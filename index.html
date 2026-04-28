@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Valuation DCF · B3</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary:    #0d1117;
+      --bg-secondary:  #161b22;
+      --bg-tertiary:   #21262d;
+      --bg-hover:      #30363d;
+      --border:        #30363d;
+      --border-muted:  #21262d;
+      --text:          #e6edf3;
+      --text-sec:      #8b949e;
+      --text-muted:    #6e7681;
+      --blue:          #58a6ff;
+      --green:         #3fb950;
+      --red:           #f85149;
+      --orange:        #d29922;
+      --mono: 'Cascadia Code','Fira Code','Consolas',monospace;
+    }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* ── Header ───────────────────────────────────────────── */
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-size: 15px;
+      font-weight: 700;
+      white-space: nowrap;
+      color: var(--text);
+    }
+    .logo em { color: var(--blue); font-style: normal; }
+
+    .search-form {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      max-width: 380px;
+    }
+
+    .search-input {
+      flex: 1;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 6px 12px;
+      text-transform: uppercase;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .search-input:focus { border-color: var(--blue); }
+    .search-input::placeholder { color: var(--text-muted); text-transform: none; }
+
+    .btn {
+      background: var(--blue);
+      border: none;
+      border-radius: 6px;
+      color: #0d1117;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 6px 16px;
+      transition: opacity .15s;
+      white-space: nowrap;
+    }
+    .btn:hover { opacity: .85; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .btn-ghost {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+    }
+
+    .settings-btn {
+      margin-left: auto;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-sec);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 5px 12px;
+    }
+    .settings-btn:hover { background: var(--bg-tertiary); }
+
+    /* ── Notifications ────────────────────────────────────── */
+    #notifications { padding: 0 24px; flex-shrink: 0; }
+    .notif {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin: 6px 0;
+      font-size: 13px;
+    }
+    .notif-error   { background: rgba(248,81,73,.12);  border: 1px solid rgba(248,81,73,.3);  color: var(--red); }
+    .notif-warning { background: rgba(210,153,34,.12); border: 1px solid rgba(210,153,34,.3); color: var(--orange); }
+    .notif-info    { background: rgba(88,166,255,.12); border: 1px solid rgba(88,166,255,.3); color: var(--blue); }
+    .notif-close {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      opacity: .7;
+      padding: 0;
+    }
+    .notif-close:hover { opacity: 1; }
+
+    /* ── Main layout ──────────────────────────────────────── */
+    .main {
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .panel {
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .panel-left {
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+    }
+
+    .panel-right { background: var(--bg-primary); }
+
+    /* ── Section title ────────────────────────────────────── */
+    .sec-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-sec);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    /* ── Company card ─────────────────────────────────────── */
+    .company-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 20px;
+      min-height: 78px;
+    }
+    .company-card.empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .co-ticker  { font-size: 12px; color: var(--blue); }
+    .co-name    { font-size: 15px; font-weight: 600; margin-top: 2px; }
+    .co-row     { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; }
+    .co-price   { font-size: 22px; font-weight: 700; font-family: var(--mono); }
+    .co-chg     { font-size: 13px; }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .co-meta    { display: flex; gap: 16px; margin-top: 6px; }
+    .co-meta-i  { font-size: 12px; color: var(--text-sec); }
+    .co-meta-i span { color: var(--text); font-family: var(--mono); }
+
+    /* ── Assumption rows ──────────────────────────────────── */
+    .assume-group { margin-bottom: 4px; }
+
+    .assume-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-muted);
+    }
+    .assume-row:last-child { border-bottom: none; }
+
+    .assume-lbl { flex: 1; }
+    .assume-lbl-text { font-size: 13px; }
+    .assume-hint { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+    .assume-ctrl { display: flex; align-items: center; gap: 4px; }
+
+    .assume-input {
+      background: var(--bg-tertiary);
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 4px 7px;
+      text-align: right;
+      width: 88px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .assume-input:focus   { border-color: var(--blue); }
+    .assume-input.ovrd    { border-color: var(--orange); }
+    .assume-input.invalid { border-color: var(--red); }
+
+    .assume-unit { font-size: 12px; color: var(--text-muted); width: 14px; }
+
+    .restore-btn {
+      background: none;
+      border: none;
+      color: var(--orange);
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      opacity: .75;
+      padding: 0;
+    }
+    .restore-btn:hover { opacity: 1; }
+
+    /* ── Results (left panel bottom) ──────────────────────── */
+    .results-sep {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0 16px;
+    }
+
+    .fair-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .fair-lbl   { font-size: 11px; color: var(--text-sec); text-transform: uppercase; letter-spacing: .05em; }
+    .fair-value { font-size: 28px; font-weight: 700; font-family: var(--mono); margin: 4px 0; }
+    .upside-badge {
+      display: inline-block;
+      font-size: 17px;
+      font-weight: 700;
+      padding: 3px 14px;
+      border-radius: 20px;
+    }
+    .upside-badge.pos { background: rgba(63,185,80,.15); color: var(--green); }
+    .upside-badge.neg { background: rgba(248,81,73,.15);  color: var(--red); }
+
+    .res-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .res-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .res-lbl   { font-size: 10px; color: var(--text-sec); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+    .res-value { font-size: 14px; font-weight: 600; font-family: var(--mono); }
+    .res-sub   { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Right panel ──────────────────────────────────────── */
+    .rp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .toggle-grp {
+      display: flex;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
+    }
+    .tog-btn {
+      background: none;
+      border: none;
+      border-radius: 4px;
+      color: var(--text-sec);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 4px 14px;
+      transition: all .15s;
+    }
+    .tog-btn.active { background: var(--blue); color: #0d1117; }
+
+    /* ── DCF table ────────────────────────────────────────── */
+    .table-wrap {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .dcf-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .dcf-table thead th {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      color: var(--text-sec);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .05em;
+      padding: 10px 16px;
+      text-align: left;
+      text-transform: uppercase;
+    }
+    .dcf-table thead th:not(:first-child) { text-align: right; }
+
+    .dcf-table tbody tr { border-bottom: 1px solid var(--border-muted); transition: background .1s; }
+    .dcf-table tbody tr:last-child { border-bottom: none; }
+    .dcf-table tbody tr:hover { background: var(--bg-tertiary); }
+    .dcf-table tbody tr.hist { color: var(--text-sec); }
+    .dcf-table tbody tr.base-yr { background: rgba(88,166,255,.05); }
+    .dcf-table tbody tr.proj { color: var(--text); }
+    .dcf-table tbody tr.tv-row {
+      border-top: 2px solid var(--border);
+      background: var(--bg-secondary);
+    }
+
+    .dcf-table td {
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 9px 16px;
+    }
+    .dcf-table td:not(:first-child) { text-align: right; }
+    .dcf-table td.yr-cell { font-family: inherit; font-size: 13px; font-weight: 500; }
+    .dcf-table td.dash { color: var(--text-muted); }
+
+    .g-pos { color: var(--green); }
+    .g-neg { color: var(--red); }
+
+    /* ── Summary cards ────────────────────────────────────── */
+    .sum-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .sum-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .sum-lbl   { font-size: 10px; color: var(--text-sec); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .sum-value { font-size: 17px; font-weight: 700; font-family: var(--mono); }
+
+    /* ── Empty state ──────────────────────────────────────── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 320px;
+      gap: 10px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .empty-icon { font-size: 44px; opacity: .3; }
+    .empty-title { font-size: 15px; color: var(--text-sec); }
+    .empty-hint { font-size: 13px; max-width: 280px; }
+
+    /* ── Modal ────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.65);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      width: 420px;
+      max-width: 92vw;
+    }
+    .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 18px; }
+    .modal-field { margin-bottom: 14px; }
+    .modal-lbl { font-size: 12px; color: var(--text-sec); display: block; margin-bottom: 6px; }
+    .modal-input {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 8px 12px;
+      width: 100%;
+      outline: none;
+    }
+    .modal-input:focus { border-color: var(--blue); }
+    .modal-hint { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+    /* ── Table editable inputs ───────────────────────────── */
+    .tbl-inp {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 3px 6px;
+      text-align: right;
+      width: 100%;
+      outline: none;
+      transition: border-color .15s, background .15s;
+      cursor: text;
+    }
+    .tbl-inp:hover  { border-color: var(--border); background: var(--bg-hover); }
+    .tbl-inp:focus  { border-color: var(--blue);   background: var(--bg-hover); }
+    .tbl-inp.tbl-inp-ovrd { border-color: var(--orange); background: rgba(210,153,34,.08); }
+
+    /* ── Skeleton shimmer ─────────────────────────────────── */
+    @keyframes shimmer { 0%,100%{opacity:.4} 50%{opacity:.9} }
+    .skeleton {
+      animation: shimmer 1.4s infinite;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      color: transparent !important;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* ── Scrollbar ────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Responsive ───────────────────────────────────────── */
+    @media (max-width: 860px) {
+      .main { grid-template-columns: 1fr; }
+      .panel-left { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────── */
+    .sidebar {
+      width: 220px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100%;
+      overflow-y: auto;
+    }
+    .sidebar-logo {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      display: block;
+      transition: background .15s;
+    }
+    .sidebar-logo:hover { background: var(--bg-tertiary); }
+    .sidebar-logo-title { font-size: 15px; font-weight: 700; color: var(--text); }
+    .sidebar-logo-title em { color: var(--blue); font-style: normal; }
+    .sidebar-logo-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    .sidebar-nav { flex: 1; padding: 8px 0; }
+    .sidebar-section {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 10px 14px 4px;
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 14px;
+      color: var(--text-sec);
+      text-decoration: none;
+      font-size: 13px;
+      transition: background .15s, color .15s;
+      border-left: 3px solid transparent;
+    }
+    .sidebar-item:hover { background: rgba(255,255,255,.04); color: var(--text); }
+    .sidebar-item.active {
+      color: var(--blue);
+      background: rgba(88,166,255,.08);
+      border-left-color: var(--blue);
+      font-weight: 500;
+    }
+    .sidebar-item-disabled {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 14px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-style: italic;
+      border-left: 3px solid transparent;
+      cursor: default;
+    }
+    .sidebar-icon { font-size: 14px; flex-shrink: 0; }
+    .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+    .sidebar-footer { padding: 14px; border-top: 1px solid var(--border); }
+    .sidebar-footer-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .page-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <a href="home.html" class="sidebar-logo">
+    <div class="sidebar-logo-title">Valuation <em>DCF</em> · B3</div>
+    <div class="sidebar-logo-sub">Análise fundamentalista</div>
+  </a>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">Ferramentas</div>
+    <a href="home.html" class="sidebar-item">
+      <span class="sidebar-icon">🏠</span> Home
+    </a>
+    <a href="index.html" class="sidebar-item active">
+      <span class="sidebar-icon">📊</span> Calculadora
+    </a>
+    <a href="watchlist.html" class="sidebar-item">
+      <span class="sidebar-icon">📋</span> Meus Valuations
+    </a>
+    <hr class="sidebar-divider">
+    <div class="sidebar-section">Em Breve</div>
+    <div class="sidebar-item-disabled">
+      <span class="sidebar-icon">⚖️</span> Comparativo
+    </div>
+    <div class="sidebar-item-disabled">
+      <span class="sidebar-icon">📈</span> Histórico
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-footer-title">Valuation DCF · B3</div>
+  </div>
+</aside>
+
+<div class="page-wrapper">
+
+<!-- ══════════════════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════════════════════ -->
+<header class="header">
+  <form class="search-form" id="searchForm">
+    <input id="tickerInput" type="text" class="search-input"
+           placeholder="Ex: WEGE3, ITUB4..." maxlength="7"
+           autocomplete="off" spellcheck="false">
+    <button type="submit" class="btn" id="searchBtn">Buscar</button>
+  </form>
+  <button class="settings-btn" id="settingsBtn">⚙ Configurações</button>
+</header>
+
+<div id="notifications"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- ── LEFT PANEL ──────────────────────────────────────── -->
+  <div class="panel panel-left">
+    <div class="sec-title">Premissas</div>
+
+    <!-- Company info -->
+    <div class="company-card empty" id="companyCard">
+      Busque um ticker para começar
+    </div>
+
+    <!-- Assumption inputs -->
+    <div class="assume-group">
+
+      <!-- Lucro Líquido Base -->
+      <div class="assume-row">
+        <div class="assume-lbl">
+          <div class="assume-lbl-text">Lucro Líquido Base</div>
+          <div class="assume-hint" id="llHint">Ano de referência para projeção</div>
+        </div>
+        <div class="assume-ctrl">
+          <input id="inp-ll"    type="text" class="assume-input" placeholder="—">
+          <span class="assume-unit"></span>
+          <button class="restore-btn" id="rst-ll" style="display:none" title="Restaurar valor da API">↺</button>
+        </div>
+      </div>
+
+      <!-- Payout -->
+      <div class="assume-row">
+        <div class="assume-lbl">
+          <div class="assume-lbl-text">Payout Médio</div>
+          <div class="assume-hint" id="payoutHint">Dividendos ÷ Lucro Líquido</div>
+        </div>
+        <div class="assume-ctrl">
+          <input id="inp-payout" type="text" class="assume-input" placeholder="—">
+          <span class="assume-unit">%</span>
+          <button class="restore-btn" id="rst-payout" style="display:none" title="Restaurar valor da API">↺</button>
+        </div>
+      </div>
+
+      <!-- ROE -->
+      <div class="assume-row">
+        <div class="assume-lbl">
+          <div class="assume-lbl-text">ROE</div>
+          <div class="assume-hint" id="roeHint">Retorno sobre Patrimônio Líquido</div>
+        </div>
+        <div class="assume-ctrl">
+          <input id="inp-roe" type="text" class="assume-input" placeholder="—">
+          <span class="assume-unit">%</span>
+          <button class="restore-btn" id="rst-roe" style="display:none" title="Restaurar valor da API">↺</button>
+        </div>
+      </div>
+
+      <!-- Taxa de Crescimento (derived) -->
+      <div class="assume-row">
+        <div class="assume-lbl">
+          <div class="assume-lbl-text">Taxa Esperada de Crescimento</div>
+          <div class="assume-hint">(1 − Payout) × ROE</div>
+        </div>
+        <div class="assume-ctrl">
+          <input id="inp-g" type="text" class="assume-input" placeholder="—">
+          <span class="assume-unit">%</span>
+          <button class="restore-btn" id="rst-g" style="display:none" title="Recalcular automaticamente">↺</button>
+        </div>
+      </div>
+
+      <!-- Número de Ações -->
+      <div class="assume-row">
+        <div class="assume-lbl">
+          <div class="assume-lbl-text">Nº de Ações</div>
+          <div class="assume-hint">Em circulação (ex-tesouraria)</div>
+        </div>
+        <div class="assume-ctrl">
+          <input id="inp-shares" type="text" class="assume-input" placeholder="—">
+          <span class="assume-unit"></span>
+          <button class="restore-btn" id="rst-shares" style="display:none" title="Restaurar valor da API">↺</button>
+        </div>
+      </div>
+
+      <!-- Taxa de desconto -->
+      <div class="assume-row">
+        <div class="assume-lbl">
+          <div class="assume-lbl-text">Taxa de Desconto (WACC)</div>
+          <div class="assume-hint">Selic hist. ~11,5% · IR15 ~9,8%</div>
+        </div>
+        <div class="assume-ctrl">
+          <input id="inp-disc" type="text" class="assume-input" value="15">
+          <span class="assume-unit">%</span>
+        </div>
+      </div>
+
+      <!-- Taxa de perpetuidade -->
+      <div class="assume-row">
+        <div class="assume-lbl">
+          <div class="assume-lbl-text">Crescimento na Perpetuidade</div>
+          <div class="assume-hint">≤ crescimento do PIB (~2–3%)</div>
+        </div>
+        <div class="assume-ctrl">
+          <input id="inp-perp" type="text" class="assume-input" value="3">
+          <span class="assume-unit">%</span>
+        </div>
+      </div>
+
+    </div><!-- /assume-group -->
+
+    <!-- Results -->
+    <hr class="results-sep">
+    <div class="sec-title">Realidade Projetada</div>
+
+    <div class="fair-card">
+      <div class="fair-lbl">Preço Teto · Valor Intrínseco</div>
+      <div class="fair-value" id="fairPriceVal">—</div>
+      <div id="upsideWrap"></div>
+    </div>
+
+    <button class="btn" id="saveBtn"
+      style="width:100%;margin-top:8px;display:none"
+      onclick="saveToWatchlist()">
+      ＋ Salvar Preço Teto
+    </button>
+
+    <div class="res-grid">
+      <div class="res-card">
+        <div class="res-lbl">Preço Atual</div>
+        <div class="res-value" id="rCurrentPrice">—</div>
+      </div>
+      <div class="res-card">
+        <div class="res-lbl">Market Cap Projetado</div>
+        <div class="res-value" id="rMarketCap">—</div>
+      </div>
+      <div class="res-card">
+        <div class="res-lbl">Nº de Ações</div>
+        <div class="res-value" id="rShares">—</div>
+        <div class="res-sub">em circulação</div>
+      </div>
+      <div class="res-card">
+        <div class="res-lbl">Valor da Empresa (EV)</div>
+        <div class="res-value" id="rEV">—</div>
+      </div>
+    </div>
+
+  </div><!-- /panel-left -->
+
+  <!-- ── RIGHT PANEL ─────────────────────────────────────── -->
+  <div class="panel panel-right">
+    <div class="rp-header">
+      <div class="sec-title" style="margin:0">Fluxo de Caixa Descontado</div>
+      <div class="toggle-grp">
+        <button class="tog-btn" id="tog3" onclick="setYears(3)">3 anos</button>
+        <button class="tog-btn active" id="tog5" onclick="setYears(5)">5 anos</button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">📊</div>
+      <div class="empty-title">Nenhum ativo selecionado</div>
+      <div class="empty-hint">Digite o código de uma ação da B3 no campo de busca acima</div>
+    </div>
+
+    <!-- Table (shown after data load) -->
+    <div id="dcfWrap" style="display:none">
+      <div class="table-wrap">
+        <table class="dcf-table">
+          <thead>
+            <tr>
+              <th>Ano</th>
+              <th>Lucro Líquido</th>
+              <th>Crescimento</th>
+              <th>VPL</th>
+            </tr>
+          </thead>
+          <tbody id="dcfBody"></tbody>
+        </table>
+      </div>
+
+      <div class="sum-grid">
+        <div class="sum-card">
+          <div class="sum-lbl">VPL dos Fluxos</div>
+          <div class="sum-value" id="sumPVFlows">—</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-lbl">VPL da Perpetuidade</div>
+          <div class="sum-value" id="sumPVPerp">—</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-lbl">Valor Total da Empresa</div>
+          <div class="sum-value" id="sumEV" style="color:var(--blue)">—</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /panel-right -->
+</main>
+
+</div><!-- /page-wrapper -->
+
+<!-- ══════════════════════════════════════════════════════════
+     SETTINGS MODAL
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-title">⚙ Configurações</div>
+    <div class="modal-field">
+      <label class="modal-lbl">Fonte de dados</label>
+      <div style="font-size:13px;color:var(--text-sec);line-height:1.6">
+        Os dados são obtidos via <strong>yfinance</strong> pelo servidor local (<code>server.py</code>).<br>
+        Nenhuma API key necessária — funciona 100% offline após instalação.
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeSettings()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ── A: Constants ──────────────────────────────────────────────
+const SK = 'dcf_'; // localStorage key prefix
+const DEF_DISC = 0.15;
+const DEF_PERP = 0.03;
+
+// ── B: Formatters ─────────────────────────────────────────────
+const fBRL = new Intl.NumberFormat('pt-BR', {
+  style: 'currency', currency: 'BRL',
+  minimumFractionDigits: 2, maximumFractionDigits: 2
+});
+
+function fShort(n) {
+  return fBRL.format(n);
+}
+
+function fPct(n, dec = 2) {
+  return (n * 100).toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + '%';
+}
+
+function fShares(n) {
+  return n.toLocaleString('pt-BR');
+}
+
+// Format a number for display inside an input field (full, no abbreviation)
+function fInputLL(n) {
+  if (n == null) return '';
+  return n.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+}
+
+// Format a growth rate as signed percentage for display in input (+10,50 or -5,20)
+function fInputPctSigned(n) {
+  if (n == null) return '';
+  const pct = n * 100;
+  const sign = pct >= 0 ? '+' : '';
+  return sign + pct.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fInputPct(n) {
+  if (n == null) return '';
+  return (n * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ── C: Parsers ────────────────────────────────────────────────
+function parsePct(s) {
+  if (!s || !s.trim()) return null;
+  const n = parseFloat(s.replace(/\./g, '').replace(',', '.').replace(/[^0-9.\-]/g, ''));
+  return isNaN(n) ? null : n / 100;
+}
+
+function parseLL(s) {
+  if (!s || !s.trim()) return null;
+  let raw = s.trim();
+  let mult = 1;
+  if (/B$/i.test(raw)) { mult = 1e9;  raw = raw.slice(0, -1); }
+  else if (/M$/i.test(raw)) { mult = 1e6; raw = raw.slice(0, -1); }
+  else if (/K$/i.test(raw)) { mult = 1e3; raw = raw.slice(0, -1); }
+  const n = parseFloat(raw.replace(/\./g, '').replace(',', '.'));
+  return isNaN(n) ? null : n * mult;
+}
+
+// ── D: App State ──────────────────────────────────────────────
+const S = {
+  ticker: null,
+  apiData: null,
+  companyName: null,
+  projYears: 5,
+  history: [],            // [{year, value}] sorted newest first
+  assumptions: {
+    ll: null,             // Lucro Líquido base (BRL)
+    payout: null,         // ratio 0-1
+    roe: null,            // ratio 0-1
+    g: null,              // growth rate 0-1 (derived or override)
+    disc: DEF_DISC,       // discount rate
+    perp: DEF_PERP,       // perpetuity growth
+    shares: null,         // total shares (float)
+    price: null,          // current price
+  },
+  overrides: new Set(),   // fields manually overridden by user
+  apiVals: {},            // original API-sourced values for restore
+  yearOverrides: {},      // { year: customLL } — per-year Lucro Líquido overrides
+  results: null
+};
+
+// ── E: DCF Engine ─────────────────────────────────────────────
+function growthRate(payout, roe) {
+  return (1 - payout) * roe;
+}
+
+function runDCF() {
+  const a = S.assumptions;
+  S.results = null;
+
+  if (!a.ll || a.ll <= 0 || !a.disc || !a.perp || !a.shares) return;
+
+  if (a.perp >= a.disc) {
+    S.results = { error: 'gordon' };
+    return;
+  }
+
+  const g = a.g ?? 0;
+  const n = S.projYears;
+  const currentYear = new Date().getFullYear();
+  const baseYear = S.history.length ? S.history[0].year : currentYear - 1;
+
+  // Project cash flows (respects per-year manual overrides)
+  const flows = [];
+  let prevCF = a.ll;
+  for (let i = 1; i <= n; i++) {
+    const year = baseYear + i;
+    let cf, actualG;
+    if (S.yearOverrides[year] != null) {
+      cf = S.yearOverrides[year];
+      actualG = prevCF > 0 ? (cf / prevCF - 1) : 0;
+    } else {
+      cf = prevCF * (1 + g);
+      actualG = g;
+    }
+    flows.push({ year, cf, g: actualG });
+    prevCF = cf;
+  }
+
+  // PV of each flow
+  const pvFlows = flows.map((f, i) => ({
+    ...f,
+    pv: f.cf / Math.pow(1 + a.disc, i + 1)
+  }));
+
+  // Terminal value (Excel formula: CF / ((1+disc)/(1+perp) - 1))
+  const lastCF = flows[n - 1].cf;
+  const tvDenom = (1 + a.disc) / (1 + a.perp) - 1;
+  const tv = lastCF / tvDenom;
+
+  // PV of terminal value — FIXED (Excel had hardcoded 10%)
+  const pvTV = tv / Math.pow(1 + a.disc, n);
+
+  const sumPV = pvFlows.reduce((acc, f) => acc + f.pv, 0);
+  const ev = sumPV + pvTV;
+  const fairPrice = ev / a.shares;
+  const upside = a.price ? (fairPrice - a.price) / fairPrice : null;
+
+  S.results = { flows, pvFlows, tv, pvTV, sumPV, ev, fairPrice, upside, baseYear };
+}
+
+// ── F: API Layer (yfinance via servidor local) ────────────────
+async function fetchTicker(ticker) {
+  const url = `/api/quote/${encodeURIComponent(ticker.toUpperCase())}`;
+  const r = await fetch(url);
+  if (!r.ok) throw { code: 'HTTP', status: r.status };
+  const d = await r.json();
+  if (d.code === 'NOT_FOUND') throw { code: 'NOT_FOUND', ticker };
+  if (d.code === 'NO_YFINANCE') throw { code: 'NO_YFINANCE' };
+  if (!d.price) throw { code: 'NOT_FOUND', ticker };
+  return d;
+}
+
+// ── G: Notifications ──────────────────────────────────────────
+const activeNotifs = new Set();
+
+function showNotif(msg, type = 'info', id = null) {
+  const nid = id || ('n' + Date.now());
+  if (id && activeNotifs.has(id)) return;
+  const el = document.createElement('div');
+  el.className = `notif notif-${type}`;
+  el.id = 'notif-' + nid;
+  el.innerHTML = `<span>${msg}</span><button class="notif-close" onclick="clearNotif('${nid}')">×</button>`;
+  document.getElementById('notifications').appendChild(el);
+  if (id) activeNotifs.add(id);
+}
+
+function clearNotif(id) {
+  document.getElementById('notif-' + id)?.remove();
+  activeNotifs.delete(id);
+}
+
+function clearAllNotifs() {
+  document.getElementById('notifications').innerHTML = '';
+  activeNotifs.clear();
+}
+
+// ── H: Rendering ──────────────────────────────────────────────
+function renderCompany(d) {
+  // d = flat object from our local API
+  const chg = d.changePercent ?? 0;
+  const cls = chg >= 0 ? 'pos' : 'neg';
+  const sign = chg >= 0 ? '+' : '';
+
+  const card = document.getElementById('companyCard');
+  card.classList.remove('empty');
+  card.innerHTML = `
+    <div class="co-ticker">${d.ticker || ''}</div>
+    <div class="co-name">${d.name || d.ticker || ''}</div>
+    <div class="co-row">
+      <div class="co-price">${fBRL.format(d.price)}</div>
+      <div class="co-chg ${cls}">${sign}${chg.toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2})}%</div>
+    </div>
+    <div class="co-meta">
+      ${d.fiftyTwoWeekHigh != null ? `<div class="co-meta-i">52s Máx: <span>${fBRL.format(d.fiftyTwoWeekHigh)}</span></div>` : ''}
+      ${d.fiftyTwoWeekLow  != null ? `<div class="co-meta-i">52s Mín: <span>${fBRL.format(d.fiftyTwoWeekLow)}</span></div>` : ''}
+    </div>`;
+}
+
+function renderInputs(skipFields = []) {
+  const a = S.assumptions;
+
+  function setInput(id, val, fmt) {
+    if (skipFields.includes(id)) return;
+    const el = document.getElementById(id);
+    if (el && val != null) el.value = fmt(val);
+  }
+
+  setInput('inp-ll',    a.ll,    fInputLL);
+  setInput('inp-payout',a.payout, fInputPct);
+  setInput('inp-roe',   a.roe,   fInputPct);
+  setInput('inp-g',     a.g,     fInputPct);
+  setInput('inp-shares',a.shares, fInputLL);
+  setInput('inp-disc',  a.disc,  fInputPct);
+  setInput('inp-perp',  a.perp,  fInputPct);
+
+  // Override indicators
+  ['ll','payout','roe','g','shares'].forEach(f => {
+    const inp = document.getElementById('inp-' + f);
+    const rst = document.getElementById('rst-' + f);
+    if (!inp || !rst) return;
+    const ovrd = S.overrides.has(f);
+    inp.classList.toggle('ovrd', ovrd);
+    rst.style.display = ovrd ? 'inline' : 'none';
+  });
+
+  // Validation: gordon condition
+  const invalid = a.perp != null && a.disc != null && a.perp >= a.disc;
+  document.getElementById('inp-disc')?.classList.toggle('invalid', invalid);
+  document.getElementById('inp-perp')?.classList.toggle('invalid', invalid);
+}
+
+function renderResults() {
+  const r = S.results;
+  const a = S.assumptions;
+
+  if (!r || r.error) {
+    document.getElementById('fairPriceVal').textContent = '—';
+    document.getElementById('upsideWrap').innerHTML = '';
+    document.getElementById('rCurrentPrice').textContent = a.price ? fBRL.format(a.price) : '—';
+    document.getElementById('rMarketCap').textContent = '—';
+    document.getElementById('rShares').textContent = a.shares ? fShares(a.shares) : '—';
+    document.getElementById('rEV').textContent = '—';
+    document.getElementById('sumPVFlows').textContent = '—';
+    document.getElementById('sumPVPerp').textContent = '—';
+    document.getElementById('sumEV').textContent = '—';
+
+    if (r?.error === 'gordon') {
+      showNotif('Taxa de crescimento na perpetuidade deve ser menor que a taxa de desconto para o cálculo ser válido.', 'error', 'gordon');
+    }
+    return;
+  }
+
+  clearNotif('gordon');
+
+  document.getElementById('fairPriceVal').textContent = fBRL.format(r.fairPrice);
+  document.getElementById('rCurrentPrice').textContent = a.price ? fBRL.format(a.price) : '—';
+  document.getElementById('rMarketCap').textContent = fShort(r.fairPrice * a.shares);
+  document.getElementById('rShares').textContent = fShares(a.shares);
+  document.getElementById('rEV').textContent = fShort(r.ev);
+  document.getElementById('sumPVFlows').textContent = fShort(r.sumPV);
+  document.getElementById('sumPVPerp').textContent = fShort(r.pvTV);
+  document.getElementById('sumEV').textContent = fShort(r.ev);
+
+  if (r.upside !== null) {
+    const pct = r.upside * 100;
+    const cls = pct >= 0 ? 'pos' : 'neg';
+    const sign = pct >= 0 ? '+' : '';
+    document.getElementById('upsideWrap').innerHTML =
+      `<span class="upside-badge ${cls}">${sign}${pct.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</span>
+       <span style="font-size:11px;color:var(--text-muted);margin-left:8px">vs. preço atual</span>`;
+  }
+}
+
+function renderTable() {
+  const r = S.results;
+  const empty = document.getElementById('emptyState');
+  const wrap  = document.getElementById('dcfWrap');
+
+  if (!r || r.error || !r.flows) {
+    empty.style.display = 'flex';
+    wrap.style.display  = 'none';
+    return;
+  }
+
+  empty.style.display = 'none';
+  wrap.style.display  = 'block';
+
+  let html = '';
+
+  // Historical rows (oldest → newest-1)
+  const histReversed = [...S.history].reverse();
+  for (let i = 0; i < histReversed.length; i++) {
+    const h = histReversed[i];
+    const prev = histReversed[i - 1];
+    const g = prev ? (h.value / prev.value - 1) : null;
+    const gTxt = g != null
+      ? `<span class="${g >= 0 ? 'g-pos' : 'g-neg'}">${g >= 0 ? '+' : ''}${fPct(g)}</span>`
+      : '<span class="dash">—</span>';
+
+    html += `<tr class="hist">
+      <td class="yr-cell">${h.year}</td>
+      <td>${fShort(h.value)}</td>
+      <td>${gTxt}</td>
+      <td class="dash">–</td>
+    </tr>`;
+  }
+
+  // Base year highlight (most recent historical = projection anchor)
+  if (S.history.length) {
+    const base = S.history[0];
+    html += `<tr class="base-yr">
+      <td class="yr-cell" style="color:var(--blue)">${base.year} <span style="font-size:11px;color:var(--text-muted)">(base)</span></td>
+      <td style="color:var(--blue)">${fShort(base.value)}</td>
+      <td class="dash">—</td>
+      <td class="dash">–</td>
+    </tr>`;
+  }
+
+  // Separator (visual only)
+  html += `<tr style="height:3px;background:rgba(88,166,255,0.1)"><td colspan="4" style="padding:0"></td></tr>`;
+
+  // Projected rows — Lucro Líquido and Crescimento are editable
+  for (const pv of r.pvFlows) {
+    const isOverridden = S.yearOverrides[pv.year] != null;
+    html += `<tr class="proj">
+      <td class="yr-cell">${pv.year}</td>
+      <td style="padding:5px 16px">
+        <input type="text"
+               class="tbl-inp${isOverridden ? ' tbl-inp-ovrd' : ''}"
+               value="${fInputLL(pv.cf)}"
+               data-year="${pv.year}"
+               title="Edite o Lucro Líquido para simular cenários">
+      </td>
+      <td id="g-cell-${pv.year}" class="${pv.g >= 0 ? 'g-pos' : 'g-neg'}" style="padding:5px 16px">
+        <input type="text"
+               class="tbl-inp tbl-g-inp${isOverridden ? ' tbl-inp-ovrd' : ''}"
+               value="${fInputPctSigned(pv.g)}"
+               data-year="${pv.year}"
+               title="Edite o crescimento (%) para simular cenários"
+               style="color:inherit;text-align:right">
+      </td>
+      <td id="pv-cell-${pv.year}">${fShort(pv.pv)}</td>
+    </tr>`;
+  }
+
+  // Terminal value
+  html += `<tr class="tv-row">
+    <td class="yr-cell">Perpetuidade</td>
+    <td>${fShort(r.tv)}</td>
+    <td class="g-pos">${fPct(S.assumptions.perp, 1)}</td>
+    <td>${fShort(r.pvTV)}</td>
+  </tr>`;
+
+  document.getElementById('dcfBody').innerHTML = html;
+
+  // Wire up editable LL inputs in projected rows
+  document.querySelectorAll('.tbl-inp:not(.tbl-g-inp)').forEach(inp => {
+    const year = parseInt(inp.dataset.year);
+    inp.addEventListener('change', () => onTableYearChange(year, inp.value, inp));
+    inp.addEventListener('input', debounce(() => onTableYearChange(year, inp.value, inp), 400));
+  });
+
+  // Wire up editable growth inputs in projected rows
+  document.querySelectorAll('.tbl-g-inp').forEach(inp => {
+    const year = parseInt(inp.dataset.year);
+    inp.addEventListener('change', () => onTableGrowthChange(year, inp.value, inp));
+    inp.addEventListener('input', debounce(() => onTableGrowthChange(year, inp.value, inp), 400));
+  });
+}
+
+function rerender() {
+  runDCF();
+  renderResults();
+  renderTable();
+  renderSaveBtn();
+  persist();
+}
+
+// ── I: Search handler ─────────────────────────────────────────
+async function onSearch(e) {
+  if (e) e.preventDefault();
+  const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+  if (!ticker) return;
+
+  clearAllNotifs();
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  try {
+    const d = await fetchTicker(ticker); // flat object from local server
+
+    S.ticker      = ticker;
+    S.companyName = d.name || ticker;
+    S.overrides.clear();
+    S.yearOverrides = {};
+
+    // Map flat API response to state
+    const history = (d.netIncomeHistory || []).map(h => ({ year: h.year, value: h.netIncome }));
+    const shares  = d.sharesOutstanding || null;
+    const roe     = (d.roe != null && d.roe > 0) ? d.roe : null;
+    const payout  = (d.payout != null && d.payout > 0) ? d.payout : null;
+    const baseCF  = history.length ? history[0].value : null;
+    const g       = (roe != null && payout != null) ? growthRate(payout, roe) : null;
+
+    S.history = history;
+    S.assumptions.ll     = baseCF;
+    S.assumptions.payout = payout;
+    S.assumptions.roe    = roe;
+    S.assumptions.g      = g;
+    S.assumptions.shares = shares;
+    S.assumptions.price  = d.price;
+
+    S.apiVals = { ll: baseCF, payout, roe, g, shares };
+
+    // Warnings for missing data
+    if (!baseCF)  showNotif('Lucro Líquido histórico não disponível para este ticker. Insira manualmente.', 'warning', 'w-ll');
+    if (!roe)     showNotif('ROE não disponível para este ticker. Insira manualmente.', 'warning', 'w-roe');
+    if (!payout)  showNotif('Dados de dividendos insuficientes. Insira o Payout manualmente (sugestão: 30–50%).', 'warning', 'w-payout');
+    if (!shares)  showNotif('Número de ações não disponível. O Preço Teto pode estar incorreto.', 'warning', 'w-shares');
+
+    if (history.length) {
+      document.getElementById('llHint').textContent = `Fonte: ${history[0].year} · ${fShort(history[0].value)}`;
+    }
+
+    renderCompany(d);
+    renderInputs();
+    rerender();
+
+  } catch (err) {
+    console.error('Erro ao buscar ticker:', err);
+    if (err.code === 'NOT_FOUND') {
+      showNotif(`Ticker "${ticker}" não encontrado. Verifique o código (ex: WEGE3, ITUB4).`, 'error', 'e-notfound');
+    } else if (err.code === 'NO_YFINANCE') {
+      showNotif('yfinance não instalado. Execute: <code>pip install yfinance</code> no terminal e reinicie o servidor.', 'error', 'e-yf');
+    } else if (err instanceof TypeError) {
+      showNotif('Não foi possível conectar ao servidor local. Certifique-se de que o <strong>start.bat</strong> está rodando.', 'error', 'e-server');
+    } else {
+      showNotif(`Erro: ${err.message || JSON.stringify(err)}`, 'error', 'e-generic');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Buscar';
+  }
+}
+
+// ── J: Assumption change handler ──────────────────────────────
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+function onInputChange(field, rawVal) {
+  let parsed;
+
+  if (field === 'll' || field === 'shares') {
+    parsed = parseLL(rawVal);
+    if (parsed == null || parsed <= 0) return;
+    S.assumptions[field] = parsed;
+  } else {
+    parsed = parsePct(rawVal);
+    if (parsed == null) return;
+    S.assumptions[field === 'payout' ? 'payout'
+                 : field === 'roe'   ? 'roe'
+                 : field === 'g'     ? 'g'
+                 : field === 'disc'  ? 'disc'
+                 : 'perp'] = parsed;
+  }
+
+  // Track overrides for API-sourced fields
+  if (['ll','payout','roe','g','shares'].includes(field)) {
+    S.overrides.add(field);
+  }
+
+  // If payout or ROE changed and g is NOT overridden, auto-recompute g
+  if ((field === 'payout' || field === 'roe') && !S.overrides.has('g')) {
+    const { payout, roe } = S.assumptions;
+    if (payout != null && roe != null) {
+      S.assumptions.g = growthRate(payout, roe);
+    }
+  }
+
+  renderInputs([`inp-${field}`]); // don't clobber the field user is typing in
+  debouncedRerender();
+}
+
+// Called when user edits Lucro Líquido directly in the projected table row
+function onTableYearChange(year, rawVal, inputEl) {
+  const parsed = parseLL(rawVal);
+  if (parsed == null || parsed <= 0) return;
+  S.yearOverrides[year] = parsed;
+  // Rerun DCF and update only results + PV column (not the whole table,
+  // to avoid blurring the input the user is typing in)
+  runDCF();
+  renderResults();
+  // Update VPL and growth cells without destroying inputs
+  updateTablePVCells();
+  persist();
+}
+
+// Called when user edits the growth % directly in the projected table row
+function onTableGrowthChange(year, rawVal, inputEl) {
+  const g = parsePct(rawVal);
+  if (g == null) return;
+  if (!S.results || !S.results.pvFlows) return;
+
+  // Find the previous year's CF to compute the new LL from the new growth rate
+  const flowIdx = S.results.pvFlows.findIndex(f => f.year === year);
+  if (flowIdx < 0) return;
+
+  const prevCF = flowIdx === 0 ? S.assumptions.ll : S.results.pvFlows[flowIdx - 1].cf;
+  if (!prevCF || prevCF <= 0) return;
+
+  const newLL = prevCF * (1 + g);
+  S.yearOverrides[year] = newLL;
+
+  runDCF();
+  renderResults();
+
+  // Update the LL input for this year (if not focused)
+  const llInp = document.querySelector(`.tbl-inp[data-year="${year}"]:not(.tbl-g-inp)`);
+  if (llInp && document.activeElement !== llInp) {
+    llInp.value = fInputLL(newLL);
+    llInp.classList.add('tbl-inp-ovrd');
+  }
+
+  updateTablePVCells();
+  persist();
+}
+
+function updateTablePVCells() {
+  if (!S.results || !S.results.pvFlows) return;
+  for (const pv of S.results.pvFlows) {
+    const pvCell = document.getElementById(`pv-cell-${pv.year}`);
+    const gCell  = document.getElementById(`g-cell-${pv.year}`);
+    if (pvCell) pvCell.textContent = fShort(pv.pv);
+    if (gCell) {
+      gCell.className = pv.g >= 0 ? 'g-pos' : 'g-neg';
+      // Update g input value only if it's not currently focused
+      const gInp = gCell.querySelector('.tbl-g-inp');
+      if (gInp && document.activeElement !== gInp) {
+        gInp.value = fInputPctSigned(pv.g);
+      }
+    }
+  }
+  // Update summary cards
+  if (S.results) {
+    const r = S.results;
+    document.getElementById('sumPVFlows').textContent = fShort(r.sumPV);
+    document.getElementById('sumPVPerp').textContent  = fShort(r.pvTV);
+    document.getElementById('sumEV').textContent      = fShort(r.ev);
+  }
+}
+
+const debouncedRerender = debounce(rerender, 300);
+
+function restoreField(field) {
+  S.overrides.delete(field);
+  if (field === 'g') {
+    const { payout, roe } = S.assumptions;
+    if (payout != null && roe != null) {
+      S.assumptions.g = growthRate(payout, roe);
+    } else {
+      S.assumptions.g = S.apiVals.g;
+    }
+  } else {
+    S.assumptions[field] = S.apiVals[field] ?? null;
+  }
+  renderInputs();
+  rerender();
+}
+
+// ── K: Projection years ───────────────────────────────────────
+function setYears(n) {
+  S.projYears = n;
+  document.getElementById('tog3').classList.toggle('active', n === 3);
+  document.getElementById('tog5').classList.toggle('active', n === 5);
+  rerender();
+}
+
+// ── L: Persistence ────────────────────────────────────────────
+function persist() {
+  if (!S.ticker) return;
+  try {
+    localStorage.setItem(SK + 'session', JSON.stringify({
+      ticker: S.ticker,
+      companyName: S.companyName,
+      projYears: S.projYears,
+      assumptions: S.assumptions,
+      overrides: [...S.overrides],
+      apiVals: S.apiVals,
+      yearOverrides: S.yearOverrides,
+      history: S.history,
+      savedAt: new Date().toISOString()
+    }));
+  } catch (_) {}
+}
+
+function restore() {
+  try {
+    const raw = localStorage.getItem(SK + 'session');
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (!d.ticker) return false;
+
+    S.ticker      = d.ticker;
+    S.companyName = d.companyName || null;
+    S.projYears   = d.projYears ?? 5;
+    Object.assign(S.assumptions, d.assumptions);
+    S.overrides     = new Set(d.overrides || []);
+    S.apiVals       = d.apiVals || {};
+    S.yearOverrides = d.yearOverrides || {};
+    S.history       = d.history || [];
+
+    document.getElementById('tickerInput').value = d.ticker;
+    setYears(S.projYears);
+    renderInputs();
+    rerender();
+
+    const when = d.savedAt ? new Date(d.savedAt).toLocaleString('pt-BR') : '';
+    showNotif(`Dados de ${d.ticker} restaurados${when ? ' (' + when + ')' : ''}.`, 'info', 'restored');
+    return true;
+  } catch (_) { return false; }
+}
+
+// ── P: Watchlist ──────────────────────────────────────────────
+const WL_KEY = 'dcf_watchlist';
+
+function getWatchlist() {
+  try { return JSON.parse(localStorage.getItem(WL_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function isInWatchlist(ticker) {
+  return !!ticker && ticker in getWatchlist();
+}
+
+function saveToWatchlist() {
+  if (!S.ticker || !S.results || S.results.error) return;
+  const wl = getWatchlist();
+  wl[S.ticker] = {
+    ticker:       S.ticker,
+    name:         S.companyName || S.ticker,
+    fairPrice:    S.results.fairPrice,
+    savedAt:      new Date().toISOString(),
+    projYears:    S.projYears,
+    assumptions:  { ...S.assumptions },
+    overrides:    [...S.overrides],
+    apiVals:      { ...S.apiVals },
+    yearOverrides: { ...S.yearOverrides },
+    history:      [...S.history],
+  };
+  localStorage.setItem(WL_KEY, JSON.stringify(wl));
+  renderSaveBtn();
+  showNotif(
+    `Preço Teto de <strong>${S.ticker}</strong> (${fBRL.format(S.results.fairPrice)}) salvo!`,
+    'info', 'wl-ok'
+  );
+  setTimeout(() => clearNotif('wl-ok'), 3000);
+}
+
+function renderSaveBtn() {
+  const btn = document.getElementById('saveBtn');
+  if (!btn) return;
+  const active = S.results && !S.results.error && S.ticker;
+  btn.style.display = active ? 'block' : 'none';
+  if (!active) return;
+  const saved = isInWatchlist(S.ticker);
+  btn.textContent  = saved ? '✓ Atualizar Preço Teto Salvo' : '＋ Salvar Preço Teto';
+  btn.style.background = saved ? 'var(--green)' : 'var(--blue)';
+  btn.style.color      = '#0d1117';
+}
+
+async function restoreFromWatchlist(ticker) {
+  const wl    = getWatchlist();
+  const entry = wl[ticker.toUpperCase()];
+  if (!entry) return;
+
+  S.ticker      = entry.ticker;
+  S.companyName = entry.name;
+  S.projYears   = entry.projYears ?? 5;
+  Object.assign(S.assumptions, entry.assumptions);
+  S.overrides     = new Set(entry.overrides    || []);
+  S.apiVals       = entry.apiVals              || {};
+  S.yearOverrides = entry.yearOverrides        || {};
+  S.history       = entry.history              || [];
+
+  document.getElementById('tickerInput').value = entry.ticker;
+  if (S.history.length) {
+    document.getElementById('llHint').textContent =
+      `Fonte: ${S.history[0].year} · ${fBRL.format(S.history[0].value)}`;
+  }
+
+  setYears(S.projYears);
+  renderInputs();
+  rerender();
+
+  // Atualiza cotação em background sem sobrescrever as premissas salvas
+  try {
+    const d = await fetchTicker(entry.ticker);
+    S.assumptions.price = d.price;
+    S.companyName       = d.name || entry.name;
+    renderCompany(d);
+    renderResults();
+    renderSaveBtn();
+  } catch (_) {
+    renderCompany({
+      ticker: entry.ticker, name: entry.name,
+      price: entry.assumptions?.price || 0, changePercent: 0
+    });
+  }
+}
+
+// ── M: Settings modal ─────────────────────────────────────────
+function openSettings() {
+  document.getElementById('settingsModal').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('open');
+}
+
+// ── N: Event bindings ─────────────────────────────────────────
+document.getElementById('searchForm').addEventListener('submit', onSearch);
+document.getElementById('settingsBtn').addEventListener('click', openSettings);
+document.getElementById('settingsModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('settingsModal')) closeSettings();
+});
+
+// Assumption inputs
+[
+  ['inp-ll',    'll'],
+  ['inp-payout','payout'],
+  ['inp-roe',    'roe'],
+  ['inp-g',      'g'],
+  ['inp-shares', 'shares'],
+  ['inp-disc',   'disc'],
+  ['inp-perp',   'perp'],
+].forEach(([id, field]) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('change', () => onInputChange(field, el.value));
+  el.addEventListener('input',  debounce(() => onInputChange(field, el.value), 400));
+});
+
+// Restore buttons
+['ll','payout','roe','g','shares'].forEach(f => {
+  document.getElementById('rst-' + f)?.addEventListener('click', () => restoreField(f));
+});
+
+// Enter on ticker input
+document.getElementById('tickerInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); onSearch(null); }
+});
+
+// ── O: Init ───────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  setYears(S.projYears);
+  const wlTicker = new URLSearchParams(window.location.search).get('wl');
+  if (wlTicker) {
+    restoreFromWatchlist(wlTicker);
+  } else {
+    restore();
+  }
+});
+</script>
+</body>
+</html>

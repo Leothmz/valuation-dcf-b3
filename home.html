@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home · Valuation DCF B3</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary:   #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary:  #21262d;
+      --bg-hover:     #30363d;
+      --border:       #30363d;
+      --border-muted: #21262d;
+      --text:         #e6edf3;
+      --text-sec:     #8b949e;
+      --text-muted:   #6e7681;
+      --blue:         #58a6ff;
+      --green:        #3fb950;
+      --red:          #f85149;
+      --orange:       #d29922;
+      --mono: 'Cascadia Code','Fira Code','Consolas',monospace;
+    }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100%;
+      overflow-y: auto;
+    }
+    .sidebar-logo {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      display: block;
+      transition: background .15s;
+    }
+    .sidebar-logo:hover { background: var(--bg-tertiary); }
+    .sidebar-logo-title { font-size: 15px; font-weight: 700; color: var(--text); }
+    .sidebar-logo-title em { color: var(--blue); font-style: normal; }
+    .sidebar-logo-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    .sidebar-nav { flex: 1; padding: 8px 0; }
+    .sidebar-section {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 10px 14px 4px;
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 14px;
+      color: var(--text-sec);
+      text-decoration: none;
+      font-size: 13px;
+      transition: background .15s, color .15s;
+      border-left: 3px solid transparent;
+    }
+    .sidebar-item:hover { background: rgba(255,255,255,.04); color: var(--text); }
+    .sidebar-item.active {
+      color: var(--blue);
+      background: rgba(88,166,255,.08);
+      border-left-color: var(--blue);
+      font-weight: 500;
+    }
+    .sidebar-item-disabled {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 14px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-style: italic;
+      border-left: 3px solid transparent;
+      cursor: default;
+    }
+    .sidebar-icon { font-size: 14px; flex-shrink: 0; }
+    .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+    .sidebar-footer { padding: 14px; border-top: 1px solid var(--border); }
+    .sidebar-footer-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    /* ── Page wrapper ── */
+    .page-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    /* ── Content ── */
+    .content {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 40px 80px;
+      width: 100%;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      margin-bottom: 56px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(88,166,255,.1);
+      border: 1px solid rgba(88,166,255,.25);
+      border-radius: 20px;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 12px;
+      margin-bottom: 20px;
+    }
+    .hero-title {
+      font-size: 38px;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -.02em;
+      margin-bottom: 16px;
+    }
+    .hero-title em { color: var(--blue); font-style: normal; }
+    .hero-subtitle {
+      font-size: 17px;
+      color: var(--text-sec);
+      line-height: 1.7;
+      max-width: 580px;
+      margin-bottom: 28px;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 9px 20px;
+      text-decoration: none;
+      transition: opacity .15s, background .15s;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary { background: var(--blue); color: #0d1117; }
+    .btn-primary:hover { opacity: .88; }
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: var(--bg-hover); }
+
+    /* ── Section ── */
+    .section { margin-bottom: 48px; }
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .section-sub {
+      font-size: 14px;
+      color: var(--text-sec);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    /* ── Feature grid ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .feature-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      transition: border-color .15s;
+    }
+    .feature-card:hover { border-color: var(--blue); }
+    .feature-icon { font-size: 24px; margin-bottom: 10px; }
+    .feature-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    .feature-desc { font-size: 13px; color: var(--text-sec); line-height: 1.6; }
+
+    /* ── Steps ── */
+    .steps { display: flex; flex-direction: column; gap: 12px; }
+    .step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+    }
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(88,166,255,.15);
+      border: 1px solid rgba(88,166,255,.3);
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+    .step-desc { font-size: 13px; color: var(--text-sec); line-height: 1.6; }
+
+    /* ── Formula box ── */
+    .formula-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+    }
+    .formula-row {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-muted);
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+    .formula-row:last-child { border-bottom: none; }
+    .formula-lbl { color: var(--text-sec); min-width: 200px; font-family: inherit; }
+    .formula-eq { color: var(--blue); }
+    .formula-val { color: var(--text); }
+
+    /* ── Tech stack ── */
+    .tech-grid {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .tech-tag {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      color: var(--text-sec);
+      font-family: var(--mono);
+    }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 48px 0;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <a href="home.html" class="sidebar-logo">
+    <div class="sidebar-logo-title">Valuation <em>DCF</em> · B3</div>
+    <div class="sidebar-logo-sub">Análise fundamentalista</div>
+  </a>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">Ferramentas</div>
+    <a href="home.html" class="sidebar-item active">
+      <span class="sidebar-icon">🏠</span> Home
+    </a>
+    <a href="index.html" class="sidebar-item">
+      <span class="sidebar-icon">📊</span> Calculadora
+    </a>
+    <a href="watchlist.html" class="sidebar-item">
+      <span class="sidebar-icon">📋</span> Meus Valuations
+    </a>
+    <hr class="sidebar-divider">
+    <div class="sidebar-section">Em Breve</div>
+    <div class="sidebar-item-disabled">
+      <span class="sidebar-icon">⚖️</span> Comparativo
+    </div>
+    <div class="sidebar-item-disabled">
+      <span class="sidebar-icon">📈</span> Histórico
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-footer-title">Valuation DCF · B3</div>
+  </div>
+</aside>
+
+<div class="page-wrapper">
+<div class="content">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge">📊 Fluxo de Caixa Descontado · B3</div>
+    <h1 class="hero-title">Encontre o valor<br>intrínseco de uma ação <em>B3</em></h1>
+    <p class="hero-subtitle">
+      Calculadora de Valuation por DCF para ações listadas na B3. Roda 100% local,
+      sem API key, sem cadastro. Ajuste as premissas e descubra se a ação está
+      barata ou cara.
+    </p>
+    <div class="hero-actions">
+      <a href="index.html" class="btn btn-primary">📊 Abrir Calculadora</a>
+      <a href="watchlist.html" class="btn btn-secondary">📋 Meus Valuations</a>
+    </div>
+  </section>
+
+  <!-- O que é DCF -->
+  <section class="section">
+    <h2 class="section-title">O que é o método DCF?</h2>
+    <p class="section-sub">
+      O Fluxo de Caixa Descontado (DCF) é um método de valuation que estima o valor
+      justo de uma empresa projetando seus lucros futuros e trazendo-os a valor presente
+      por uma taxa de desconto. A ideia central é que <strong>um real hoje vale mais
+      do que um real no futuro</strong>.
+    </p>
+
+    <div class="formula-box">
+      <div class="formula-row">
+        <span class="formula-lbl">Taxa de crescimento</span>
+        <span class="formula-eq">=</span>
+        <span class="formula-val">(1 − Payout) × ROE</span>
+      </div>
+      <div class="formula-row">
+        <span class="formula-lbl">VPL de cada fluxo</span>
+        <span class="formula-eq">=</span>
+        <span class="formula-val">CF_ano / (1 + desconto)^ano</span>
+      </div>
+      <div class="formula-row">
+        <span class="formula-lbl">Valor Terminal (Gordon)</span>
+        <span class="formula-eq">=</span>
+        <span class="formula-val">CF_último × (1 + perpetuidade) / (desconto − perpetuidade)</span>
+      </div>
+      <div class="formula-row">
+        <span class="formula-lbl">Preço Teto</span>
+        <span class="formula-eq">=</span>
+        <span class="formula-val">(Σ VPL + VPL do Valor Terminal) / Nº de ações</span>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Funcionalidades -->
+  <section class="section">
+    <h2 class="section-title">Funcionalidades</h2>
+    <p class="section-sub">Tudo que você precisa para uma análise fundamentalista rápida e confiável.</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <div class="feature-title">Busca automática de dados</div>
+        <div class="feature-desc">
+          Digite o ticker e o sistema busca preço, ROE, payout, lucros históricos e
+          número de ações via yfinance.
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚙️</div>
+        <div class="feature-title">Premissas editáveis</div>
+        <div class="feature-desc">
+          Todos os inputs são ajustáveis. O campo de Crescimento é calculado
+          automaticamente mas pode ser sobrescrito manualmente.
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📅</div>
+        <div class="feature-title">Projeção de 3 ou 5 anos</div>
+        <div class="feature-desc">
+          Escolha o horizonte de projeção. Cada ano da tabela é editável
+          individualmente — edite o lucro ou o crescimento diretamente.
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💾</div>
+        <div class="feature-title">Watchlist com preços ao vivo</div>
+        <div class="feature-desc">
+          Salve o preço teto calculado e acompanhe o upside/downside em tempo real
+          com atualização automática a cada 3 minutos.
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💻</div>
+        <div class="feature-title">100% local e offline</div>
+        <div class="feature-desc">
+          Nenhum dado sai do seu computador. Sem cadastro, sem API key,
+          sem dependências de serviço externo.
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">↺</div>
+        <div class="feature-title">Restauração de sessão</div>
+        <div class="feature-desc">
+          O estado completo da análise é salvo automaticamente no navegador e
+          restaurado na próxima vez que você abrir a calculadora.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Como usar -->
+  <section class="section">
+    <h2 class="section-title">Como usar</h2>
+    <p class="section-sub">Em menos de 2 minutos você tem o preço teto de qualquer ação da B3.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <div class="step-title">Inicie o servidor local</div>
+          <div class="step-desc">
+            Execute <code>start.bat</code> (Windows) ou <code>python server.py</code>
+            no terminal. O servidor busca os dados via yfinance na porta 8000.
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <div class="step-title">Busque um ticker</div>
+          <div class="step-desc">
+            Na Calculadora, digite o código da ação (ex: WEGE3, ITUB4, PETR4)
+            e clique em Buscar. Os dados são carregados automaticamente.
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <div class="step-title">Revise e ajuste as premissas</div>
+          <div class="step-desc">
+            Confira ROE, Payout, Lucro Líquido Base, Taxa de Desconto e
+            Crescimento na Perpetuidade. Campos com borda laranja foram alterados
+            manualmente — clique em ↺ para restaurar o valor da API.
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div>
+          <div class="step-title">Analise o Preço Teto</div>
+          <div class="step-desc">
+            O painel esquerdo mostra o Preço Teto (valor intrínseco) e o
+            upside/downside em relação ao preço atual. A tabela DCF detalha
+            cada ano projetado.
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div>
+          <div class="step-title">Salve na Watchlist</div>
+          <div class="step-desc">
+            Clique em "Salvar Preço Teto" para adicionar à Watchlist e acompanhar
+            o upside ao longo do tempo com preços atualizados automaticamente.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Tech stack -->
+  <section class="section">
+    <h2 class="section-title">Tecnologias</h2>
+    <p class="section-sub" style="margin-bottom:16px">
+      Sem frameworks, sem bundlers, sem node_modules. Máxima simplicidade para
+      rodar em qualquer máquina com Python instalado.
+    </p>
+    <div class="tech-grid">
+      <span class="tech-tag">Python 3</span>
+      <span class="tech-tag">yfinance</span>
+      <span class="tech-tag">http.server</span>
+      <span class="tech-tag">HTML5</span>
+      <span class="tech-tag">CSS3</span>
+      <span class="tech-tag">Vanilla JS</span>
+      <span class="tech-tag">localStorage</span>
+    </div>
+  </section>
+
+</div>
+</div><!-- /page-wrapper -->
+
+</body>
+</html>
