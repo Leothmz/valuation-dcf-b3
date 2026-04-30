@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ranking de Ações · B3</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary:   #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary:  #21262d;
+      --bg-hover:     #30363d;
+      --border:       #30363d;
+      --border-muted: #21262d;
+      --text:         #e6edf3;
+      --text-sec:     #8b949e;
+      --text-muted:   #6e7681;
+      --blue:         #58a6ff;
+      --green:        #3fb950;
+      --red:          #f85149;
+      --orange:       #d29922;
+      --purple:       #bc8cff;
+      --mono: 'Cascadia Code','Fira Code','Consolas',monospace;
+    }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────── */
+    .sidebar {
+      width: 56px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      transition: width 0.22s ease;
+    }
+    .sidebar:hover { width: 220px; }
+
+    .sidebar-logo {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      display: block;
+      transition: background .15s;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .sidebar-logo:hover { background: var(--bg-tertiary); }
+    .sidebar-logo-title { display: none; font-size: 15px; font-weight: 700; color: var(--text); }
+    .sidebar-logo-title em { color: var(--blue); font-style: normal; }
+    .sidebar-logo-sub { display: none; font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+    .sidebar-logo-collapsed {
+      font-size: 11px; font-weight: 700;
+      color: var(--blue); text-align: center; padding: 4px 0;
+    }
+    .sidebar:hover .sidebar-logo-title { display: block; }
+    .sidebar:hover .sidebar-logo-sub   { display: block; }
+    .sidebar:hover .sidebar-logo-collapsed { display: none; }
+
+    .sidebar-nav { flex: 1; padding: 8px 0; overflow: hidden; }
+    .sidebar-section {
+      display: none;
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      letter-spacing: .08em; text-transform: uppercase;
+      padding: 10px 14px 4px; white-space: nowrap;
+    }
+    .sidebar:hover .sidebar-section { display: block; }
+
+    .sidebar-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 0; justify-content: center;
+      color: var(--text-sec);
+      text-decoration: none; font-size: 14px;
+      transition: background .15s, color .15s;
+      border-left: 3px solid transparent;
+      white-space: nowrap; overflow: hidden;
+    }
+    .sidebar-item:hover { background: rgba(255,255,255,.04); color: var(--text); }
+    .sidebar-item.active {
+      color: var(--blue); background: rgba(88,166,255,.08);
+      font-weight: 500;
+    }
+    .sidebar:hover .sidebar-item { padding: 8px 14px; justify-content: flex-start; }
+    .sidebar:hover .sidebar-item.active { border-left-color: var(--blue); }
+
+    .sidebar-item-disabled {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 0; justify-content: center;
+      color: var(--text-muted);
+      font-size: 14px; font-style: italic;
+      border-left: 3px solid transparent; cursor: default;
+      white-space: nowrap; overflow: hidden;
+    }
+    .sidebar:hover .sidebar-item-disabled { padding: 8px 14px; justify-content: flex-start; }
+
+    .sidebar-label { flex: 1; display: none; }
+    .sidebar:hover .sidebar-label { display: inline; }
+
+    .sidebar-icon { font-size: 15px; flex-shrink: 0; }
+    .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+    .sidebar-footer { display: none; padding: 14px; border-top: 1px solid var(--border); }
+    .sidebar-footer-title {
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      letter-spacing: .08em; text-transform: uppercase;
+    }
+    .sidebar:hover .sidebar-footer { display: block; }
+
+    /* ── Page wrapper ─────────────────────────────────────────── */
+    .page-wrapper {
+      flex: 1; display: flex; flex-direction: column;
+      min-width: 0; height: 100%; overflow: hidden;
+    }
+
+    /* ── Rank header ──────────────────────────────────────────── */
+    .rank-header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    .rank-title { font-size: 15px; font-weight: 700; }
+    .rank-sub { font-size: 13px; color: var(--text-muted); margin-top: 1px; }
+
+    /* ── Filter panel ─────────────────────────────────────────── */
+    .filter-panel {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px 10px;
+      flex-shrink: 0;
+    }
+    .filter-row {
+      display: flex; gap: 10px; flex-wrap: wrap;
+      align-items: flex-end; margin-bottom: 10px;
+    }
+    .filter-row:last-child { margin-bottom: 0; }
+    .filter-group { display: flex; flex-direction: column; gap: 3px; }
+    .filter-label { font-size: 13px; color: var(--text-muted); font-weight: 500; white-space: nowrap; }
+    .filter-input {
+      background: var(--bg-tertiary); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-size: 14px;
+      padding: 7px 10px; width: 130px; outline: none;
+      font-family: var(--mono);
+    }
+    .filter-input:focus { border-color: var(--blue); }
+    .filter-input.wide { width: 150px; }
+    .filter-select {
+      background: var(--bg-tertiary); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-size: 14px;
+      padding: 7px 10px; outline: none; cursor: pointer;
+      min-width: 130px;
+    }
+    .filter-select:focus { border-color: var(--blue); }
+    .filter-select option { background: var(--bg-tertiary); }
+
+    .filter-section-label {
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      letter-spacing: .08em; text-transform: uppercase;
+      padding-bottom: 6px; display: block;
+    }
+
+    /* Extras toggle */
+    .extras-toggle {
+      width: 100%; background: rgba(88,166,255,.06);
+      border: 1px solid rgba(88,166,255,.18); border-radius: 6px;
+      color: var(--blue); font-size: 12px; padding: 6px 12px;
+      cursor: pointer; text-align: left;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    .extras-toggle:hover { background: rgba(88,166,255,.1); }
+    #filter-extras { overflow: hidden; }
+
+    /* Action buttons */
+    .btn-filter {
+      background: var(--blue); border: none; border-radius: 6px;
+      color: #0d1117; cursor: pointer; font-size: 14px; font-weight: 600;
+      padding: 8px 18px; transition: opacity .15s; white-space: nowrap;
+    }
+    .btn-filter:hover { opacity: .85; }
+    .btn-secondary-action {
+      background: var(--bg-tertiary); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text-sec); cursor: pointer;
+      font-size: 14px; padding: 8px 14px; transition: color .15s, background .15s;
+      white-space: nowrap;
+    }
+    .btn-secondary-action:hover { color: var(--text); background: var(--bg-hover); }
+
+    /* Method dropdown */
+    .method-dropdown-wrap { margin-left: auto; position: relative; }
+    .method-select {
+      background: var(--bg-tertiary); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-size: 14px; font-weight: 500;
+      padding: 8px 32px 8px 12px; cursor: pointer; outline: none;
+    }
+    .method-select:focus { border-color: var(--blue); }
+    .method-select option { background: var(--bg-tertiary); }
+
+    /* Thomaz config button */
+    .btn-thomaz-config {
+      background: rgba(188,140,255,.1); border: 1px solid rgba(188,140,255,.3);
+      border-radius: 6px; color: var(--purple); cursor: pointer;
+      font-size: 14px; padding: 8px 14px; transition: background .15s;
+      white-space: nowrap;
+    }
+    .btn-thomaz-config:hover { background: rgba(188,140,255,.18); }
+
+    /* ── Sector tabs ──────────────────────────────────────────── */
+    .sector-tabs {
+      display: flex; gap: 0; border-bottom: 1px solid var(--border);
+      padding: 0 24px; background: var(--bg-secondary); flex-shrink: 0;
+    }
+    .sector-tab {
+      background: none; border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-sec); cursor: pointer; font-size: 14px;
+      font-weight: 500; padding: 10px 18px;
+      transition: color .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .sector-tab:hover { color: var(--text); }
+    .sector-tab.active { color: var(--text); border-bottom-color: var(--blue); }
+
+    /* ── Table controls bar ───────────────────────────────────── */
+    .table-controls {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 24px; background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border); font-size: 14px;
+      flex-shrink: 0; flex-wrap: wrap;
+    }
+    .table-controls-count { color: var(--text-muted); white-space: nowrap; }
+    .table-controls-count strong { color: var(--text); }
+    .sticky-header-toggle {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--text-sec); cursor: pointer;
+    }
+    .sticky-header-toggle input { cursor: pointer; accent-color: var(--blue); }
+    .search-input {
+      background: var(--bg-tertiary); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-size: 14px;
+      padding: 6px 10px; outline: none; width: 210px;
+      transition: border-color .15s;
+    }
+    .search-input:focus { border-color: var(--blue); }
+    .table-controls-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+    /* Progress */
+    .progress-wrap { display: flex; align-items: center; gap: 8px; }
+    .progress-bar {
+      width: 100px; height: 4px; background: var(--bg-tertiary);
+      border-radius: 2px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: var(--blue);
+      border-radius: 2px; transition: width .3s; width: 0%;
+    }
+    .progress-text { font-size: 12px; color: var(--text-muted); font-family: var(--mono); white-space: nowrap; }
+    .btn-cancel {
+      background: none; border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text-muted);
+      cursor: pointer; font-size: 11px; padding: 3px 7px;
+      transition: color .15s, border-color .15s;
+    }
+    .btn-cancel:hover { color: var(--red); border-color: var(--red); }
+    .btn-load {
+      background: var(--blue); border: none; border-radius: 6px;
+      color: #0d1117; cursor: pointer; font-size: 14px; font-weight: 600;
+      padding: 7px 16px; transition: opacity .15s; white-space: nowrap;
+    }
+    .btn-load:hover { opacity: .85; }
+    .btn-load:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── Scrollable content ───────────────────────────────────── */
+    .rank-content {
+      flex: 1; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+
+    /* ── Table ────────────────────────────────────────────────── */
+    .table-wrap {
+      flex: 1; overflow: auto;
+    }
+    .rank-table {
+      width: 100%; border-collapse: collapse; font-size: 14px;
+    }
+    .rank-table thead {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--bg-secondary);
+    }
+    .rank-table thead.not-sticky { position: static; }
+    .rank-table th {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px; font-weight: 600;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: .04em; white-space: nowrap;
+      user-select: none;
+    }
+    .rank-table th.th-num { text-align: right; }
+    .rank-table th.th-rank { text-align: center; width: 36px; }
+    .th-sortable { cursor: pointer; }
+    .th-sortable:hover { color: var(--text); }
+    .th-sortable.sort-asc::after  { content: ' ↑'; color: var(--blue); }
+    .th-sortable.sort-desc::after { content: ' ↓'; color: var(--blue); }
+
+    /* Valuation column headers */
+    .th-val-bazin   { background: rgba(88,166,255,.08);  color: var(--blue)   !important; }
+    .th-val-graham  { background: rgba(188,140,255,.08); color: var(--purple) !important; }
+    .th-val-lynch   { background: rgba(63,185,80,.08);   color: var(--green)  !important; }
+    .th-val-joel    { background: rgba(210,153,34,.08);  color: var(--orange) !important; }
+
+    .rank-table td {
+      padding: 10px 12px; border-bottom: 1px solid var(--border-muted);
+      vertical-align: middle; white-space: nowrap;
+    }
+    .rank-table tbody tr:last-child td { border-bottom: none; }
+    .rank-table tbody tr:hover td { background: rgba(255,255,255,.03); }
+
+    .td-num { text-align: right; font-family: var(--mono); font-size: 14px; }
+    .td-rank { text-align: center; color: var(--text-muted); font-family: var(--mono); font-size: 14px; font-weight: 700; }
+
+    /* Valuation cells — background tint */
+    .td-val-bazin  { background: rgba(88,166,255,.04); }
+    .td-val-graham { background: rgba(188,140,255,.04); }
+    .td-val-lynch  { background: rgba(63,185,80,.04); }
+    .td-val-joel   { background: rgba(210,153,34,.04); }
+
+    .ticker-cell { display: flex; align-items: center; gap: 6px; }
+    .ticker-link {
+      color: var(--blue); text-decoration: none;
+      font-weight: 600; font-family: var(--mono); font-size: 14px;
+      transition: opacity .15s;
+    }
+    .ticker-link:hover { opacity: .75; text-decoration: underline; }
+    .fav-btn {
+      color: var(--text-muted); cursor: pointer; font-size: 15px; line-height: 1;
+      transition: color .15s; background: none; border: none; padding: 0; flex-shrink: 0;
+    }
+    .fav-btn:hover { color: var(--orange); }
+    .fav-btn.active { color: var(--orange); }
+
+    /* Colors */
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .neutral { color: var(--text-sec); }
+
+    /* Score badge */
+    .score-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 38px; height: 24px; padding: 0 7px;
+      border-radius: 4px; font-size: 14px; font-weight: 700;
+      font-family: var(--mono);
+    }
+    .score-ex   { background: rgba(63,185,80,.15);  color: var(--green); }
+    .score-good { background: rgba(88,166,255,.12); color: var(--blue); }
+    .score-ok   { background: rgba(210,153,34,.12); color: var(--orange); }
+    .score-bad  { background: rgba(248,81,73,.12);  color: var(--red); }
+
+    /* Empty / loading */
+    .empty-row {
+      text-align: center; padding: 48px !important;
+      color: var(--text-muted); font-size: 14px;
+    }
+
+    /* ── Modal ────────────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.6);
+      z-index: 1000; display: flex; align-items: center; justify-content: center;
+    }
+    .modal-box {
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px; min-width: 500px; max-width: 640px;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 20px;
+    }
+    .modal-title { font-size: 16px; font-weight: 700; }
+    .modal-close {
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 20px; line-height: 1;
+      transition: color .15s;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    /* Sliders inside modal */
+    .weight-grid { display: flex; gap: 16px; flex-wrap: wrap; }
+    .weight-item { display: flex; flex-direction: column; gap: 5px; min-width: 200px; flex: 1; }
+    .weight-item label {
+      font-size: 12px; color: var(--text-sec);
+      display: flex; justify-content: space-between;
+    }
+    .weight-val { font-family: var(--mono); color: var(--text); font-weight: 600; }
+    .weight-slider {
+      -webkit-appearance: none; width: 100%; height: 4px;
+      background: var(--bg-tertiary); border-radius: 2px;
+      cursor: pointer; outline: none;
+    }
+    .weight-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: var(--purple);
+      cursor: pointer; border: 2px solid var(--bg-primary);
+    }
+    .config-note {
+      font-size: 12px; color: var(--text-muted); margin-top: 16px; line-height: 1.6;
+    }
+
+    /* Saved filters popup */
+    .saved-filters-popup {
+      position: absolute; top: 100%; right: 0; margin-top: 4px;
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 8px; min-width: 220px; z-index: 200;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+      padding: 8px 0;
+    }
+    .saved-filters-popup-header {
+      padding: 6px 14px 8px; font-size: 12px; font-weight: 600;
+      color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em;
+      border-bottom: 1px solid var(--border); margin-bottom: 4px;
+    }
+    .saved-filter-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 14px; cursor: pointer; font-size: 14px; color: var(--text-sec);
+      transition: background .15s, color .15s;
+    }
+    .saved-filter-item:hover { background: rgba(255,255,255,.04); color: var(--text); }
+    .saved-filter-del {
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 13px; padding: 0 2px;
+      transition: color .15s;
+    }
+    .saved-filter-del:hover { color: var(--red); }
+    .saved-filter-save-row {
+      padding: 8px 14px 4px; border-top: 1px solid var(--border); margin-top: 4px;
+      display: flex; gap: 6px;
+    }
+    .saved-filter-name-input {
+      flex: 1; background: var(--bg-tertiary); border: 1px solid var(--border);
+      border-radius: 5px; color: var(--text); font-size: 12px;
+      padding: 4px 8px; outline: none;
+    }
+    .saved-filter-name-input:focus { border-color: var(--blue); }
+    .saved-filter-save-btn {
+      background: var(--blue); border: none; border-radius: 5px;
+      color: #0d1117; cursor: pointer; font-size: 12px;
+      font-weight: 600; padding: 4px 10px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar ─────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <a href="home.html" class="sidebar-logo">
+    <div class="sidebar-logo-title">Valuation <em>DCF</em> · B3</div>
+    <div class="sidebar-logo-sub">Análise fundamentalista</div>
+    <div class="sidebar-logo-collapsed">DCF·B3</div>
+  </a>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">Ferramentas</div>
+    <a href="home.html" class="sidebar-item">
+      <span class="sidebar-icon">🏠</span>
+      <span class="sidebar-label">Home</span>
+    </a>
+    <a href="index.html" class="sidebar-item">
+      <span class="sidebar-icon">📊</span>
+      <span class="sidebar-label">Calculadora</span>
+    </a>
+    <a href="watchlist.html" class="sidebar-item">
+      <span class="sidebar-icon">📋</span>
+      <span class="sidebar-label">Meus Valuations</span>
+    </a>
+    <a href="ranking.html" class="sidebar-item active">
+      <span class="sidebar-icon">🏆</span>
+      <span class="sidebar-label">Ranking de Ações</span>
+    </a>
+    <hr class="sidebar-divider">
+    <div class="sidebar-section">Em Breve</div>
+    <div class="sidebar-item-disabled">
+      <span class="sidebar-icon">⚖️</span>
+      <span class="sidebar-label">Comparativo</span>
+    </div>
+    <div class="sidebar-item-disabled">
+      <span class="sidebar-icon">📈</span>
+      <span class="sidebar-label">Histórico</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-footer-title">Valuation DCF · B3</div>
+  </div>
+</aside>
+
+<!-- ── Page wrapper ───────────────────────────────────────────── -->
+<div class="page-wrapper">
+
+  <!-- Header -->
+  <header class="rank-header">
+    <div>
+      <div class="rank-title">Ranking de Ações</div>
+      <div class="rank-sub">Screening fundamentalista · B3 · dados via yfinance</div>
+    </div>
+  </header>
+
+  <!-- Filter panel -->
+  <div class="filter-panel" id="filter-panel">
+
+    <!-- Linha 1: Taxas de cálculo -->
+    <div class="filter-row">
+      <span class="filter-section-label" style="align-self:center;margin-bottom:0;padding-bottom:0;">Taxas de cálculo:</span>
+      <div class="filter-group">
+        <label class="filter-label">Taxa Bazin (%)</label>
+        <input type="number" id="fi-taxa-bazin" class="filter-input" value="6.00" min="1" max="20" step="0.5">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Múltiplo Graham</label>
+        <input type="number" id="fi-taxa-graham" class="filter-input" value="22.50" min="10" max="40" step="0.5">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Ref. Peter Lynch</label>
+        <input type="number" id="fi-taxa-lynch" class="filter-input" value="3.00" min="0.5" max="10" step="0.5">
+      </div>
+    </div>
+
+    <!-- Linha 2: Filtros principais -->
+    <div class="filter-row">
+      <div class="filter-group">
+        <label class="filter-label">P/L Mín.</label>
+        <input type="number" id="fi-pl-min" class="filter-input" value="3.00" step="0.5">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">P/L Máx.</label>
+        <input type="number" id="fi-pl-max" class="filter-input" value="15.00" step="0.5">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">DL/EBITDA Mín.</label>
+        <input type="number" id="fi-de-min" class="filter-input" placeholder="—" step="0.5">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">DL/EBITDA Máx.</label>
+        <input type="number" id="fi-de-max" class="filter-input" value="5.00" step="0.5">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">DY Mín. (%)</label>
+        <input type="number" id="fi-dy-min" class="filter-input" value="6.00" min="0" max="50" step="0.5">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Mostrar</label>
+        <select id="fi-show" class="filter-select">
+          <option value="todos">Todos</option>
+          <option value="favoritos">Favoritos</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Filtros extras (collapsible) -->
+    <button class="extras-toggle" id="extras-toggle">
+      <span id="extras-toggle-label">Clique para expandir filtros extras</span>
+      <span id="extras-toggle-icon">▶</span>
+    </button>
+    <div id="filter-extras" style="display:none">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label class="filter-label">Margem Líquida Mín. (%)</label>
+          <input type="number" id="fi-margem-min" class="filter-input" value="10.00" min="0" max="100" step="1">
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">ROE Mín. (%)</label>
+          <input type="number" id="fi-roe-min" class="filter-input" value="10.00" min="0" max="100" step="1">
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Liquidez Mín. (R$)</label>
+          <input type="number" id="fi-liquidez-min" class="filter-input wide" value="1000000" min="0" step="100000">
+        </div>
+      </div>
+    </div>
+
+    <!-- Linha de ações -->
+    <div class="filter-row" style="margin-top:6px;margin-bottom:0">
+      <button class="btn-filter" id="apply-filters-btn">Filtrar</button>
+      <div style="position:relative">
+        <button class="btn-secondary-action" id="saved-filters-btn">Filtros Salvos</button>
+        <div class="saved-filters-popup" id="saved-filters-popup" style="display:none"></div>
+      </div>
+      <button class="btn-secondary-action" id="reset-filters-btn">↺ Reiniciar filtros</button>
+      <button class="btn-secondary-action" id="clear-filters-btn">✕ Limpar filtros</button>
+      <div id="thomaz-config-wrap" style="display:none">
+        <button class="btn-thomaz-config" id="thomaz-config-btn">⚙ Configurações (Método Thomaz)</button>
+      </div>
+      <div class="method-dropdown-wrap">
+        <select id="method-select" class="method-select">
+          <option value="thomaz">Rank Thomaz</option>
+          <option value="bazin">Rank Bazin</option>
+          <option value="graham">Rank Graham</option>
+          <option value="lynch">Rank Peter Lynch</option>
+          <option value="joel">Rank Joel</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sector tabs -->
+  <div class="sector-tabs">
+    <button class="sector-tab active" data-sector="">Todos</button>
+    <button class="sector-tab" data-sector="insurance">Seguradoras</button>
+    <button class="sector-tab" data-sector="banks">Bancos</button>
+  </div>
+
+  <!-- Table controls bar -->
+  <div class="table-controls">
+    <span class="table-controls-count" id="table-count-label">
+      Mostrando <strong id="tc-showing">—</strong> de <strong id="tc-total">—</strong> ações
+    </span>
+    <label class="sticky-header-toggle">
+      <input type="checkbox" id="sticky-header-cb" checked>
+      Fixar cabeçalho
+    </label>
+    <input type="text" id="search-input" class="search-input" placeholder="🔍 Pesquisar...">
+    <div class="table-controls-right">
+      <div class="progress-wrap" id="progress-wrap" style="display:none">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <span class="progress-text" id="progress-text">0/0</span>
+        <button class="btn-cancel" id="cancel-btn">✕</button>
+      </div>
+      <button class="btn-load" id="load-btn">⟳ Carregar Ranking</button>
+    </div>
+  </div>
+
+  <!-- Scrollable content: table only -->
+  <div class="rank-content">
+    <div class="table-wrap">
+      <table class="rank-table" id="rank-table">
+        <thead id="rank-thead">
+          <tr>
+            <th colspan="8" style="background:transparent;border-bottom:none;padding:3px 0"></th>
+            <th colspan="4" style="text-align:center;background:rgba(88,166,255,.05);font-size:10px;color:var(--text-muted);border-bottom:none;padding:3px 0;letter-spacing:.08em;text-transform:uppercase">Valuations</th>
+          </tr>
+          <tr>
+            <th class="th-rank">#</th>
+            <th>Ticker</th>
+            <th class="th-num th-sortable" data-col="price">Cotação</th>
+            <th class="th-num th-sortable" data-col="dy">Dividend Yield</th>
+            <th class="th-num th-sortable" data-col="pl">P/L</th>
+            <th class="th-num th-sortable" data-col="margemLiquida">Margem Líquida</th>
+            <th class="th-num th-sortable" data-col="roe">ROE</th>
+            <th class="th-num th-sortable" data-col="dividaLiquidaEbit">DL/EBITDA</th>
+            <th class="th-num th-sortable th-val-bazin" data-col="bazinFairPrice">Valuation Bazin</th>
+            <th class="th-num th-sortable th-val-graham" data-col="grahamFairPrice">Valuation Graham</th>
+            <th class="th-num th-sortable th-val-lynch" data-col="lynchVal">Valuation P. Lynch</th>
+            <th class="th-num th-sortable th-val-joel" data-col="joelVal">Valuation Joel</th>
+          </tr>
+        </thead>
+        <tbody id="rank-tbody">
+          <tr><td colspan="12" class="empty-row">Clique em "Carregar Ranking" para começar</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /page-wrapper -->
+
+<!-- ── Modal: Configurações Thomaz ────────────────────────────── -->
+<div class="modal-backdrop" id="thomaz-modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Configurações · Método Thomaz (Rank Thomaz)</div>
+      <button class="modal-close" id="thomaz-modal-close">×</button>
+    </div>
+    <div class="weight-grid">
+      <div class="weight-item">
+        <label>DY <span class="weight-val" id="wv-dy">25</span>%</label>
+        <input type="range" id="w-dy" min="0" max="50" value="25" class="weight-slider">
+      </div>
+      <div class="weight-item">
+        <label>P/L <span class="weight-val" id="wv-pl">15</span>%</label>
+        <input type="range" id="w-pl" min="0" max="50" value="15" class="weight-slider">
+      </div>
+      <div class="weight-item">
+        <label>Margem Líquida <span class="weight-val" id="wv-ml">20</span>%</label>
+        <input type="range" id="w-ml" min="0" max="50" value="20" class="weight-slider">
+      </div>
+      <div class="weight-item">
+        <label>ROE <span class="weight-val" id="wv-roe">20</span>%</label>
+        <input type="range" id="w-roe" min="0" max="50" value="20" class="weight-slider">
+      </div>
+      <div class="weight-item">
+        <label>ROIC <span class="weight-val" id="wv-roic">10</span>%</label>
+        <input type="range" id="w-roic" min="0" max="50" value="10" class="weight-slider">
+      </div>
+      <div class="weight-item">
+        <label>Dívida/EBIT <span class="weight-val" id="wv-de">10</span>%</label>
+        <input type="range" id="w-de" min="0" max="50" value="10" class="weight-slider">
+      </div>
+    </div>
+    <div class="config-note">
+      Score composto por ranking ponderado em cada métrica. Pesos são normalizados automaticamente.
+      Empresas com liquidez abaixo do mínimo configurado são excluídas.
+      Ações com prejuízo (P/L negativo) recebem penalização máxima na métrica P/L.
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── A: Constantes ──────────────────────────────────────────────────
+const CACHE_TTL  = 30 * 60 * 1000;
+const BATCH_SIZE = 4;
+const LS_SETTINGS  = 'ranking_settings';
+const LS_FAVORITES = 'ranking_favorites';
+const LS_CACHE     = 'ranking_cache_v2';
+
+const DEFAULT_TICKERS = [
+  // Bancos & holding financeira
+  'ITUB4','ITUB3','BBDC4','BBDC3','BBAS3','SANB11','BRSR6','BMGB4','BPAC11','ABCB4','ITSA4',
+  // Seguros
+  'BBSE3','PSSA3','CXSE3','WIZC3','IRBR3','SULA11','BRBI11',
+  // Outros financeiros
+  'B3SA3','CIEL3','RIAA3','BRAP4','GGPS3',
+  // Energia elétrica
+  'EGIE3','TAEE11','TRPL4','EQTL3','CMIG4','CMIG3','CPFE3','ELET3','ELET6','CPLE6',
+  'ENEV3','ENBR3','ISAE4','AURE3','ALUP11','ENGI11','NEOE3','CESP6','EQPA3',
+  // Gás
+  'CGAS3',
+  // Saneamento
+  'SBSP3','SAPR11','CSMG3',
+  // Petróleo & gás
+  'PETR4','PETR3','PRIO3','CSAN3','RECV3','RRRP3','VBBR3','RAIZ4','BRAV3',
+  // Mineração & siderurgia
+  'VALE3','GGBR4','GGBR3','CSNA3','CMIN3','GOAU4','USIM5','BRKM5','CBAV3',
+  // Papel & celulose
+  'SUZB3','KLBN11',
+  // Consumo básico
+  'ABEV3','MDIA3','SMTO3','BEEF3','SLCE3','AGRO3','TTEN3','CAML3','NATU3',
+  // Consumo cíclico
+  'RADL3','RENT3','LREN3','SOMA3','ARZZ3','VIVA3','GRND3','CGRA4',
+  'NTCO3','MGLU3','PETZ3','CRFB3','ASAI3','PCAR3','SMFT3',
+  'ALPA4','AZZA3','CEAB3','LJQQ3',
+  // Proteína animal
+  'JBSS3','BRFS3','MRFG3',
+  // Construção civil
+  'CYRE3','MRVE3','DIRR3','EVEN3','CURY3','PLPL3','TRIS3','TEND3',
+  'LAVV3','JHSF3','HBOR3','GFSA3','MDNE3','EZTC3','MTRE3',
+  // Saúde & farmácia
+  'RDOR3','FLRY3','HAPV3','ODPV3','HYPE3','DASA3','QUAL3','PNVL3','ONCO3','PARD3','BLAU3',
+  // Tecnologia & serviços
+  'TOTS3','VIVT3','TIMS3','LWSA3','POSI3','DESK3','VLID3',
+  // Industrial
+  'WEGE3','RAIL3','EMBR3','TUPY3','FRAS3','ROMI3','MYPK3','LEVE3','VULC3','SHUL4','KEPL3',
+  'POMO4','DXCO3','RAPT4',
+  // Locação & distribuição
+  'UGPA3','MOVI3','VAMO3','ARML3',
+  // Shoppings & imóveis
+  'MULT3','IGTI11','ALOS3','LOGG3','BRPR3',
+  // Educação
+  'COGN3','YDUQ3','SEER3','ANIM3','VTRU3',
+  // Transporte & logística
+  'GOLL4','AZUL4','CCRO3','ECOR3','JSLG3','SIMH3','HBSA3','SEQL3','TGMA3','LOGN3',
+  // Ambiental
+  'AMBP3','ORVR3',
+  // Agro
+  'RANI3','JALL3','SOJA3','VITT3',
+  // Química
+  'UNIP6',
+  // Turismo
+  'CVCB3',
+];
+
+const SECTOR_PT = {
+  'Financial Services':    'Financeiro',
+  'Utilities':             'Energia',
+  'Energy':                'Petróleo & Gás',
+  'Basic Materials':       'Mat. Básicos',
+  'Consumer Defensive':    'Consumo Básico',
+  'Consumer Cyclical':     'Consumo Cíclico',
+  'Healthcare':            'Saúde',
+  'Technology':            'Tecnologia',
+  'Industrials':           'Industrial',
+  'Communication Services':'Comunicação',
+  'Real Estate':           'Imóveis',
+};
+
+// ── B: Formatadores ────────────────────────────────────────────────
+const fmtBRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:2 });
+const fmtPct = new Intl.NumberFormat('pt-BR', { style:'percent', maximumFractionDigits:1 });
+
+function fBRL(v) { return v == null ? '—' : fmtBRL.format(v); }
+function fPct(v) { return v == null ? '—' : fmtPct.format(v); }
+function fNum(v, d=1) {
+  if (v == null || isNaN(v)) return '—';
+  return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: d }).format(v);
+}
+function fLiq(v) {
+  if (v == null || v === 0) return '—';
+  if (v >= 1e9) return 'R$ ' + fNum(v / 1e9, 1) + 'B';
+  if (v >= 1e6) return 'R$ ' + fNum(v / 1e6, 1) + 'M';
+  return 'R$ ' + fNum(v / 1e3, 0) + 'K';
+}
+function trunc(s, n) {
+  if (!s) return '—';
+  return s.length > n ? s.slice(0, n) + '…' : s;
+}
+function sectorPt(s) { return SECTOR_PT[s] || s || '—'; }
+
+// ── C: Estado global ───────────────────────────────────────────────
+const DEFAULT_FILTER_CONFIG = {
+  taxaBazin:   0.06,
+  taxaGraham:  22.5,
+  taxaLynch:   3.0,
+  plMin:       3,
+  plMax:       15,
+  deMin:       null,
+  deMax:       5,
+  dyMin:       0.06,
+  margemMin:   0.10,
+  roeMin:      0.10,
+  liquidezMin: 1_000_000,
+  show:        'todos',
+  sectorTab:   '',
+  extrasOpen:  false,
+};
+
+const S = {
+  method:    'thomaz',
+  stocks:    [],
+  ranked:    [],
+  filtered:  [],
+  loading:   false,
+  abortLoad: false,
+  loadDone:  0,
+  loadTotal: 0,
+  sortCol:   'score',
+  sortDir:   'desc',
+  filterConfig: { ...DEFAULT_FILTER_CONFIG },
+  savedFilters: [],
+  weights: { dy:25, pl:15, margemLiquida:20, roe:20, roic:10, dividaLiquidaEbit:10 },
+  tickers: [...DEFAULT_TICKERS],
+  favorites: new Set(),
+  cache: {},
+  // display-only filters (not persisted to filterConfig, applied on top)
+  _search: '',
+};
+
+// ── D: Engines de ranking ──────────────────────────────────────────
+
+function _rankMetric(stocks, key, dir) {
+  const valid = stocks.filter(s => s[key] != null && !isNaN(s[key]));
+  valid.sort((a, b) => dir === 'desc' ? b[key] - a[key] : a[key] - b[key]);
+  const map = {};
+  valid.forEach((s, i) => { map[s.ticker] = i + 1; });
+  return map;
+}
+
+function _scoreFromRank(rank, n) {
+  if (n < 2) return 50;
+  return Math.round(100 * (1 - (rank - 1) / (n - 1)));
+}
+
+function calcThomazScore(stocks, weights) {
+  if (stocks.length === 0) return [];
+  const w = weights;
+  const totalW = Object.values(w).reduce((a, b) => a + b, 0) || 1;
+  const n = stocks.length;
+
+  const plPos = stocks.filter(s => s.pl != null && s.pl > 0);
+  const rankPL_map = _rankMetric(plPos, 'pl', 'asc');
+  const rankDY   = _rankMetric(stocks, 'dy',                'desc');
+  const rankML   = _rankMetric(stocks, 'margemLiquida',     'desc');
+  const rankDE   = _rankMetric(stocks, 'dividaLiquidaEbit', 'asc');
+  const rankROE  = _rankMetric(stocks, 'roe',               'desc');
+  const rankROIC = _rankMetric(stocks, 'roic',              'desc');
+
+  const wl = getWatchlistMap();
+
+  return stocks.map(s => {
+    const t   = s.ticker;
+    const bad = n + 1;
+    const rankPL = rankPL_map[t] || bad;
+
+    const wr = (
+      (rankDY[t]   || bad) * w.dy +
+      rankPL              * w.pl +
+      (rankML[t]   || bad) * w.margemLiquida +
+      (rankDE[t]   || bad) * w.dividaLiquidaEbit +
+      (rankROE[t]  || bad) * w.roe +
+      (rankROIC[t] || bad) * w.roic
+    ) / totalW;
+
+    const score     = _scoreFromRank(wr, n + 1);
+    const fairPrice = wl[t] ? wl[t].fairPrice : null;
+    return { ...s, score, fairPrice };
+  });
+}
+
+function calcBazinScore(stocks, taxaBazin) {
+  if (stocks.length === 0) return [];
+  const rate = taxaBazin ?? S.filterConfig.taxaBazin;
+  const scored = stocks.map(s => {
+    const fairPrice = s.dpa ? s.dpa / rate : null;
+    const upside    = fairPrice ? (fairPrice - s.price) / fairPrice : null;
+    return { ...s, fairPrice, _upside: upside };
+  });
+  const valid = scored.filter(s => s._upside != null);
+  if (valid.length < 2) {
+    return scored.map(s => ({ ...s, score: s._upside != null ? 50 : null }));
+  }
+  const rankMap = {};
+  [...valid].sort((a, b) => b._upside - a._upside)
+    .forEach((s, i) => { rankMap[s.ticker] = i + 1; });
+  const nv = valid.length;
+  return scored.map(s => ({
+    ...s,
+    score: rankMap[s.ticker] ? _scoreFromRank(rankMap[s.ticker], nv) : null,
+  }));
+}
+
+function calcGrahamScore(stocks, multiplier) {
+  if (stocks.length === 0) return [];
+  const mult = multiplier ?? S.filterConfig.taxaGraham;
+  return stocks.map(s => {
+    const { lpa, vpa, pl, pvp, dy, margemLiquida, roe } = s;
+    let fairPrice = null;
+    if (lpa > 0 && vpa > 0) fairPrice = Math.sqrt(mult * lpa * vpa);
+
+    let score = 0;
+    if (pl  != null && pl  > 0 && pl  < 15)  score += 20;
+    else if (pl != null && pl > 0 && pl < 25) score += 10;
+    if (pvp != null && pvp > 0 && pvp < 1.5) score += 20;
+    else if (pvp != null && pvp > 0 && pvp < 2.5) score += 10;
+    if (pl != null && pvp != null && pl > 0 && pvp > 0 && pl * pvp < 22.5) score += 10;
+    if (dy  != null && dy  > 0)               score += 10;
+    if (lpa != null && lpa > 0)               score += 10;
+    if (vpa != null && vpa > 0)               score += 10;
+    if (margemLiquida != null && margemLiquida > 0.05) score += 10;
+    if (roe != null && roe > 0.15)            score += 10;
+    return { ...s, fairPrice, score };
+  });
+}
+
+function calcLynchScore(stocks) {
+  if (stocks.length === 0) return [];
+  return stocks.map(s => {
+    const { lpa, pl, crescimentoLucros, margemLiquida, roe, pegRatio } = s;
+
+    let fairPrice = null;
+    if (lpa && crescimentoLucros > 0) {
+      fairPrice = lpa * (crescimentoLucros * 100);
+    }
+
+    const peg = pegRatio ?? (pl && crescimentoLucros > 0 ? pl / (crescimentoLucros * 100) : null);
+
+    let score = 0;
+    if (peg != null) {
+      if      (peg < 0.5) score += 50;
+      else if (peg < 1.0) score += 35;
+      else if (peg < 1.5) score += 20;
+      else                score += 5;
+    }
+    if (crescimentoLucros != null && crescimentoLucros > 0.20) score += 20;
+    else if (crescimentoLucros != null && crescimentoLucros > 0.10) score += 10;
+    if (margemLiquida != null && margemLiquida > 0.10) score += 15;
+    if (roe           != null && roe           > 0.20) score += 15;
+
+    return { ...s, fairPrice, score, _peg: peg };
+  });
+}
+
+function calcJoelScore(stocks) {
+  if (stocks.length === 0) return [];
+  const n = stocks.length;
+  const bad = n + 1;
+
+  // Rank earnings yield: lower PL = higher EY = better (rank 1)
+  const plPos = stocks.filter(s => s.pl != null && s.pl > 0);
+  const rankEY_map = _rankMetric(plPos, 'pl', 'asc'); // lower PL = rank 1
+
+  // Rank ROIC: higher is better
+  const rankROIC_map = _rankMetric(stocks, 'roic', 'desc');
+
+  return stocks.map(s => {
+    const rEY   = rankEY_map[s.ticker]   || bad;
+    const rROIC = rankROIC_map[s.ticker] || bad;
+    const combined = (rEY + rROIC) / 2;
+    const score = _scoreFromRank(combined, n + 1);
+    const earningsYield = (s.pl != null && s.pl > 0) ? (1 / s.pl) : null;
+    return { ...s, score, fairPrice: null, _earningsYield: earningsYield };
+  });
+}
+
+// ── E: Watchlist (leitura apenas) ─────────────────────────────────
+function getWatchlistMap() {
+  try { return JSON.parse(localStorage.getItem('dcf_watchlist') || '{}'); }
+  catch { return {}; }
+}
+
+// ── F: Camada de API ───────────────────────────────────────────────
+function getCached(ticker) {
+  const e = S.cache[ticker];
+  if (e && Date.now() - e.ts < CACHE_TTL) return e.data;
+  return null;
+}
+
+async function fetchFundamentals(ticker) {
+  const cached = getCached(ticker);
+  if (cached) return cached;
+  const res = await fetch(`/api/fundamentals/${ticker}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.code) throw new Error(data.error || data.code);
+  S.cache[ticker] = { data, ts: Date.now() };
+  return data;
+}
+
+async function loadRanking() {
+  if (S.loading) return;
+  S.loading   = true;
+  S.abortLoad = false;
+  S.stocks    = [];
+  S.loadDone  = 0;
+  S.loadTotal = S.tickers.length;
+
+  setLoadBtn(true);
+  showProgress(true);
+  renderTable();
+
+  for (let i = 0; i < S.tickers.length; i += BATCH_SIZE) {
+    if (S.abortLoad) break;
+
+    const batch   = S.tickers.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(batch.map(t => fetchFundamentals(t)));
+
+    results.forEach((r, idx) => {
+      S.loadDone++;
+      if (r.status === 'fulfilled') {
+        S.stocks.push(r.value);
+      } else {
+        console.warn(`[ranking] falha ${batch[idx]}:`, r.reason?.message);
+      }
+    });
+
+    updateProgressUI();
+    applyPipeline();
+    renderTable();
+    saveCache();
+  }
+
+  S.loading = false;
+  setLoadBtn(false);
+  showProgress(false);
+  persistSettings();
+}
+
+// ── G: Pipeline de ranking ─────────────────────────────────────────
+function deduplicateByCompany(stocks) {
+  const map = new Map();
+  for (const s of stocks) {
+    const key = s.ticker.slice(0, 4);
+    const prev = map.get(key);
+    if (!prev || (s.liquidezMedia ?? 0) > (prev.liquidezMedia ?? 0)) {
+      map.set(key, s);
+    }
+  }
+  return [...map.values()];
+}
+
+function applyPipeline() {
+  const fc = S.filterConfig;
+
+  // 1. Filtrar por liquidez
+  let stocks = S.stocks.filter(s =>
+    (s.liquidezMedia ?? 0) >= fc.liquidezMin
+  );
+
+  // 1b. Deduplicar: mesma empresa com múltiplos tickers → mantém o de maior liquidez
+  stocks = deduplicateByCompany(stocks);
+
+  // 2. Pré-filtros (P/L, DL/EBITDA, DY, Margem, ROE)
+  stocks = applyPreFilters(stocks);
+
+  // 3. Calcular valuations de TODOS os métodos para as colunas
+  const bazinScored  = calcBazinScore(stocks, fc.taxaBazin);
+  const grahamScored = calcGrahamScore(stocks, fc.taxaGraham);
+  const lynchScored  = calcLynchScore(stocks);
+  const joelScored   = calcJoelScore(stocks);
+
+  // Mesclar campos de valuation calculados em cada stock
+  const stocksWithVals = stocks.map((s, i) => ({
+    ...s,
+    bazinFairPrice: bazinScored[i]?.fairPrice ?? null,
+    grahamFairPrice: grahamScored[i]?.fairPrice ?? null,
+    lynchVal: lynchScored[i]?._peg ?? null,
+    joelVal:  joelScored[i]?._earningsYield ?? null,
+  }));
+
+  // 4. Calcular score do método ativo para ranking
+  let ranked;
+  switch (S.method) {
+    case 'thomaz': ranked = calcThomazScore(stocksWithVals, S.weights); break;
+    case 'bazin':  ranked = calcBazinScore(stocksWithVals, fc.taxaBazin); break;
+    case 'graham': ranked = calcGrahamScore(stocksWithVals, fc.taxaGraham); break;
+    case 'lynch':  ranked = calcLynchScore(stocksWithVals); break;
+    case 'joel':   ranked = calcJoelScore(stocksWithVals); break;
+    default:       ranked = stocksWithVals.map(s => ({ ...s, score: null }));
+  }
+
+  // Preservar campos bazinFairPrice/grahamFairPrice/lynchVal/joelVal no ranked
+  ranked = ranked.map((s, i) => ({
+    bazinFairPrice:  stocksWithVals[i]?.bazinFairPrice  ?? s.bazinFairPrice  ?? null,
+    grahamFairPrice: stocksWithVals[i]?.grahamFairPrice ?? s.grahamFairPrice ?? null,
+    lynchVal:        stocksWithVals[i]?.lynchVal        ?? s.lynchVal        ?? null,
+    joelVal:         stocksWithVals[i]?.joelVal         ?? s.joelVal         ?? null,
+    ...s,
+  }));
+
+  // 5. Ordenar e atribuir rank
+  ranked = sortStocks(ranked);
+  ranked.forEach((s, i) => s.rank = i + 1);
+
+  S.ranked = ranked;
+  applyDisplayFilters();
+}
+
+function applyPreFilters(stocks) {
+  const fc = S.filterConfig;
+  return stocks.filter(s => {
+    // P/L
+    if (fc.plMin != null && (s.pl == null || s.pl < fc.plMin)) return false;
+    if (fc.plMax != null && (s.pl == null || s.pl > fc.plMax)) return false;
+    // DL/EBITDA
+    if (fc.deMin != null && (s.dividaLiquidaEbit == null || s.dividaLiquidaEbit < fc.deMin)) return false;
+    if (fc.deMax != null && (s.dividaLiquidaEbit == null || s.dividaLiquidaEbit > fc.deMax)) return false;
+    // DY
+    if (fc.dyMin != null && fc.dyMin > 0 && (s.dy == null || s.dy < fc.dyMin)) return false;
+    // Margem Líquida
+    if (fc.margemMin != null && fc.margemMin > 0 && (s.margemLiquida == null || s.margemLiquida < fc.margemMin)) return false;
+    // ROE
+    if (fc.roeMin != null && fc.roeMin > 0 && (s.roe == null || s.roe < fc.roeMin)) return false;
+    return true;
+  });
+}
+
+function applyDisplayFilters() {
+  let stocks = [...S.ranked];
+  const fc = S.filterConfig;
+
+  // Pesquisa
+  if (S._search) {
+    const q = S._search.toLowerCase();
+    stocks = stocks.filter(s =>
+      s.ticker.toLowerCase().includes(q) ||
+      (s.name || '').toLowerCase().includes(q)
+    );
+  }
+
+  // Favoritos
+  if (fc.show === 'favoritos') {
+    stocks = stocks.filter(s => S.favorites.has(s.ticker));
+  }
+
+  // Aba de setor
+  if (fc.sectorTab === 'insurance') {
+    stocks = stocks.filter(s => (s.subsetor || '').toLowerCase().includes('insurance'));
+  } else if (fc.sectorTab === 'banks') {
+    stocks = stocks.filter(s => (s.subsetor || '').toLowerCase().includes('bank'));
+  }
+
+  S.filtered = stocks;
+}
+
+function sortStocks(stocks) {
+  const col = S.sortCol;
+  const dir = S.sortDir === 'asc' ? 1 : -1;
+  return [...stocks].sort((a, b) => {
+    let va = a[col], vb = b[col];
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === 'string') return dir * va.localeCompare(vb, 'pt-BR');
+    return dir * (va - vb);
+  });
+}
+
+// ── H: Renderização ────────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('rank-tbody');
+  if (!tbody) return;
+
+  const totalRanked = S.ranked.length;
+  const showing     = S.filtered.length;
+
+  document.getElementById('tc-showing').textContent = showing;
+  document.getElementById('tc-total').textContent   = totalRanked || S.stocks.length || '—';
+
+  if (S.filtered.length === 0) {
+    const msg = S.loading && S.stocks.length === 0
+      ? 'Carregando dados…'
+      : S.stocks.length === 0
+        ? 'Clique em "Carregar Ranking" para começar'
+        : 'Nenhuma ação encontrada com os filtros atuais';
+    tbody.innerHTML = `<tr><td colspan="12" class="empty-row">${msg}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = S.filtered.map(renderRow).join('');
+}
+
+function renderRow(s) {
+  const isFav  = S.favorites.has(s.ticker);
+  const sc     = s.score;
+
+  const deVal   = s.dividaLiquidaEbit;
+  const deClass = deVal == null ? '' : deVal > 3 ? ' neg' : deVal < 0 ? ' pos' : '';
+
+  const scoreClass = sc == null ? ''
+                   : sc >= 75 ? 'score-ex'
+                   : sc >= 50 ? 'score-good'
+                   : sc >= 25 ? 'score-ok'
+                   : 'score-bad';
+
+  const bazinFP  = s.bazinFairPrice;
+  const grahamFP = s.grahamFairPrice;
+  const lynchPEG = s.lynchVal;
+  const joelEY   = s.joelVal;
+
+  return `<tr>
+    <td class="td-rank">
+      ${sc != null ? `<span class="score-badge ${scoreClass}">${s.rank ?? '—'}</span>` : (s.rank ?? '—')}
+    </td>
+    <td>
+      <div class="ticker-cell">
+        <button class="fav-btn${isFav ? ' active' : ''}" data-ticker="${s.ticker}" title="Favorito">★</button>
+        <a href="index.html?ticker=${s.ticker}" class="ticker-link">${s.ticker}</a>
+      </div>
+    </td>
+    <td class="td-num">${fBRL(s.price)}</td>
+    <td class="td-num">${s.dy != null ? fPct(s.dy) : '—'}</td>
+    <td class="td-num${s.pl != null && s.pl < 0 ? ' neg' : ''}">${fNum(s.pl, 1)}</td>
+    <td class="td-num">${s.margemLiquida != null ? fPct(s.margemLiquida) : '—'}</td>
+    <td class="td-num${s.roe != null && s.roe > 0.2 ? ' pos' : ''}">${s.roe != null ? fPct(s.roe) : '—'}</td>
+    <td class="td-num${deClass}">${fNum(deVal, 2)}</td>
+    <td class="td-num td-val-bazin">${bazinFP ? fBRL(bazinFP) : '—'}</td>
+    <td class="td-num td-val-graham">${grahamFP ? fBRL(grahamFP) : '—'}</td>
+    <td class="td-num td-val-lynch">${lynchPEG != null ? fNum(lynchPEG, 2) : '—'}</td>
+    <td class="td-num td-val-joel">${joelEY != null ? fPct(joelEY) : '—'}</td>
+  </tr>`;
+}
+
+function showProgress(show) {
+  document.getElementById('progress-wrap').style.display = show ? 'flex' : 'none';
+}
+
+function updateProgressUI() {
+  const pct = S.loadTotal ? (S.loadDone / S.loadTotal * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${S.loadDone}/${S.loadTotal}`;
+}
+
+function setLoadBtn(loading) {
+  const btn = document.getElementById('load-btn');
+  btn.disabled = loading;
+  btn.textContent = loading ? 'Carregando…' : '⟳ Carregar Ranking';
+}
+
+function updateSortHeaders() {
+  document.querySelectorAll('.th-sortable').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.col === S.sortCol) {
+      th.classList.add(S.sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
+// ── I: Persistência ────────────────────────────────────────────────
+function persistSettings() {
+  try {
+    localStorage.setItem(LS_SETTINGS, JSON.stringify({
+      method:       S.method,
+      sortCol:      S.sortCol,
+      sortDir:      S.sortDir,
+      weights:      S.weights,
+      filterConfig: S.filterConfig,
+      savedFilters: S.savedFilters,
+    }));
+  } catch (_) {}
+}
+
+function restoreSettings() {
+  try {
+    const raw = localStorage.getItem(LS_SETTINGS);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.method)       S.method  = d.method;
+    if (d.sortCol)      S.sortCol = d.sortCol;
+    if (d.sortDir)      S.sortDir = d.sortDir;
+    if (d.weights)      Object.assign(S.weights, d.weights);
+    if (d.filterConfig) Object.assign(S.filterConfig, d.filterConfig);
+    if (d.savedFilters) S.savedFilters = d.savedFilters;
+  } catch (_) {}
+}
+
+function saveFavorites() {
+  try { localStorage.setItem(LS_FAVORITES, JSON.stringify([...S.favorites])); } catch (_) {}
+}
+
+function restoreFavorites() {
+  try {
+    const raw = localStorage.getItem(LS_FAVORITES);
+    if (raw) S.favorites = new Set(JSON.parse(raw));
+  } catch (_) {}
+}
+
+function saveCache() {
+  try {
+    const slim = {};
+    Object.entries(S.cache).forEach(([t, e]) => {
+      if (Date.now() - e.ts < CACHE_TTL) slim[t] = e;
+    });
+    localStorage.setItem(LS_CACHE, JSON.stringify(slim));
+  } catch (_) {}
+}
+
+function restoreCache() {
+  try {
+    const raw = localStorage.getItem(LS_CACHE);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      Object.entries(parsed).forEach(([t, e]) => {
+        if (Date.now() - e.ts < CACHE_TTL) S.cache[t] = e;
+      });
+    }
+  } catch (_) {}
+}
+
+// ── J: Sync de UI <-> estado ───────────────────────────────────────
+function syncWeightsFromUI() {
+  S.weights.dy                = +document.getElementById('w-dy').value;
+  S.weights.pl                = +document.getElementById('w-pl').value;
+  S.weights.margemLiquida     = +document.getElementById('w-ml').value;
+  S.weights.roe               = +document.getElementById('w-roe').value;
+  S.weights.roic              = +document.getElementById('w-roic').value;
+  S.weights.dividaLiquidaEbit = +document.getElementById('w-de').value;
+}
+
+function syncFilterInputsFromState() {
+  const fc = S.filterConfig;
+  document.getElementById('fi-taxa-bazin').value  = (fc.taxaBazin * 100).toFixed(2);
+  document.getElementById('fi-taxa-graham').value = fc.taxaGraham.toFixed(2);
+  document.getElementById('fi-taxa-lynch').value  = fc.taxaLynch.toFixed(2);
+  document.getElementById('fi-pl-min').value      = fc.plMin  ?? '';
+  document.getElementById('fi-pl-max').value      = fc.plMax  ?? '';
+  document.getElementById('fi-de-min').value      = fc.deMin  ?? '';
+  document.getElementById('fi-de-max').value      = fc.deMax  ?? '';
+  document.getElementById('fi-dy-min').value      = fc.dyMin != null ? (fc.dyMin * 100).toFixed(2) : '';
+  document.getElementById('fi-show').value        = fc.show || 'todos';
+  document.getElementById('fi-margem-min').value  = fc.margemMin != null ? (fc.margemMin * 100).toFixed(2) : '';
+  document.getElementById('fi-roe-min').value     = fc.roeMin    != null ? (fc.roeMin    * 100).toFixed(2) : '';
+  document.getElementById('fi-liquidez-min').value = fc.liquidezMin ?? '';
+
+  // Extras open state
+  const extrasEl = document.getElementById('filter-extras');
+  const lblEl    = document.getElementById('extras-toggle-label');
+  const iconEl   = document.getElementById('extras-toggle-icon');
+  if (fc.extrasOpen) {
+    extrasEl.style.display = '';
+    lblEl.textContent  = 'Clique para recolher filtros extras';
+    iconEl.textContent = '▼';
+  } else {
+    extrasEl.style.display = 'none';
+    lblEl.textContent  = 'Clique para expandir filtros extras';
+    iconEl.textContent = '▶';
+  }
+}
+
+function readFilterInputsToState() {
+  const fc = S.filterConfig;
+  const getNum = (id) => {
+    const v = document.getElementById(id).value.trim();
+    return v === '' ? null : parseFloat(v);
+  };
+
+  fc.taxaBazin  = (getNum('fi-taxa-bazin')  ?? 6)   / 100;
+  fc.taxaGraham = getNum('fi-taxa-graham')  ?? 22.5;
+  fc.taxaLynch  = getNum('fi-taxa-lynch')   ?? 3.0;
+  fc.plMin      = getNum('fi-pl-min');
+  fc.plMax      = getNum('fi-pl-max');
+  fc.deMin      = getNum('fi-de-min');
+  fc.deMax      = getNum('fi-de-max');
+  const dyVal   = getNum('fi-dy-min');
+  fc.dyMin      = dyVal != null ? dyVal / 100 : null;
+  fc.show       = document.getElementById('fi-show').value;
+  const mgVal   = getNum('fi-margem-min');
+  fc.margemMin  = mgVal != null ? mgVal / 100 : null;
+  const roeVal  = getNum('fi-roe-min');
+  fc.roeMin     = roeVal != null ? roeVal / 100 : null;
+  fc.liquidezMin = getNum('fi-liquidez-min') ?? 0;
+}
+
+function syncUIFromState() {
+  // Method select
+  document.getElementById('method-select').value = S.method;
+
+  // Thomaz config button visibility
+  document.getElementById('thomaz-config-wrap').style.display =
+    S.method === 'thomaz' ? '' : 'none';
+
+  // Sliders
+  document.getElementById('w-dy').value   = S.weights.dy;
+  document.getElementById('w-pl').value   = S.weights.pl;
+  document.getElementById('w-ml').value   = S.weights.margemLiquida;
+  document.getElementById('w-roe').value  = S.weights.roe;
+  document.getElementById('w-roic').value = S.weights.roic;
+  document.getElementById('w-de').value   = S.weights.dividaLiquidaEbit;
+  document.getElementById('wv-dy').textContent   = S.weights.dy;
+  document.getElementById('wv-pl').textContent   = S.weights.pl;
+  document.getElementById('wv-ml').textContent   = S.weights.margemLiquida;
+  document.getElementById('wv-roe').textContent  = S.weights.roe;
+  document.getElementById('wv-roic').textContent = S.weights.roic;
+  document.getElementById('wv-de').textContent   = S.weights.dividaLiquidaEbit;
+
+  syncFilterInputsFromState();
+  updateSortHeaders();
+  syncSectorTabs();
+}
+
+function syncSectorTabs() {
+  document.querySelectorAll('.sector-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.sector === S.filterConfig.sectorTab);
+  });
+}
+
+// ── K: Saved filters popup ─────────────────────────────────────────
+function renderSavedFiltersPopup() {
+  const popup = document.getElementById('saved-filters-popup');
+  const items = S.savedFilters.length
+    ? S.savedFilters.map((f, i) => `
+        <div class="saved-filter-item">
+          <span onclick="loadSavedFilter(${i})">${f.name}</span>
+          <button class="saved-filter-del" onclick="deleteSavedFilter(${i})">✕</button>
+        </div>`).join('')
+    : '<div style="padding:6px 14px;font-size:12px;color:var(--text-muted)">Nenhum filtro salvo</div>';
+
+  popup.innerHTML = `
+    <div class="saved-filters-popup-header">Filtros Salvos</div>
+    ${items}
+    <div class="saved-filter-save-row">
+      <input type="text" class="saved-filter-name-input" id="sf-name-input" placeholder="Nome do filtro…">
+      <button class="saved-filter-save-btn" onclick="saveCurrentFilter()">Salvar</button>
+    </div>`;
+}
+
+function loadSavedFilter(idx) {
+  const f = S.savedFilters[idx];
+  if (!f) return;
+  Object.assign(S.filterConfig, f.config);
+  syncFilterInputsFromState();
+  closeSavedFiltersPopup();
+  rerender();
+}
+
+function deleteSavedFilter(idx) {
+  S.savedFilters.splice(idx, 1);
+  persistSettings();
+  renderSavedFiltersPopup();
+}
+
+function saveCurrentFilter() {
+  const nameEl = document.getElementById('sf-name-input');
+  const name   = nameEl ? nameEl.value.trim() : '';
+  if (!name) return;
+  readFilterInputsToState();
+  S.savedFilters.push({ name, config: { ...S.filterConfig } });
+  persistSettings();
+  renderSavedFiltersPopup();
+}
+
+function closeSavedFiltersPopup() {
+  document.getElementById('saved-filters-popup').style.display = 'none';
+}
+
+// ── L: Event handlers ──────────────────────────────────────────────
+function rerender() {
+  applyPipeline();
+  renderTable();
+  persistSettings();
+}
+
+// Load button
+document.getElementById('load-btn').addEventListener('click', () => {
+  const cached = S.tickers.filter(t => getCached(t)).length;
+  if (cached > 0 && S.stocks.length > 0) {
+    if (!confirm(`${cached} ações estão em cache (válido por 30 min). Recarregar do servidor?`)) {
+      applyPipeline();
+      renderTable();
+      return;
+    }
+    S.cache = {};
+    localStorage.removeItem(LS_CACHE);
+  }
+  loadRanking();
+});
+
+document.getElementById('cancel-btn').addEventListener('click', () => {
+  S.abortLoad = true;
+});
+
+// Method select
+document.getElementById('method-select').addEventListener('change', e => {
+  S.method = e.target.value;
+  document.getElementById('thomaz-config-wrap').style.display =
+    S.method === 'thomaz' ? '' : 'none';
+  if (S.stocks.length > 0) rerender();
+  persistSettings();
+});
+
+// Apply filters button
+document.getElementById('apply-filters-btn').addEventListener('click', () => {
+  readFilterInputsToState();
+  rerender();
+});
+
+// Reset filters
+document.getElementById('reset-filters-btn').addEventListener('click', () => {
+  Object.assign(S.filterConfig, DEFAULT_FILTER_CONFIG);
+  syncFilterInputsFromState();
+  rerender();
+});
+
+// Clear filters — zero all filter values, keep calculation rates
+document.getElementById('clear-filters-btn').addEventListener('click', () => {
+  S.filterConfig.plMin      = null;
+  S.filterConfig.plMax      = null;
+  S.filterConfig.deMin      = null;
+  S.filterConfig.deMax      = null;
+  S.filterConfig.dyMin      = null;
+  S.filterConfig.margemMin  = null;
+  S.filterConfig.roeMin     = null;
+  S.filterConfig.liquidezMin = 0;
+  S.filterConfig.show       = 'todos';
+  syncFilterInputsFromState();
+  rerender();
+});
+
+// Extras toggle
+document.getElementById('extras-toggle').addEventListener('click', () => {
+  S.filterConfig.extrasOpen = !S.filterConfig.extrasOpen;
+  syncFilterInputsFromState();
+  persistSettings();
+});
+
+// Saved filters popup toggle
+document.getElementById('saved-filters-btn').addEventListener('click', e => {
+  const popup = document.getElementById('saved-filters-popup');
+  if (popup.style.display === 'none') {
+    renderSavedFiltersPopup();
+    popup.style.display = '';
+    e.stopPropagation();
+  } else {
+    closeSavedFiltersPopup();
+  }
+});
+
+document.addEventListener('click', e => {
+  const popup = document.getElementById('saved-filters-popup');
+  if (!popup.contains(e.target) && e.target.id !== 'saved-filters-btn') {
+    closeSavedFiltersPopup();
+  }
+});
+
+// Thomaz modal
+document.getElementById('thomaz-config-btn').addEventListener('click', () => {
+  document.getElementById('thomaz-modal').style.display = 'flex';
+});
+document.getElementById('thomaz-modal-close').addEventListener('click', () => {
+  document.getElementById('thomaz-modal').style.display = 'none';
+});
+document.getElementById('thomaz-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('thomaz-modal')) {
+    document.getElementById('thomaz-modal').style.display = 'none';
+  }
+});
+
+// Sliders Thomaz
+['dy','pl','ml','roe','roic','de'].forEach(key => {
+  const el = document.getElementById('w-' + key);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    document.getElementById('wv-' + key).textContent = el.value;
+    syncWeightsFromUI();
+    if (S.stocks.length > 0) rerender();
+  });
+});
+
+// Sector tabs
+document.querySelectorAll('.sector-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    S.filterConfig.sectorTab = btn.dataset.sector;
+    syncSectorTabs();
+    applyDisplayFilters();
+    renderTable();
+    persistSettings();
+  });
+});
+
+// Sticky header toggle
+document.getElementById('sticky-header-cb').addEventListener('change', e => {
+  const thead = document.getElementById('rank-thead');
+  if (e.target.checked) {
+    thead.classList.remove('not-sticky');
+  } else {
+    thead.classList.add('not-sticky');
+  }
+});
+
+// Search input
+let _searchTimer = null;
+document.getElementById('search-input').addEventListener('input', e => {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => {
+    S._search = e.target.value.trim();
+    applyDisplayFilters();
+    renderTable();
+  }, 250);
+});
+
+// Table: sort + fav (event delegation)
+document.getElementById('rank-table').addEventListener('click', e => {
+  const th = e.target.closest('.th-sortable');
+  if (th) {
+    const col = th.dataset.col;
+    if (S.sortCol === col) {
+      S.sortDir = S.sortDir === 'desc' ? 'asc' : 'desc';
+    } else {
+      S.sortCol = col;
+      S.sortDir = col === 'dividaLiquidaEbit' || col === 'pl' ? 'asc' : 'desc';
+    }
+    updateSortHeaders();
+    rerender();
+    return;
+  }
+
+  const favBtn = e.target.closest('.fav-btn');
+  if (favBtn) {
+    const ticker = favBtn.dataset.ticker;
+    if (S.favorites.has(ticker)) {
+      S.favorites.delete(ticker);
+      favBtn.classList.remove('active');
+    } else {
+      S.favorites.add(ticker);
+      favBtn.classList.add('active');
+    }
+    saveFavorites();
+  }
+});
+
+// ── M: Init ────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  restoreSettings();
+  restoreFavorites();
+  restoreCache();
+  syncUIFromState();
+
+  // Expansão futura: buscar lista dinâmica (inclui FIIs) via /api/b3-tickers
+  // try {
+  //   const res = await fetch('/api/b3-tickers');
+  //   if (res.ok) {
+  //     const data = await res.json();
+  //     if (Array.isArray(data.tickers) && data.tickers.length > 0) {
+  //       S.tickers = data.tickers;
+  //     }
+  //   }
+  // } catch (e) {
+  //   console.warn('[b3-tickers] usando lista padrão:', e.message);
+  // }
+
+  // Se há cache válido, carrega automaticamente
+  const cachedTickers = S.tickers.filter(t => getCached(t));
+  if (cachedTickers.length > 0) {
+    cachedTickers.forEach(t => {
+      const d = getCached(t);
+      if (d) S.stocks.push(d);
+    });
+    applyPipeline();
+    renderTable();
+  }
+});
+</script>
+</body>
+</html>

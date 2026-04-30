@@ -22,7 +22,10 @@ Informe um ticker, ajuste as premissas e obtenha o **preço teto (valor intríns
 - **Premissas personalizáveis** — taxa de desconto (WACC), crescimento na perpetuidade, payout, ROE, taxa de crescimento
 - **Botão restaurar** — reverte qualquer campo ao valor original da API com um clique
 - **Watchlist** — salva múltiplos valuations e exibe cotações ao vivo com upside calculado em tempo real
-- **Persistência local** — sessão e watchlist salvas no `localStorage`; nada vai para nenhum servidor
+- **Ranking fundamentalista** — screening de ~130 ações da B3 com 5 métodos: Thomaz/GD, Bazin, Graham, Peter Lynch e Joel Greenblatt (Magic Formula)
+- **Filtros avançados** — filtre por P/L, DY mínimo, Dívida/EBITDA, Margem Líquida, ROE e liquidez; salve e reutilize conjuntos de filtros
+- **Favoritos** — marque ações com ★ para acompanhá-las separadamente no ranking
+- **Persistência local** — sessão, watchlist e cache do ranking salvos no `localStorage`; nada vai para nenhum servidor
 - **Zero dependências de frontend** — HTML + CSS + JS vanilla, sem npm, sem build
 
 ---
@@ -69,12 +72,10 @@ Acesse no browser: **http://localhost:8000**
 
 ## Fluxo de Uso
 
-1. **Home** — clique em "Calculadora DCF" ou "Meus Valuations"
-2. **Calculadora** — digite o ticker (ex: `WEGE3`, `PETR4`, `ITUB4`) e pressione Enter
-3. Os dados são preenchidos automaticamente; ajuste as premissas se necessário
-4. O preço teto é calculado em tempo real conforme você edita
-5. Clique em **"Salvar Preço Teto"** para adicionar à watchlist
-6. **Watchlist** — acompanhe todos os valuations com preços atualizados a cada 3 minutos
+1. **Home** — ponto de entrada com links para todas as ferramentas
+2. **Calculadora DCF** — digite o ticker (ex: `WEGE3`, `PETR4`, `ITUB4`) e pressione Enter; ajuste as premissas; salve o preço teto
+3. **Watchlist** — acompanhe todos os valuations salvos com preços atualizados a cada 3 minutos
+4. **Ranking de Ações** — carregue os dados fundamentalistas de ~130 tickers da B3, aplique filtros e escolha o método de ranking
 
 ---
 
@@ -118,7 +119,8 @@ Preço Teto = EV / Número de Ações
 valuation-dcf-b3/
 ├── index.html      — Calculadora DCF (HTML + CSS + JS em arquivo único)
 ├── watchlist.html  — Lista de valuations salvos com preços ao vivo
-├── home.html       — Página inicial
+├── ranking.html    — Ranking e screening fundamentalista (5 métodos)
+├── home.html       — Página inicial com navegação
 ├── server.py       — Servidor HTTP local + API de dados via yfinance
 ├── start.bat       — Atalho Windows para iniciar o servidor
 └── README.md
@@ -128,35 +130,18 @@ valuation-dcf-b3/
 
 ## API Local
 
-O servidor expõe um endpoint de dados:
+O servidor expõe três endpoints:
 
-```
-GET /api/quote/<TICKER>
-```
+| Endpoint | Uso |
+|----------|-----|
+| `GET /api/quote/<TICKER>` | Dados para a calculadora DCF (preço, ROE, Payout, histórico de LL) |
+| `GET /api/fundamentals/<TICKER>` | Dados estendidos para o ranking (P/L, P/VP, margens, DY, DPA, LPA, VPA…) |
+| `GET /api/b3-tickers` | Lista de tickers da B3 usada pelo ranking |
 
 **Exemplo:**
 ```bash
 curl http://localhost:8000/api/quote/WEGE3
-```
-
-**Resposta:**
-```json
-{
-  "ticker": "WEGE3",
-  "name": "WEG S.A.",
-  "price": 35.50,
-  "changePercent": 0.012,
-  "roe": 0.28,
-  "payout": 0.35,
-  "sharesOutstanding": 4000000000,
-  "netIncomeHistory": [
-    { "year": 2023, "netIncome": 4200000000 }
-  ],
-  "marketCap": 142000000000,
-  "dividendYield": 0.018,
-  "fiftyTwoWeekHigh": 42.10,
-  "fiftyTwoWeekLow": 28.30
-}
+curl http://localhost:8000/api/fundamentals/WEGE3
 ```
 
 O servidor adiciona `.SA` automaticamente aos tickers brasileiros.

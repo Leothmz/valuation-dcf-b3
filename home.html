@@ -28,8 +28,8 @@
       background: var(--bg-primary);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      font-size: 14px;
-      line-height: 1.5;
+      font-size: 15px;
+      line-height: 1.6;
       height: 100vh;
       overflow: hidden;
       display: flex;
@@ -37,7 +37,7 @@
 
     /* ── Sidebar ── */
     .sidebar {
-      width: 220px;
+      width: 56px;
       background: var(--bg-secondary);
       border-right: 1px solid var(--border);
       display: flex;
@@ -45,61 +45,84 @@
       flex-shrink: 0;
       height: 100%;
       overflow-y: auto;
+      overflow-x: hidden;
+      transition: width 0.22s ease;
     }
+    .sidebar:hover { width: 220px; }
     .sidebar-logo {
-      padding: 16px;
+      padding: 14px 16px;
       border-bottom: 1px solid var(--border);
       text-decoration: none;
       display: block;
       transition: background .15s;
+      white-space: nowrap;
+      overflow: hidden;
     }
     .sidebar-logo:hover { background: var(--bg-tertiary); }
-    .sidebar-logo-title { font-size: 15px; font-weight: 700; color: var(--text); }
+    .sidebar-logo-title { display: none; font-size: 15px; font-weight: 700; color: var(--text); }
     .sidebar-logo-title em { color: var(--blue); font-style: normal; }
-    .sidebar-logo-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
-    .sidebar-nav { flex: 1; padding: 8px 0; }
+    .sidebar-logo-sub { display: none; font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+    .sidebar-logo-collapsed { font-size: 11px; font-weight: 700; color: var(--blue); text-align: center; padding: 4px 0; }
+    .sidebar:hover .sidebar-logo-title { display: block; }
+    .sidebar:hover .sidebar-logo-sub { display: block; }
+    .sidebar:hover .sidebar-logo-collapsed { display: none; }
+    .sidebar-nav { flex: 1; padding: 8px 0; overflow: hidden; }
     .sidebar-section {
-      font-size: 10px;
+      display: none;
+      font-size: 11px;
       font-weight: 600;
       color: var(--text-muted);
       letter-spacing: .08em;
       text-transform: uppercase;
       padding: 10px 14px 4px;
+      white-space: nowrap;
     }
+    .sidebar:hover .sidebar-section { display: block; }
     .sidebar-item {
       display: flex;
       align-items: center;
       gap: 9px;
-      padding: 7px 14px;
+      padding: 8px 0;
+      justify-content: center;
       color: var(--text-sec);
       text-decoration: none;
-      font-size: 13px;
+      font-size: 14px;
       transition: background .15s, color .15s;
       border-left: 3px solid transparent;
+      white-space: nowrap;
+      overflow: hidden;
     }
     .sidebar-item:hover { background: rgba(255,255,255,.04); color: var(--text); }
     .sidebar-item.active {
       color: var(--blue);
       background: rgba(88,166,255,.08);
-      border-left-color: var(--blue);
       font-weight: 500;
     }
+    .sidebar:hover .sidebar-item { padding: 7px 14px; justify-content: flex-start; }
+    .sidebar:hover .sidebar-item.active { border-left-color: var(--blue); }
     .sidebar-item-disabled {
       display: flex;
       align-items: center;
       gap: 9px;
-      padding: 7px 14px;
+      padding: 8px 0;
+      justify-content: center;
       color: var(--text-muted);
-      font-size: 13px;
+      font-size: 14px;
       font-style: italic;
       border-left: 3px solid transparent;
       cursor: default;
+      white-space: nowrap;
+      overflow: hidden;
     }
-    .sidebar-icon { font-size: 14px; flex-shrink: 0; }
+    .sidebar:hover .sidebar-item-disabled { padding: 8px 14px; justify-content: flex-start; }
+    .sidebar-label { display: none; }
+    .sidebar:hover .sidebar-label { display: inline; }
+    .sidebar-icon { font-size: 15px; flex-shrink: 0; }
     .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
-    .sidebar-footer { padding: 14px; border-top: 1px solid var(--border); }
+    .sidebar-footer { display: none; padding: 14px; border-top: 1px solid var(--border); }
+    .sidebar:hover .sidebar-footer { display: block; }
     .sidebar-footer-title {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 600;
       color: var(--text-muted);
       letter-spacing: .08em;
@@ -136,9 +159,9 @@
       border: 1px solid rgba(88,166,255,.25);
       border-radius: 20px;
       color: var(--blue);
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 500;
-      padding: 4px 12px;
+      padding: 5px 14px;
       margin-bottom: 20px;
     }
     .hero-title {
@@ -212,8 +235,8 @@
     }
     .feature-card:hover { border-color: var(--blue); }
     .feature-icon { font-size: 24px; margin-bottom: 10px; }
-    .feature-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
-    .feature-desc { font-size: 13px; color: var(--text-sec); line-height: 1.6; }
+    .feature-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .feature-desc { font-size: 14px; color: var(--text-sec); line-height: 1.6; }
 
     /* ── Steps ── */
     .steps { display: flex; flex-direction: column; gap: 12px; }
@@ -241,8 +264,8 @@
       flex-shrink: 0;
       margin-top: 1px;
     }
-    .step-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
-    .step-desc { font-size: 13px; color: var(--text-sec); line-height: 1.6; }
+    .step-title { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+    .step-desc { font-size: 14px; color: var(--text-sec); line-height: 1.6; }
 
     /* ── Formula box ── */
     .formula-box {
@@ -255,10 +278,10 @@
       display: flex;
       align-items: baseline;
       gap: 12px;
-      padding: 8px 0;
+      padding: 9px 0;
       border-bottom: 1px solid var(--border-muted);
       font-family: var(--mono);
-      font-size: 13px;
+      font-size: 14px;
     }
     .formula-row:last-child { border-bottom: none; }
     .formula-lbl { color: var(--text-sec); min-width: 200px; font-family: inherit; }
@@ -296,29 +319,33 @@
 </head>
 <body>
 
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
   <a href="home.html" class="sidebar-logo">
     <div class="sidebar-logo-title">Valuation <em>DCF</em> · B3</div>
     <div class="sidebar-logo-sub">Análise fundamentalista</div>
+    <div class="sidebar-logo-collapsed">DCF·B3</div>
   </a>
   <nav class="sidebar-nav">
     <div class="sidebar-section">Ferramentas</div>
     <a href="home.html" class="sidebar-item active">
-      <span class="sidebar-icon">🏠</span> Home
+      <span class="sidebar-icon">🏠</span><span class="sidebar-label"> Home</span>
     </a>
     <a href="index.html" class="sidebar-item">
-      <span class="sidebar-icon">📊</span> Calculadora
+      <span class="sidebar-icon">📊</span><span class="sidebar-label"> Calculadora</span>
     </a>
     <a href="watchlist.html" class="sidebar-item">
-      <span class="sidebar-icon">📋</span> Meus Valuations
+      <span class="sidebar-icon">📋</span><span class="sidebar-label"> Meus Valuations</span>
+    </a>
+    <a href="ranking.html" class="sidebar-item">
+      <span class="sidebar-icon">🏆</span><span class="sidebar-label"> Ranking de Ações</span>
     </a>
     <hr class="sidebar-divider">
     <div class="sidebar-section">Em Breve</div>
     <div class="sidebar-item-disabled">
-      <span class="sidebar-icon">⚖️</span> Comparativo
+      <span class="sidebar-icon">⚖️</span><span class="sidebar-label"> Comparativo</span>
     </div>
     <div class="sidebar-item-disabled">
-      <span class="sidebar-icon">📈</span> Histórico
+      <span class="sidebar-icon">📈</span><span class="sidebar-label"> Histórico</span>
     </div>
   </nav>
   <div class="sidebar-footer">
