@@ -4,30 +4,53 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Meus Valuations · DCF B3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    * { transition: border-color .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease; }
 
     :root {
-      --bg-primary:   #0d1117;
-      --bg-secondary: #161b22;
-      --bg-tertiary:  #21262d;
-      --bg-hover:     #30363d;
-      --border:       #30363d;
-      --border-muted: #21262d;
-      --text:         #e6edf3;
-      --text-sec:     #8b949e;
-      --text-muted:   #6e7681;
-      --blue:         #58a6ff;
-      --green:        #3fb950;
-      --red:          #f85149;
-      --orange:       #d29922;
-      --mono: 'Cascadia Code','Fira Code','Consolas',monospace;
+      --bg-0:       #060910;
+      --bg-1:       #0b0f17;
+      --bg-2:       #111827;
+      --bg-3:       #1a2233;
+      --bg-4:       #1f2a3f;
+      --border:      #1e2d42;
+      --border-muted:#151e2d;
+      --border-glow: rgba(6,182,212,.25);
+      --text:        #f0f4f8;
+      --text-sec:    #94a3b8;
+      --text-muted:  #4a5568;
+      --cyan:        #06b6d4;
+      --cyan-dim:    rgba(6,182,212,.12);
+      --cyan-glow:   rgba(6,182,212,.08);
+      --green:       #10b981;
+      --green-dim:   rgba(16,185,129,.12);
+      --red:         #ef4444;
+      --red-dim:     rgba(239,68,68,.12);
+      --amber:       #f59e0b;
+      --amber-dim:   rgba(245,158,11,.12);
+      --purple:      #8b5cf6;
+      --purple-dim:  rgba(139,92,246,.12);
+      --font-ui:    'Inter', -apple-system, system-ui, sans-serif;
+      --font-mono:  'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+      --r-sm:  6px;
+      --r-md:  10px;
+      --r-lg:  14px;
+      --r-xl:  20px;
+      --shadow-sm:  0 1px 3px rgba(0,0,0,.4);
+      --shadow-md:  0 4px 16px rgba(0,0,0,.5);
+      --shadow-lg:  0 8px 32px rgba(0,0,0,.6);
+      --glow-cyan:  0 0 20px rgba(6,182,212,.15);
+      --glow-green: 0 0 20px rgba(16,185,129,.15);
     }
 
     body {
-      background: var(--bg-primary);
+      background: var(--bg-1);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-family: var(--font-ui);
       font-size: 15px;
       line-height: 1.6;
       height: 100vh;
@@ -37,7 +60,7 @@
 
     /* ── Header ── */
     .header {
-      background: var(--bg-secondary);
+      background: var(--bg-2);
       border-bottom: 1px solid var(--border);
       padding: 10px 24px;
       display: flex;
@@ -47,56 +70,50 @@
       top: 0;
       z-index: 100;
     }
-    .logo { font-size: 15px; font-weight: 700; white-space: nowrap; color: var(--text); }
-    .logo em { color: var(--blue); font-style: normal; }
-
-    .nav { display: flex; gap: 2px; margin-left: 8px; }
-    .nav-link {
-      color: var(--text-sec);
-      text-decoration: none;
-      font-size: 13px;
-      padding: 5px 12px;
-      border-radius: 6px;
-      transition: background .15s, color .15s;
-    }
-    .nav-link:hover { background: var(--bg-tertiary); color: var(--text); }
-    .nav-link.active { color: var(--text); background: var(--bg-tertiary); font-weight: 500; }
 
     .header-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 
     .btn {
-      background: var(--blue);
+      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
       border: none;
-      border-radius: 6px;
-      color: #0d1117;
+      border-radius: var(--r-md);
+      color: #060910;
       cursor: pointer;
       font-size: 13px;
       font-weight: 600;
-      padding: 6px 14px;
+      font-family: var(--font-ui);
+      padding: 7px 16px;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      transition: opacity .15s;
       white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(6,182,212,.2);
     }
-    .btn:hover { opacity: .85; }
-    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(6,182,212,.3); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
     .btn-ghost {
       background: none;
       border: 1px solid var(--border);
       color: var(--text-sec);
+      box-shadow: none;
     }
-    .btn-ghost:hover { background: var(--bg-tertiary); color: var(--text); opacity: 1; }
+    .btn-ghost:hover { background: var(--bg-3); color: var(--text); box-shadow: none; opacity: 1; }
 
     /* ── Notifications ── */
     #notifications { padding: 0 24px; }
     .notif {
       display: flex; align-items: center; gap: 8px;
-      padding: 8px 12px; border-radius: 6px; margin: 6px 0; font-size: 13px;
+      padding: 10px 16px; border-radius: var(--r-md); margin: 6px 0; font-size: 13px;
+      backdrop-filter: blur(8px);
+      animation: notifIn .2s ease;
     }
-    .notif-error { background: rgba(248,81,73,.12); border: 1px solid rgba(248,81,73,.3); color: var(--red); }
-    .notif-info  { background: rgba(88,166,255,.12); border: 1px solid rgba(88,166,255,.3); color: var(--blue); }
+    @keyframes notifIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .notif-error { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25); color: #f87171; }
+    .notif-info  { background: rgba(6,182,212,.1); border: 1px solid rgba(6,182,212,.25); color: #22d3ee; }
     .notif-close { margin-left: auto; background: none; border: none; color: inherit; cursor: pointer; font-size: 16px; padding: 0; opacity: .7; }
     .notif-close:hover { opacity: 1; }
 
@@ -107,47 +124,47 @@
       display: flex;
       align-items: flex-end;
       justify-content: space-between;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
       gap: 16px;
       flex-wrap: wrap;
     }
-    .page-title { font-size: 23px; font-weight: 700; }
-    .page-sub { font-size: 14px; color: var(--text-muted); margin-top: 3px; }
+    .page-title { font-size: 26px; font-weight: 700; }
+    .page-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 
     /* ── Toolbar ── */
     .toolbar {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
       flex-wrap: wrap;
     }
     .filter-input {
-      background: var(--bg-secondary);
+      background: var(--bg-2);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: var(--r-md);
       color: var(--text);
       font-size: 13px;
-      padding: 6px 12px;
+      font-family: var(--font-ui);
+      padding: 7px 14px;
       outline: none;
-      width: 220px;
-      transition: border-color .15s;
+      width: 240px;
     }
-    .filter-input:focus { border-color: var(--blue); }
+    .filter-input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(6,182,212,.06); }
     .filter-input::placeholder { color: var(--text-muted); }
-    .refresh-meta { font-size: 13px; color: var(--text-muted); margin-left: auto; }
+    .refresh-meta { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 
     /* ── Table ── */
-    .table-wrap { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .table-wrap { border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-md); }
     .wl-table { width: 100%; border-collapse: collapse; }
 
     .wl-table thead th {
-      background: var(--bg-secondary);
+      background: var(--bg-2);
       border-bottom: 1px solid var(--border);
-      color: var(--text-sec);
-      font-size: 12px;
+      color: var(--text-muted);
+      font-size: 11px;
       font-weight: 600;
-      letter-spacing: .05em;
+      letter-spacing: .1em;
       padding: 12px 16px;
       text-align: right;
       text-transform: uppercase;
@@ -160,80 +177,94 @@
     .wl-table tbody tr {
       border-bottom: 1px solid var(--border-muted);
       cursor: pointer;
-      transition: background .1s;
     }
     .wl-table tbody tr:last-child { border-bottom: none; }
-    .wl-table tbody tr:hover { background: var(--bg-tertiary); }
+    .wl-table tbody tr:hover { background: rgba(6,182,212,.03); transform: translateX(2px); }
 
     .wl-table td {
-      font-family: var(--mono);
+      font-family: var(--font-mono);
       font-size: 14px;
       padding: 14px 16px;
       text-align: right;
       vertical-align: middle;
     }
     .wl-table td:first-child { text-align: left; }
-    .wl-table td.td-left { text-align: left; font-family: inherit; }
-    .wl-table td:last-child { text-align: center; font-family: inherit; }
+    .wl-table td.td-left { text-align: left; font-family: var(--font-ui); }
+    .wl-table td:last-child { text-align: center; font-family: var(--font-ui); }
 
     /* ── Ticker logo ── */
     .ticker-cell { display: flex; align-items: center; gap: 10px; }
     .ticker-logo {
-      width: 36px; height: 36px;
-      border-radius: 8px;
+      width: 38px; height: 38px;
+      border-radius: var(--r-md);
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700;
-      font-family: var(--mono);
+      font-size: 10px; font-weight: 700;
+      font-family: var(--font-mono);
       flex-shrink: 0;
       letter-spacing: .02em;
     }
-    .ticker-sym { font-weight: 600; font-size: 14px; font-family: var(--mono); }
+    .ticker-sym { font-weight: 600; font-size: 14px; font-family: var(--font-mono); color: var(--cyan); }
 
     /* ── Badges ── */
     .badge {
       display: inline-block;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-family: var(--mono);
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-family: var(--font-mono);
     }
-    .badge-pos { background: rgba(63,185,80,.15); color: var(--green); }
-    .badge-neg { background: rgba(248,81,73,.15);  color: var(--red); }
+    .badge-pos { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,.2); }
+    .badge-neg { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(239,68,68,.2); }
 
     /* ── Fair price ── */
-    .fair-price { color: var(--blue); font-weight: 600; }
+    .fair-price { color: var(--cyan); font-weight: 600; }
 
     /* ── Upside cell ── */
     .upside-cell {
       display: flex; align-items: center; justify-content: flex-end;
       gap: 5px; font-weight: 600;
     }
+    .upside-badge-lg {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+    .upside-badge-lg.pos { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,.25); }
+    .upside-badge-lg.neg { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(239,68,68,.25); }
 
     /* ── Delete button ── */
     .del-btn {
       background: none;
       border: 1px solid transparent;
-      border-radius: 5px;
+      border-radius: var(--r-sm);
       color: var(--text-muted);
       cursor: pointer;
       font-size: 13px;
       padding: 4px 8px;
       line-height: 1;
-      transition: all .15s;
     }
     .del-btn:hover {
       border-color: var(--red);
       color: var(--red);
-      background: rgba(248,81,73,.08);
+      background: var(--red-dim);
     }
 
     /* ── Skeleton shimmer ── */
-    @keyframes shimmer { 0%,100%{opacity:.35} 50%{opacity:.8} }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
     .skel {
-      animation: shimmer 1.4s infinite;
-      background: var(--bg-tertiary);
-      border-radius: 4px;
+      background: linear-gradient(90deg, var(--bg-3) 25%, var(--bg-4) 50%, var(--bg-3) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.8s infinite;
+      border-radius: var(--r-sm);
       color: transparent !important;
       display: inline-block;
       height: 14px;
@@ -243,12 +274,12 @@
     /* ── Empty state ── */
     .empty-state {
       display: flex; flex-direction: column; align-items: center;
-      justify-content: center; padding: 90px 24px; gap: 10px;
+      justify-content: center; padding: 90px 24px; gap: 12px;
       color: var(--text-muted); text-align: center;
     }
-    .empty-icon { font-size: 52px; opacity: .35; }
-    .empty-title { font-size: 16px; color: var(--text-sec); }
-    .empty-hint { font-size: 13px; max-width: 280px; line-height: 1.6; }
+    .empty-icon { font-size: 52px; opacity: .2; }
+    .empty-title { font-size: 17px; color: var(--text-sec); font-weight: 600; }
+    .empty-hint { font-size: 14px; max-width: 300px; line-height: 1.7; color: var(--text-sec); }
 
     /* ── Scrollbar ── */
     ::-webkit-scrollbar { width: 5px; }
@@ -257,8 +288,9 @@
 
     /* ── Sidebar ── */
     .sidebar {
-      width: 56px;
-      background: var(--bg-secondary);
+      width: 58px;
+      background: rgba(11,15,23,.95);
+      backdrop-filter: blur(12px);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
@@ -268,21 +300,27 @@
       overflow-x: hidden;
       transition: width 0.22s ease;
     }
-    .sidebar:hover { width: 220px; }
+    .sidebar:hover { width: 224px; }
     .sidebar-logo {
-      padding: 14px 16px;
+      padding: 16px;
       border-bottom: 1px solid var(--border);
       text-decoration: none;
       display: block;
-      transition: background .15s;
       white-space: nowrap;
       overflow: hidden;
     }
-    .sidebar-logo:hover { background: var(--bg-tertiary); }
-    .sidebar-logo-title { display: none; font-size: 15px; font-weight: 700; color: var(--text); }
-    .sidebar-logo-title em { color: var(--blue); font-style: normal; }
+    .sidebar-logo:hover { background: var(--bg-3); }
+    .sidebar-logo-title {
+      display: none;
+      font-size: 14px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #06b6d4, #0891b2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
     .sidebar-logo-sub { display: none; font-size: 12px; color: var(--text-muted); margin-top: 3px; }
-    .sidebar-logo-collapsed { font-size: 11px; font-weight: 700; color: var(--blue); text-align: center; padding: 4px 0; }
+    .sidebar-logo-collapsed { font-size: 11px; font-weight: 700; color: var(--cyan); text-align: center; padding: 4px 0; font-family: var(--font-mono); }
     .sidebar:hover .sidebar-logo-title { display: block; }
     .sidebar:hover .sidebar-logo-sub { display: block; }
     .sidebar:hover .sidebar-logo-collapsed { display: none; }
@@ -292,7 +330,7 @@
       font-size: 11px;
       font-weight: 600;
       color: var(--text-muted);
-      letter-spacing: .08em;
+      letter-spacing: .12em;
       text-transform: uppercase;
       padding: 10px 14px 4px;
       white-space: nowrap;
@@ -307,19 +345,18 @@
       color: var(--text-sec);
       text-decoration: none;
       font-size: 14px;
-      transition: background .15s, color .15s;
-      border-left: 3px solid transparent;
+      border-left: 2px solid transparent;
       white-space: nowrap;
       overflow: hidden;
     }
-    .sidebar-item:hover { background: rgba(255,255,255,.04); color: var(--text); }
+    .sidebar-item:hover { background: rgba(6,182,212,.06); color: var(--text); }
     .sidebar-item.active {
-      color: var(--blue);
-      background: rgba(88,166,255,.08);
+      color: var(--cyan);
+      background: rgba(6,182,212,.08);
+      border-left-color: var(--cyan);
       font-weight: 500;
     }
     .sidebar:hover .sidebar-item { padding: 8px 14px; justify-content: flex-start; }
-    .sidebar:hover .sidebar-item.active { border-left-color: var(--blue); }
     .sidebar-item-disabled {
       display: flex;
       align-items: center;
@@ -329,7 +366,7 @@
       color: var(--text-muted);
       font-size: 14px;
       font-style: italic;
-      border-left: 3px solid transparent;
+      border-left: 2px solid transparent;
       cursor: default;
       white-space: nowrap;
       overflow: hidden;
@@ -355,13 +392,17 @@
       min-width: 0;
       overflow-y: auto;
     }
+
+    @media (max-width: 768px) {
+      .sidebar { width: 0; overflow: hidden; }
+    }
   </style>
 </head>
 <body>
 
 <aside class="sidebar" id="sidebar">
   <a href="home.html" class="sidebar-logo">
-    <div class="sidebar-logo-title">Valuation <em>DCF</em> · B3</div>
+    <div class="sidebar-logo-title">Valuation DCF · B3</div>
     <div class="sidebar-logo-sub">Análise fundamentalista</div>
     <div class="sidebar-logo-collapsed">DCF·B3</div>
   </a>
@@ -424,7 +465,7 @@
     <div class="empty-icon">📋</div>
     <div class="empty-title">Nenhum valuation salvo ainda</div>
     <div class="empty-hint">Calcule o valuation de uma ação e clique em "Salvar Preço Teto" para acompanhar aqui.</div>
-    <a href="index.html" class="btn" style="margin-top:12px">＋ Calcular primeiro valuation</a>
+    <a href="index.html" class="btn" style="margin-top:16px">＋ Calcular primeiro valuation</a>
   </div>
 
   <!-- Table -->
@@ -488,10 +529,14 @@ function removeFromWatchlist(ticker) {
 // ── Ticker logo ───────────────────────────────────────────────
 function tickerColors(ticker) {
   const palette = [
-    ['#58a6ff', '#0d2547'], ['#3fb950', '#0d2e17'],
-    ['#d29922', '#3d2e0a'], ['#f0883e', '#3d1e0a'],
-    ['#a371f7', '#2a1d49'], ['#ff7b72', '#3d1515'],
-    ['#79c0ff', '#0d2a3d'], ['#56d364', '#0d2e17'],
+    ['#06b6d4', 'rgba(6,182,212,.12)'],
+    ['#10b981', 'rgba(16,185,129,.12)'],
+    ['#f59e0b', 'rgba(245,158,11,.12)'],
+    ['#8b5cf6', 'rgba(139,92,246,.12)'],
+    ['#ef4444', 'rgba(239,68,68,.12)'],
+    ['#06b6d4', 'rgba(6,182,212,.15)'],
+    ['#10b981', 'rgba(16,185,129,.15)'],
+    ['#f59e0b', 'rgba(245,158,11,.15)'],
   ];
   let h = 0;
   for (let i = 0; i < ticker.length; i++) h = (h * 31 + ticker.charCodeAt(i)) >>> 0;
@@ -501,7 +546,7 @@ function tickerColors(ticker) {
 function tickerLogoHTML(ticker) {
   const [fg, bg] = tickerColors(ticker);
   const label = ticker.replace(/\d+$/, '').slice(0, 4);
-  return `<div class="ticker-logo" style="background:${bg};color:${fg}">${label}</div>`;
+  return `<div class="ticker-logo" style="background:${bg};color:${fg};border:1px solid ${fg}33">${label}</div>`;
 }
 
 // ── Notificações ─────────────────────────────────────────────
@@ -606,23 +651,20 @@ function renderTable() {
       ? `<span class="skel" style="width:50px">&nbsp;&nbsp;&nbsp;&nbsp;</span>`
       : hasErr ? '<span style="color:var(--text-muted)">—</span>'
       : (live.dividendYield != null && live.dividendYield > 0)
-        ? fPct(live.dividendYield)
+        ? `<span style="color:var(--green)">${fPct(live.dividendYield)}</span>`
         : '—';
 
     // Upside
     const u = e._upside;
     const upsideHTML = loading
-      ? `<span class="skel" style="width:64px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>`
+      ? `<span class="skel" style="width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>`
       : hasErr || u === null
         ? '<span style="color:var(--text-muted)">—</span>'
         : (() => {
-            const color = u >= 0 ? 'var(--green)' : 'var(--red)';
+            const cls   = u >= 0 ? 'pos' : 'neg';
             const arrow = u >= 0 ? '↑' : '↓';
             const sign  = u >= 0 ? '+' : '';
-            return `<div class="upside-cell" style="color:${color}">
-              <span>${arrow}</span>
-              <span>${sign}${fPct(u)}</span>
-            </div>`;
+            return `<span class="upside-badge-lg ${cls}">${arrow} ${sign}${fPct(u)}</span>`;
           })();
 
     return `<tr data-ticker="${e.ticker}" onclick="openValuation('${e.ticker}')">
@@ -632,13 +674,13 @@ function renderTable() {
           <div class="ticker-sym">${e.ticker}</div>
         </div>
       </td>
-      <td class="td-left">${e.name || '—'}</td>
+      <td class="td-left" style="color:var(--text-sec);font-size:13px">${e.name || '—'}</td>
       <td>${priceHTML}</td>
       <td>${varHTML}</td>
       <td>${dyHTML}</td>
       <td class="fair-price">${fBRL.format(e.fairPrice)}</td>
-      <td>${upsideHTML}</td>
-      <td style="font-family:inherit;color:var(--text-muted);font-size:12px">${fDate(e.savedAt)}</td>
+      <td style="text-align:right">${upsideHTML}</td>
+      <td style="font-family:var(--font-ui);color:var(--text-muted);font-size:12px">${fDate(e.savedAt)}</td>
       <td onclick="event.stopPropagation()">
         <button class="del-btn" title="Remover" onclick="deleteEntry('${e.ticker}')">✕</button>
       </td>
