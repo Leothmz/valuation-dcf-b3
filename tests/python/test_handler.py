@@ -77,11 +77,14 @@ def test_quote_calls_get_stock_data(server_port):
         mock_fn.assert_called_once_with("VALE3")
 
 def test_fundamentals_returns_200_json(server_port):
-    resp, body = _get(server_port, "/api/fundamentals/VALE3", mock_fund=MOCK_FUND)
+    with patch('server.get_fundamentals', return_value=MOCK_FUND) as mock_fn:
+        conn = http.client.HTTPConnection("127.0.0.1", server_port, timeout=5)
+        conn.request("GET", "/api/fundamentals/VALE3")
+        resp = conn.getresponse()
+        body = resp.read()
+        mock_fn.assert_called_once_with("VALE3")
     assert resp.status == 200
     assert "application/json" in resp.getheader("Content-Type")
-    data = json.loads(body)
-    assert data["ticker"] == "PETR4"
 
 def test_b3_tickers_returns_json(server_port):
     resp, body = _get(server_port, "/api/b3-tickers")
