@@ -108,7 +108,7 @@ def test_payout_calculation(mock_i10, mock_ticker_cls):
 def test_payout_filters_outliers(mock_i10, mock_ticker_cls):
     # Dividendos absurdamente altos → payout > 2 → descartado
     divs = pd.Series({
-        pd.Timestamp("2023-12-31"): 5.0,  # 5.0 * 10M / 1M = 50x payout → descartado
+        pd.Timestamp("2023-12-31"): 5.0,  # 5.0 * 10M / 5M = 10x payout → descartado
     })
     info = {**MOCK_INFO, "sharesOutstanding": 10_000_000}
     fin = _make_financials()  # net_income_2023 = 5M

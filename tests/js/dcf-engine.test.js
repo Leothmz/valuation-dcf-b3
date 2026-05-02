@@ -23,6 +23,17 @@ describe('growthRate', () => {
   });
 });
 
+describe('runDCF — history vazio', () => {
+  it('funciona com history vazio — usa ano corrente como base', () => {
+    const r = runDCF(BASE_ASSUMPTIONS, [], 3, {});
+    expect(r).not.toBeNull();
+    expect(r.flows).toHaveLength(3);
+    // Primeiro ano projetado deve ser ano corrente (currentYear - 1 + 1 = currentYear)
+    const expectedFirstYear = new Date().getFullYear();
+    expect(r.flows[0].year).toBe(expectedFirstYear);
+  });
+});
+
 describe('runDCF — inputs inválidos', () => {
   it('retorna null quando ll é 0', () => {
     const r = runDCF({ ...BASE_ASSUMPTIONS, ll: 0 }, BASE_HISTORY, 5, {});
