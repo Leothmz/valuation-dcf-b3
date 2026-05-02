@@ -117,12 +117,20 @@ Preço Teto = EV / Número de Ações
 
 ```
 valuation-dcf-b3/
-├── index.html      — Calculadora DCF (HTML + CSS + JS em arquivo único)
+├── index.html      — Calculadora DCF
 ├── watchlist.html  — Lista de valuations salvos com preços ao vivo
 ├── ranking.html    — Ranking e screening fundamentalista (5 métodos)
 ├── home.html       — Página inicial com navegação
 ├── server.py       — Servidor HTTP local + API de dados via yfinance
 ├── start.bat       — Atalho Windows para iniciar o servidor
+├── src/            — Módulos JS puros (importados pelos HTMLs via ES modules)
+│   ├── formatters.js
+│   ├── parsers.js
+│   ├── dcf-engine.js
+│   └── ranking-scores.js
+├── tests/
+│   ├── js/         — Testes Vitest (69 testes)
+│   └── python/     — Testes pytest (20 testes)
 └── README.md
 ```
 
@@ -145,6 +153,29 @@ curl http://localhost:8000/api/fundamentals/WEGE3
 ```
 
 O servidor adiciona `.SA` automaticamente aos tickers brasileiros.
+
+---
+
+## Testes
+
+```bash
+# Testes JS — engine DCF, formatadores, parsers e scores de ranking (Vitest)
+npm install
+npm test
+
+# Testes Python — lógica de negócio e rotas HTTP (pytest)
+pip install pytest
+python -m pytest tests/python/ -v
+```
+
+| Suite | Ferramenta | Testes |
+|-------|-----------|--------|
+| `tests/js/formatters.test.js` | Vitest | 14 |
+| `tests/js/parsers.test.js` | Vitest | 13 |
+| `tests/js/dcf-engine.test.js` | Vitest | 20 |
+| `tests/js/ranking-scores.test.js` | Vitest | 22 |
+| `tests/python/test_server.py` | pytest | 13 |
+| `tests/python/test_handler.py` | pytest | 7 |
 
 ---
 
