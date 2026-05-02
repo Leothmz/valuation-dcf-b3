@@ -935,68 +935,16 @@
 <!-- ══════════════════════════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════════════════════════════ -->
-<script>
+<script type="module">
 'use strict';
+import { fBRL, fShort, fPct, fShares, fInputLL, fInputPctSigned, fInputPct } from './src/formatters.js';
+import { parsePct, parseLL } from './src/parsers.js';
+import { growthRate, runDCF as _runDCF } from './src/dcf-engine.js';
 
 // ── A: Constants ──────────────────────────────────────────────
 const SK = 'dcf_'; // localStorage key prefix
 const DEF_DISC = 0.15;
 const DEF_PERP = 0.03;
-
-// ── B: Formatters ─────────────────────────────────────────────
-const fBRL = new Intl.NumberFormat('pt-BR', {
-  style: 'currency', currency: 'BRL',
-  minimumFractionDigits: 2, maximumFractionDigits: 2
-});
-
-function fShort(n) {
-  return fBRL.format(n);
-}
-
-function fPct(n, dec = 2) {
-  return (n * 100).toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + '%';
-}
-
-function fShares(n) {
-  return n.toLocaleString('pt-BR');
-}
-
-// Format a number for display inside an input field (full, no abbreviation)
-function fInputLL(n) {
-  if (n == null) return '';
-  return n.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
-}
-
-// Format a growth rate as signed percentage for display in input (+10,50 or -5,20)
-function fInputPctSigned(n) {
-  if (n == null) return '';
-  const pct = n * 100;
-  const sign = pct >= 0 ? '+' : '';
-  return sign + pct.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function fInputPct(n) {
-  if (n == null) return '';
-  return (n * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-// ── C: Parsers ────────────────────────────────────────────────
-function parsePct(s) {
-  if (!s || !s.trim()) return null;
-  const n = parseFloat(s.replace(/\./g, '').replace(',', '.').replace(/[^0-9.\-]/g, ''));
-  return isNaN(n) ? null : n / 100;
-}
-
-function parseLL(s) {
-  if (!s || !s.trim()) return null;
-  let raw = s.trim();
-  let mult = 1;
-  if (/B$/i.test(raw)) { mult = 1e9;  raw = raw.slice(0, -1); }
-  else if (/M$/i.test(raw)) { mult = 1e6; raw = raw.slice(0, -1); }
-  else if (/K$/i.test(raw)) { mult = 1e3; raw = raw.slice(0, -1); }
-  const n = parseFloat(raw.replace(/\./g, '').replace(',', '.'));
-  return isNaN(n) ? null : n * mult;
-}
 
 // ── D: App State ──────────────────────────────────────────────
 const S = {
@@ -1022,63 +970,8 @@ const S = {
 };
 
 // ── E: DCF Engine ─────────────────────────────────────────────
-function growthRate(payout, roe) {
-  return (1 - payout) * roe;
-}
-
-function runDCF() {
-  const a = S.assumptions;
-  S.results = null;
-
-  if (!a.ll || a.ll <= 0 || !a.disc || !a.perp || !a.shares) return;
-
-  if (a.perp >= a.disc) {
-    S.results = { error: 'gordon' };
-    return;
-  }
-
-  const g = a.g ?? 0;
-  const n = S.projYears;
-  const currentYear = new Date().getFullYear();
-  const baseYear = S.history.length ? S.history[0].year : currentYear - 1;
-
-  // Project cash flows (respects per-year manual overrides)
-  const flows = [];
-  let prevCF = a.ll;
-  for (let i = 1; i <= n; i++) {
-    const year = baseYear + i;
-    let cf, actualG;
-    if (S.yearOverrides[year] != null) {
-      cf = S.yearOverrides[year];
-      actualG = prevCF > 0 ? (cf / prevCF - 1) : 0;
-    } else {
-      cf = prevCF * (1 + g);
-      actualG = g;
-    }
-    flows.push({ year, cf, g: actualG });
-    prevCF = cf;
-  }
-
-  // PV of each flow
-  const pvFlows = flows.map((f, i) => ({
-    ...f,
-    pv: f.cf / Math.pow(1 + a.disc, i + 1)
-  }));
-
-  // Terminal value (Excel formula: CF / ((1+disc)/(1+perp) - 1))
-  const lastCF = flows[n - 1].cf;
-  const tvDenom = (1 + a.disc) / (1 + a.perp) - 1;
-  const tv = lastCF / tvDenom;
-
-  // PV of terminal value — FIXED (Excel had hardcoded 10%)
-  const pvTV = tv / Math.pow(1 + a.disc, n);
-
-  const sumPV = pvFlows.reduce((acc, f) => acc + f.pv, 0);
-  const ev = sumPV + pvTV;
-  const fairPrice = ev / a.shares;
-  const upside = a.price ? (fairPrice - a.price) / fairPrice : null;
-
-  S.results = { flows, pvFlows, tv, pvTV, sumPV, ev, fairPrice, upside, baseYear };
+function rerunDCF() {
+  S.results = _runDCF(S.assumptions, S.history, S.projYears, S.yearOverrides);
 }
 
 // ── F: API Layer (yfinance via servidor local) ────────────────
@@ -1312,7 +1205,7 @@ function renderTable() {
 }
 
 function rerender() {
-  runDCF();
+  rerunDCF();
   renderResults();
   renderTable();
   renderSaveBtn();
@@ -1434,7 +1327,7 @@ function onTableYearChange(year, rawVal, inputEl) {
   S.yearOverrides[year] = parsed;
   // Rerun DCF and update only results + PV column (not the whole table,
   // to avoid blurring the input the user is typing in)
-  runDCF();
+  rerunDCF();
   renderResults();
   // Update VPL and growth cells without destroying inputs
   updateTablePVCells();
@@ -1457,7 +1350,7 @@ function onTableGrowthChange(year, rawVal, inputEl) {
   const newLL = prevCF * (1 + g);
   S.yearOverrides[year] = newLL;
 
-  runDCF();
+  rerunDCF();
   renderResults();
 
   // Update the LL input for this year (if not focused)
