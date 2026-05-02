@@ -17,6 +17,10 @@ build/
 venv/
 ENV/
 
+# Node
+node_modules/
+package-lock.json
+
 # Claude AI (uso interno)
 .claude/
 CLAUDE.md
