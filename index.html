@@ -500,6 +500,18 @@
     .modal-hint { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
 
+    /* ── DCF method picker ─────────────────────────────────────── */
+    .method-sec-lbl { font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px; }
+    .method-opt { display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;margin-bottom:8px;transition:background .15s,border-color .15s; }
+    .method-opt:hover { background:var(--bg-3); }
+    .method-opt.selected { background:rgba(6,182,212,.08);border-color:rgba(6,182,212,.3); }
+    .method-opt input[type=radio] { margin-top:3px;accent-color:var(--cyan);flex-shrink:0; }
+    .method-opt-name { font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px; }
+    .method-opt-desc { font-size:12px;color:var(--text-sec); }
+    .btn-icon-sm { background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-sec);cursor:pointer;font-size:13px;padding:2px 7px;line-height:1.6;transition:color .15s,border-color .15s,background .15s; }
+    .btn-icon-sm:hover { color:var(--text);border-color:var(--cyan);background:var(--cyan-dim); }
+    .fair-price-secondary { font-size:12px;color:var(--text-muted);margin-top:2px;margin-bottom:4px; }
+
     /* ── Table editable inputs ───────────────────────────── */
     .tbl-inp {
       background: transparent;
@@ -823,17 +835,20 @@
 
     <!-- Results -->
     <hr class="results-sep">
-    <div class="sec-title">Realidade Projetada</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="sec-title" style="margin-bottom:0">Realidade Projetada</div>
+      <button class="btn-icon-sm" id="dcfMethodBtn" title="Configurações do método DCF">⚙</button>
+    </div>
 
     <div class="fair-card">
       <div class="fair-lbl">Preço Teto · Valor Intrínseco</div>
       <div class="fair-value" id="fairPriceVal">—</div>
+      <div id="fairPriceSecondary"></div>
       <div id="upsideWrap"></div>
     </div>
 
     <button class="btn" id="saveBtn"
-      style="width:100%;margin-top:8px;display:none"
-      onclick="saveToWatchlist()">
+      style="width:100%;margin-top:8px;display:none">
       ＋ Salvar Preço Teto
     </button>
 
@@ -864,8 +879,8 @@
     <div class="rp-header">
       <div class="sec-title" style="margin:0">Fluxo de Caixa Descontado</div>
       <div class="toggle-grp">
-        <button class="tog-btn" id="tog3" onclick="setYears(3)">3 anos</button>
-        <button class="tog-btn active" id="tog5" onclick="setYears(5)">5 anos</button>
+        <button class="tog-btn" id="tog3">3 anos</button>
+        <button class="tog-btn active" id="tog5">5 anos</button>
       </div>
     </div>
 
@@ -927,7 +942,35 @@
       </div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeSettings()">Fechar</button>
+      <button class="btn btn-ghost" id="closeSettingsBtn">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     DCF METHOD MODAL
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="dcfMethodModal">
+  <div class="modal">
+    <div class="modal-title">Configurações</div>
+    <div class="method-sec-lbl">Método de Fluxo de Caixa Descontado</div>
+    <div class="method-opt" id="mopt-classico">
+      <input type="radio" name="dcfMethod" value="classico" id="radio-classico">
+      <div>
+        <div class="method-opt-name">Clássico FCD</div>
+        <div class="method-opt-desc">Desconto do perpétuo igual ao dos anos anteriores</div>
+      </div>
+    </div>
+    <div class="method-opt selected" id="mopt-buffett">
+      <input type="radio" name="dcfMethod" value="buffett" id="radio-buffett" checked>
+      <div>
+        <div class="method-opt-name">Buffett</div>
+        <div class="method-opt-desc">Taxa de desconto fixa de 10% no perpétuo</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="closeDcfMethodBtn">Cancelar</button>
+      <button class="btn" id="applyDcfMethodBtn">Aplicar configurações</button>
     </div>
   </div>
 </div>
@@ -966,12 +1009,17 @@ const S = {
   overrides: new Set(),   // fields manually overridden by user
   apiVals: {},            // original API-sourced values for restore
   yearOverrides: {},      // { year: customLL } — per-year Lucro Líquido overrides
-  results: null
+  results: null,
+  resultsClassico: null,
+  resultsBuffett: null,
+  dcfMethod: 'buffett',
 };
 
 // ── E: DCF Engine ─────────────────────────────────────────────
 function rerunDCF() {
-  S.results = _runDCF(S.assumptions, S.history, S.projYears, S.yearOverrides);
+  S.resultsClassico = _runDCF(S.assumptions, S.history, S.projYears, S.yearOverrides);
+  S.resultsBuffett  = _runDCF({ ...S.assumptions, tvDisc: 0.10 }, S.history, S.projYears, S.yearOverrides);
+  S.results = S.dcfMethod === 'buffett' ? S.resultsBuffett : S.resultsClassico;
 }
 
 // ── F: API Layer (yfinance via servidor local) ────────────────
@@ -1072,6 +1120,7 @@ function renderResults() {
   if (!r || r.error) {
     document.getElementById('fairPriceVal').textContent = '—';
     document.getElementById('upsideWrap').innerHTML = '';
+    document.getElementById('fairPriceSecondary').innerHTML = '';
     document.getElementById('rCurrentPrice').textContent = a.price ? fBRL.format(a.price) : '—';
     document.getElementById('rMarketCap').textContent = '—';
     document.getElementById('rShares').textContent = a.shares ? fShares(a.shares) : '—';
@@ -1089,6 +1138,14 @@ function renderResults() {
   clearNotif('gordon');
 
   document.getElementById('fairPriceVal').textContent = fBRL.format(r.fairPrice);
+  const _otherR   = S.dcfMethod === 'buffett' ? S.resultsClassico : S.resultsBuffett;
+  const _otherLbl = S.dcfMethod === 'buffett' ? 'Clássico FCD' : 'Buffett (10%)';
+  const _secEl = document.getElementById('fairPriceSecondary');
+  if (_otherR && !_otherR.error) {
+    _secEl.innerHTML = `<div class="fair-price-secondary">${_otherLbl}: ${fBRL.format(_otherR.fairPrice)}</div>`;
+  } else {
+    _secEl.innerHTML = '';
+  }
   document.getElementById('rCurrentPrice').textContent = a.price ? fBRL.format(a.price) : '—';
   document.getElementById('rMarketCap').textContent = fShort(r.fairPrice * a.shares);
   document.getElementById('rShares').textContent = fShares(a.shares);
@@ -1324,7 +1381,33 @@ function onInputChange(field, rawVal) {
 function onTableYearChange(year, rawVal, inputEl) {
   const parsed = parseLL(rawVal);
   if (parsed == null || parsed <= 0) return;
+
+  // Capture growth rates of subsequent years before the change so we can
+  // maintain them (user edited LL, not growth %)
+  const subsequentGrowths = [];
+  if (S.results && S.results.pvFlows) {
+    let afterEdit = false;
+    for (const flow of S.results.pvFlows) {
+      if (afterEdit) subsequentGrowths.push({ year: flow.year, g: flow.g });
+      if (flow.year === year) afterEdit = true;
+    }
+  }
+
   S.yearOverrides[year] = parsed;
+
+  // Cascade: recompute subsequent years using their stored growth rates
+  let prevLL = parsed;
+  for (const { year: nextYear, g } of subsequentGrowths) {
+    const newLL = prevLL * (1 + g);
+    S.yearOverrides[nextYear] = newLL;
+    prevLL = newLL;
+    const llInp = document.querySelector(`.tbl-inp[data-year="${nextYear}"]:not(.tbl-g-inp)`);
+    if (llInp && document.activeElement !== llInp) {
+      llInp.value = fInputLL(newLL);
+      llInp.classList.add('tbl-inp-ovrd');
+    }
+  }
+
   // Rerun DCF and update only results + PV column (not the whole table,
   // to avoid blurring the input the user is typing in)
   rerunDCF();
@@ -1474,17 +1557,25 @@ function isInWatchlist(ticker) {
 function saveToWatchlist() {
   if (!S.ticker || !S.results || S.results.error) return;
   const wl = getWatchlist();
+  const fpC = (S.resultsClassico && !S.resultsClassico.error) ? S.resultsClassico.fairPrice : null;
+  const fpB = (S.resultsBuffett  && !S.resultsBuffett.error)  ? S.resultsBuffett.fairPrice  : null;
+  const valid = [fpC, fpB].filter(p => p != null && isFinite(p));
+  const fpMin = valid.length ? Math.min(...valid) : S.results.fairPrice;
+  const fpMax = valid.length > 1 ? Math.max(...valid) : null;
   wl[S.ticker] = {
-    ticker:       S.ticker,
-    name:         S.companyName || S.ticker,
-    fairPrice:    S.results.fairPrice,
-    savedAt:      new Date().toISOString(),
-    projYears:    S.projYears,
-    assumptions:  { ...S.assumptions },
-    overrides:    [...S.overrides],
-    apiVals:      { ...S.apiVals },
-    yearOverrides: { ...S.yearOverrides },
-    history:      [...S.history],
+    ticker:            S.ticker,
+    name:              S.companyName || S.ticker,
+    fairPrice:         fpMin,
+    fairPriceMax:      fpMax,
+    fairPriceClassico: fpC,
+    fairPriceBuffett:  fpB,
+    savedAt:           new Date().toISOString(),
+    projYears:         S.projYears,
+    assumptions:       { ...S.assumptions },
+    overrides:         [...S.overrides],
+    apiVals:           { ...S.apiVals },
+    yearOverrides:     { ...S.yearOverrides },
+    history:           [...S.history],
   };
   localStorage.setItem(WL_KEY, JSON.stringify(wl));
   renderSaveBtn();
@@ -1547,7 +1638,7 @@ async function restoreFromWatchlist(ticker) {
   }
 }
 
-// ── M: Settings modal ─────────────────────────────────────────
+// ── M: Modals ──────────────────────────────────────────────────
 function openSettings() {
   document.getElementById('settingsModal').classList.add('open');
 }
@@ -1555,12 +1646,57 @@ function closeSettings() {
   document.getElementById('settingsModal').classList.remove('open');
 }
 
+function _syncMethodOptStyles() {
+  document.querySelectorAll('.method-opt').forEach(el => {
+    const radio = el.querySelector('input[type=radio]');
+    el.classList.toggle('selected', !!radio?.checked);
+  });
+}
+function openDcfMethod() {
+  document.querySelectorAll('[name=dcfMethod]').forEach(r => { r.checked = r.value === S.dcfMethod; });
+  _syncMethodOptStyles();
+  document.getElementById('dcfMethodModal').classList.add('open');
+}
+function closeDcfMethod() {
+  document.getElementById('dcfMethodModal').classList.remove('open');
+}
+function applyDcfMethod() {
+  const sel = document.querySelector('[name=dcfMethod]:checked');
+  if (sel && sel.value !== S.dcfMethod) {
+    S.dcfMethod = sel.value;
+    S.results = S.dcfMethod === 'buffett' ? S.resultsBuffett : S.resultsClassico;
+    renderResults();
+    renderTable();
+  }
+  closeDcfMethod();
+}
+
 // ── N: Event bindings ─────────────────────────────────────────
 document.getElementById('searchForm').addEventListener('submit', onSearch);
 document.getElementById('settingsBtn').addEventListener('click', openSettings);
+document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
 document.getElementById('settingsModal').addEventListener('click', e => {
   if (e.target === document.getElementById('settingsModal')) closeSettings();
 });
+document.getElementById('tog3').addEventListener('click', () => setYears(3));
+document.getElementById('tog5').addEventListener('click', () => setYears(5));
+document.getElementById('saveBtn').addEventListener('click', saveToWatchlist);
+document.getElementById('dcfMethodBtn').addEventListener('click', openDcfMethod);
+document.getElementById('closeDcfMethodBtn').addEventListener('click', closeDcfMethod);
+document.getElementById('applyDcfMethodBtn').addEventListener('click', applyDcfMethod);
+document.getElementById('dcfMethodModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('dcfMethodModal')) closeDcfMethod();
+});
+document.querySelectorAll('.method-opt').forEach(el => {
+  el.addEventListener('click', () => {
+    const radio = el.querySelector('input[type=radio]');
+    if (radio) { radio.checked = true; _syncMethodOptStyles(); }
+  });
+});
+document.querySelectorAll('[name=dcfMethod]').forEach(r => {
+  r.addEventListener('change', _syncMethodOptStyles);
+});
+window.clearNotif = clearNotif;
 
 // Assumption inputs
 [

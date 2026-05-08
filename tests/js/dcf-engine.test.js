@@ -116,3 +116,23 @@ describe('runDCF — fórmulas financeiras', () => {
     expect(r.upside).toBeCloseTo(expected);
   });
 });
+
+describe('runDCF — tvDisc e perpDisc (método Buffett)', () => {
+  it('pvTV usa tvDisc em vez de disc quando fornecido', () => {
+    const r = runDCF({ ...BASE_ASSUMPTIONS, tvDisc: 0.10 }, BASE_HISTORY, 3, {});
+    const expectedPvTV = r.tv / Math.pow(1.10, 3);
+    expect(r.pvTV).toBeCloseTo(expectedPvTV);
+  });
+  it('TV usa perpDisc no denominador quando fornecido', () => {
+    const perpDisc = 0.12;
+    const r = runDCF({ ...BASE_ASSUMPTIONS, perpDisc }, BASE_HISTORY, 3, {});
+    const lastCF = r.flows[2].cf;
+    const expectedTV = lastCF / ((1 + perpDisc) / (1 + BASE_ASSUMPTIONS.perp) - 1);
+    expect(r.tv).toBeCloseTo(expectedTV);
+  });
+  it('retorna {error:"gordon"} quando perp >= perpDisc', () => {
+    // disc=0.15 não dispara o erro, mas perpDisc=0.05 < perp=0.06 deve disparar
+    const r = runDCF({ ...BASE_ASSUMPTIONS, perp: 0.06, perpDisc: 0.05 }, BASE_HISTORY, 3, {});
+    expect(r).toMatchObject({ error: 'gordon' });
+  });
+});

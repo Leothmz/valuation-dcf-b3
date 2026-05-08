@@ -6,5 +6,5 @@ echo  ==================
 echo  Acesse: http://localhost:8000
 echo  Encerrar: Ctrl+C
 echo.
-python server.py
+"C:\Users\Leonardo Thomaz\AppData\Local\Programs\Python\Python313\python.exe" server.py
 pause

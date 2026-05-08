@@ -514,6 +514,11 @@ function fDate(iso) {
   });
 }
 
+function fairPriceRangeHTML(e) {
+  const fp = e.fairPriceBuffett ?? e.fairPrice;
+  return fp != null ? fBRL.format(fp) : '—';
+}
+
 // ── Storage ───────────────────────────────────────────────────
 function getWatchlist() {
   try { return JSON.parse(localStorage.getItem(WL_KEY) || '{}'); }
@@ -606,7 +611,8 @@ function renderTable() {
   // Upside para ordenação
   visible = visible.map(e => {
     const live = liveCache[e.ticker];
-    const u = (live && !live.error) ? calcUpside(e.fairPrice, live.price) : null;
+    const fp = e.fairPriceBuffett ?? e.fairPrice;
+    const u = (live && !live.error) ? calcUpside(fp, live.price) : null;
     return { ...e, _upside: u };
   });
 
@@ -678,7 +684,7 @@ function renderTable() {
       <td>${priceHTML}</td>
       <td>${varHTML}</td>
       <td>${dyHTML}</td>
-      <td class="fair-price">${fBRL.format(e.fairPrice)}</td>
+      <td class="fair-price">${fairPriceRangeHTML(e)}</td>
       <td style="text-align:right">${upsideHTML}</td>
       <td style="font-family:var(--font-ui);color:var(--text-muted);font-size:12px">${fDate(e.savedAt)}</td>
       <td onclick="event.stopPropagation()">

@@ -4,8 +4,10 @@ export function growthRate(payout, roe) {
 
 export function runDCF(assumptions, history, projYears, yearOverrides) {
   const a = assumptions;
+  const perpDisc = a.perpDisc ?? a.disc;
+  const tvDisc   = a.tvDisc   ?? a.disc; // rate used only to discount TV back to present
   if (!a.ll || a.ll <= 0 || !a.disc || !a.perp || !a.shares) return null;
-  if (a.perp >= a.disc) return { error: 'gordon' };
+  if (a.perp >= perpDisc) return { error: 'gordon' };
 
   const g = a.g ?? 0;
   const n = projYears;
@@ -34,9 +36,9 @@ export function runDCF(assumptions, history, projYears, yearOverrides) {
   }));
 
   const lastCF = flows[n - 1].cf;
-  const tvDenom = (1 + a.disc) / (1 + a.perp) - 1;
+  const tvDenom = (1 + perpDisc) / (1 + a.perp) - 1;
   const tv = lastCF / tvDenom;
-  const pvTV = tv / Math.pow(1 + a.disc, n);
+  const pvTV = tv / Math.pow(1 + tvDisc, n);
   const sumPV = pvFlows.reduce((acc, f) => acc + f.pv, 0);
   const ev = sumPV + pvTV;
   const fairPrice = ev / a.shares;
