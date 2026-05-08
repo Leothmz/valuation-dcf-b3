@@ -118,6 +118,25 @@ def test_payout_filters_outliers(mock_i10, mock_ticker_cls):
     assert result["payout"] is None
 
 
+# ── Testes: normalização de dividendYield ─────────────────────────
+
+@mock.patch('yfinance.Ticker')
+@mock.patch('server._get_investidor10_net_income', return_value=[])
+def test_dividend_yield_decimal_passthrough(mock_i10, mock_ticker_cls):
+    # yfinance retorna decimal correto (0.06) → deve passar sem alteração
+    mock_ticker_cls.return_value = _make_mock_ticker(info={**MOCK_INFO, "dividendYield": 0.06})
+    result = server.get_stock_data("PETR4")
+    assert abs(result["dividendYield"] - 0.06) < 1e-9
+
+@mock.patch('yfinance.Ticker')
+@mock.patch('server._get_investidor10_net_income', return_value=[])
+def test_dividend_yield_percentage_normalized(mock_i10, mock_ticker_cls):
+    # yfinance retorna formato percentual (6.0 = 6%) → deve normalizar para 0.06
+    mock_ticker_cls.return_value = _make_mock_ticker(info={**MOCK_INFO, "dividendYield": 6.0})
+    result = server.get_stock_data("PETR4")
+    assert abs(result["dividendYield"] - 0.06) < 1e-9
+
+
 # ── Testes: histórico ─────────────────────────────────────────────
 
 @mock.patch('yfinance.Ticker')

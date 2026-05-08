@@ -160,6 +160,14 @@ def _get_investidor10_net_income(ticker: str) -> list:
         return []
 
 
+def _normalize_dy(dy) -> float | None:
+    """yfinance for .SA tickers sometimes returns dividendYield as a percentage
+    (e.g. 8.49 meaning 8.49%) instead of decimal (0.0849). Normalize to 0-1."""
+    if dy is None:
+        return None
+    return dy / 100 if dy > 1 else dy
+
+
 def get_stock_data(ticker: str) -> dict:
     try:
         import yfinance as yf
@@ -270,7 +278,7 @@ def get_stock_data(ticker: str) -> dict:
         "payout":            payout,
         "netIncomeHistory":  history,
         "marketCap":         info.get("marketCap"),
-        "dividendYield":     info.get("dividendYield"),
+        "dividendYield":     _normalize_dy(info.get("dividendYield")),
     }
 
 
