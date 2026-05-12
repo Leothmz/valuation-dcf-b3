@@ -24,6 +24,7 @@ package-lock.json
 # Claude AI (uso interno)
 .claude/
 CLAUDE.md
+.superpowers/
 
 # OS
 .DS_Store
