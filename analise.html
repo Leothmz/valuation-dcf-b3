@@ -57,12 +57,16 @@
 
     /* ── Search bar ── */
     .search-bar { padding:14px 24px; border-bottom:1px solid var(--border); background:var(--bg-2); display:flex; gap:10px; align-items:center; }
-    .search-input { flex:1; max-width:360px; background:var(--bg-3); border:1px solid var(--border); border-radius:var(--r-md); padding:8px 14px; color:var(--text); font-family:var(--font-mono); font-size:14px; outline:none; }
+    .search-input-wrap { position:relative; flex:1; max-width:360px; }
+    .search-input { width:100%; background:var(--bg-3); border:1px solid var(--border); border-radius:var(--r-md); padding:8px 14px; color:var(--text); font-family:var(--font-mono); font-size:14px; outline:none; text-transform:uppercase; }
     .search-input:focus { border-color:var(--cyan); box-shadow:0 0 0 2px rgba(6,182,212,.15); }
-    .search-input::placeholder { color:var(--text-muted); }
+    .search-input::placeholder { color:var(--text-muted); text-transform:none; }
     .search-btn { background:var(--cyan); color:#000; border:none; border-radius:var(--r-md); padding:8px 20px; font-weight:700; font-size:13px; cursor:pointer; }
     .search-btn:hover { background:#0891b2; }
     .search-error { color:var(--red); font-size:13px; }
+    .autocomplete-dropdown { position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r-md); overflow:hidden; z-index:200; box-shadow:var(--shadow-md); }
+    .autocomplete-item { padding:9px 14px; font-family:var(--font-mono); font-size:13px; cursor:pointer; color:var(--text); }
+    .autocomplete-item:hover, .autocomplete-item.focused { background:var(--bg-4); color:var(--cyan); }
 
     /* ── Scrollable content area ── */
     .content { flex:1; overflow-y:auto; padding:24px; display:flex; flex-direction:column; gap:20px; }
@@ -126,7 +130,7 @@
     /* ── Tooltip ── */
     .tooltip-wrap { position:relative; display:inline-flex; align-items:center; }
     .tooltip-btn { width:14px; height:14px; border-radius:50%; border:1px solid var(--border); color:var(--text-muted); cursor:default; font-size:9px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; }
-    .tooltip-content { display:none; position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r-md); padding:12px 14px; width:230px; font-size:12px; line-height:1.6; color:var(--text-sec); z-index:200; box-shadow:var(--shadow-lg); text-transform:none; letter-spacing:normal; font-weight:400; }
+    .tooltip-content { display:none; position:absolute; bottom:calc(100% + 8px); left:0; transform:none; background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r-md); padding:12px 14px; width:230px; font-size:12px; line-height:1.6; color:var(--text-sec); z-index:300; box-shadow:var(--shadow-lg); text-transform:none; letter-spacing:normal; font-weight:400; }
     .tooltip-wrap:hover .tooltip-content { display:block; }
     .tooltip-content strong { color:var(--text); display:block; margin-bottom:4px; }
 
@@ -229,7 +233,10 @@
 
   <div class="main">
     <div class="search-bar">
-      <input id="search-input" class="search-input" placeholder="Buscar ticker… (ex: ITUB4)" autocomplete="off" spellcheck="false">
+      <div class="search-input-wrap">
+        <input id="search-input" class="search-input" placeholder="Buscar ticker… (ex: ITUB4)" autocomplete="off" spellcheck="false">
+        <div id="search-autocomplete" class="autocomplete-dropdown" style="display:none"></div>
+      </div>
       <button id="search-btn" class="search-btn">Buscar</button>
       <span id="search-error" class="search-error" style="display:none"></span>
     </div>
@@ -296,13 +303,14 @@
 
         <!-- Pane: Valuations -->
         <div id="pane-valuations" class="tab-pane">
-          <div class="val-grid" id="val-grid"></div>
+          <div class="dcf-section-title">Preço Teto Buffett (DCF)</div>
+          <div id="dcf-block" style="margin-bottom:20px;"></div>
           <div class="current-price-ref">
             <span>Preço atual</span>
             <span id="val-current-price">—</span>
           </div>
-          <div class="dcf-section-title">Valuation por Fluxo de Caixa Descontado (DCF)</div>
-          <div id="dcf-block"></div>
+          <div class="dcf-section-title" style="margin-top:16px;">Outros Métodos de Valuation</div>
+          <div class="val-grid" id="val-grid"></div>
         </div>
 
         <!-- Pane: Histórico -->
@@ -341,6 +349,73 @@
   <script type="module">
     import { fBRL, fPct } from './src/formatters.js';
 
+    const B3_TICKERS = [
+      'ABCB4','ABEV3','AGRO3','ALOS3','ALPA4','ALUP11','AMBP3','ANIM3','ARML3','ASAI3','AURE3','AZUL4',
+      'AZZA3','B3SA3','BBAS3','BBDC3','BBDC4','BBSE3','BEEF3','BLAU3','BMGB4','BPAC11','BRAP4','BRAV3',
+      'BRBI11','BRFS3','BRPR3','BRSR6','BRKM5','CAML3','CBAV3','CCRO3','CEAB3','CESP6','CGRA4','CIEL3',
+      'CMIG3','CMIG4','CMIN3','COGN3','CPFE3','CPLE6','CRFB3','CSAN3','CSMG3','CSNA3','CVCB3','CXSE3',
+      'CYRE3','DASA3','DESK3','DIRR3','DXCO3','ECOR3','EGIE3','ELET3','ELET6','EMBR3','ENBR3','ENEV3',
+      'ENGI11','EQPA3','EQTL3','EVEN3','EZTC3','FLRY3','FRAS3','GFSA3','GGBR3','GGBR4','GGPS3','GOAU4',
+      'GOLL4','GRND3','HAPV3','HBOR3','HBSA3','HYPE3','IGTI11','IRBR3','ISAE4','ITSA4','ITUB3','ITUB4',
+      'JALL3','JBSS3','JHSF3','JSLG3','KEPL3','KLBN11','LAVV3','LAVV3','LAVV3','LJQQ3','LEVE3','LJQQ3',
+      'LOGN3','LOGG3','LREN3','LWSA3','MDNE3','MDIA3','MGLU3','MRFG3','MRVE3','MOVI3','MTRE3','MULT3',
+      'MYPK3','NATU3','NEOE3','NTCO3','ONCO3','ODPV3','ORVR3','PARD3','PCAR3','PETR3','PETR4','PETZ3',
+      'PLPL3','PNVL3','POMO4','POSI3','PRIO3','PSSA3','QUAL3','RADL3','RAIL3','RANI3','RAIZ4','RAPT4',
+      'RDOR3','RECV3','RENT3','RIAA3','ROMI3','RRRP3','SAPR11','SBSP3','SEER3','SEQL3','SHUL4','SIMH3',
+      'SLCE3','SMFT3','SMTO3','SOJA3','SOMA3','SULA11','SUZB3','TAEE11','TEND3','TGMA3','TIMS3','TOTS3',
+      'TRIS3','TRPL4','TTEN3','TUPY3','UGPA3','UNIP6','USIM5','VALE3','VAMO3','VBBR3','VITT3','VIVT3',
+      'VLID3','VIVA3','VTRU3','VULC3','WEGE3','WIZC3','YDUQ3','SANB11','CGAS3','CURY3','ARZZ3','CGRA4',
+    ];
+
+    function setupAutocomplete(inputId, dropdownId, onSelect) {
+      const inp = document.getElementById(inputId);
+      const dd  = document.getElementById(dropdownId);
+      let idx = -1;
+
+      inp.addEventListener('input', () => {
+        const q = inp.value.trim().toUpperCase();
+        if (!q) { dd.style.display = 'none'; return; }
+        const hits = B3_TICKERS.filter(t => t.startsWith(q)).slice(0, 8);
+        if (!hits.length) { dd.style.display = 'none'; return; }
+        idx = -1;
+        dd.innerHTML = hits.map(t => `<div class="autocomplete-item" data-t="${t}">${t}</div>`).join('');
+        dd.style.display = 'block';
+        dd.querySelectorAll('.autocomplete-item').forEach(el => {
+          el.addEventListener('mousedown', e => {
+            e.preventDefault();
+            inp.value = el.dataset.t;
+            dd.style.display = 'none';
+            onSelect(el.dataset.t);
+          });
+        });
+      });
+
+      inp.addEventListener('keydown', e => {
+        const items = dd.querySelectorAll('.autocomplete-item');
+        if (dd.style.display === 'none' || !items.length) return;
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          idx = Math.min(idx + 1, items.length - 1);
+          items.forEach((it, i) => it.classList.toggle('focused', i === idx));
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          idx = Math.max(idx - 1, -1);
+          items.forEach((it, i) => it.classList.toggle('focused', i === idx));
+        } else if (e.key === 'Enter' && idx >= 0) {
+          const t = items[idx].dataset.t;
+          inp.value = t;
+          dd.style.display = 'none';
+          onSelect(t);
+        } else if (e.key === 'Escape') {
+          dd.style.display = 'none';
+        }
+      });
+
+      document.addEventListener('click', e => {
+        if (!inp.contains(e.target) && !dd.contains(e.target)) dd.style.display = 'none';
+      });
+    }
+
     function fMktCap(n) {
       if (!n) return '—';
       if (n >= 1e12) return 'R$ ' + (n/1e12).toLocaleString('pt-BR', {maximumFractionDigits:1}) + 'T';
@@ -370,6 +445,10 @@
       document.getElementById('search-btn').addEventListener('click', onSearch);
       document.getElementById('search-input').addEventListener('keydown', e => {
         if (e.key === 'Enter') onSearch();
+      });
+      setupAutocomplete('search-input', 'search-autocomplete', ticker => {
+        history.replaceState(null, '', `?ticker=${encodeURIComponent(ticker)}`);
+        loadTicker(ticker);
       });
       document.querySelectorAll('.tab').forEach(btn => {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -588,7 +667,7 @@
         return;
       }
 
-      const fair = entry.fairPrice;
+      const fair = entry.fairPriceBuffett ?? entry.fairPrice;
       const upside = calcUpside(fair, price);
       const uClass = upside >= 0 ? 'pos' : 'neg';
       const uTxt = (upside >= 0 ? '↑ +' : '↓ ') + fPct(Math.abs(upside));

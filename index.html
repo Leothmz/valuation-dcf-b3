@@ -79,8 +79,10 @@
       max-width: 400px;
     }
 
+    .search-input-wrap { position: relative; flex: 1; }
+
     .search-input {
-      flex: 1;
+      width: 100%;
       background: var(--bg-3);
       border: 1px solid var(--border);
       border-radius: var(--r-md);
@@ -94,6 +96,16 @@
     }
     .search-input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(6,182,212,.08); }
     .search-input::placeholder { color: var(--text-muted); text-transform: none; }
+
+    .autocomplete-dropdown { position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r-md); overflow:hidden; z-index:200; box-shadow:var(--shadow-md); }
+    .autocomplete-item { padding:9px 14px; font-family:var(--font-mono); font-size:13px; cursor:pointer; color:var(--text); }
+    .autocomplete-item:hover, .autocomplete-item.focused { background:var(--bg-4); color:var(--cyan); }
+
+    /* ── Empty state ── */
+    .calc-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; gap:14px; color:var(--text-muted); text-align:center; padding:40px; }
+    .calc-empty-icon { font-size:56px; opacity:.2; }
+    .calc-empty-title { font-size:18px; color:var(--text-sec); font-weight:600; }
+    .calc-empty-hint { font-size:14px; max-width:340px; line-height:1.7; color:var(--text-sec); }
 
     .btn {
       background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
@@ -725,9 +737,12 @@
 ══════════════════════════════════════════════════════════════ -->
 <header class="header">
   <form class="search-form" id="searchForm">
-    <input id="tickerInput" type="text" class="search-input"
-           placeholder="Ex: WEGE3, ITUB4..." maxlength="7"
-           autocomplete="off" spellcheck="false">
+    <div class="search-input-wrap">
+      <input id="tickerInput" type="text" class="search-input"
+             placeholder="Ex: WEGE3, ITUB4..." maxlength="7"
+             autocomplete="off" spellcheck="false">
+      <div id="search-autocomplete" class="autocomplete-dropdown" style="display:none"></div>
+    </div>
     <button type="submit" class="btn" id="searchBtn">Buscar</button>
   </form>
   <button class="settings-btn" id="settingsBtn">⚙ Configurações</button>
@@ -735,10 +750,16 @@
 
 <div id="notifications"></div>
 
+<div id="calc-empty-state" class="calc-empty" style="display:none">
+  <div class="calc-empty-icon">📊</div>
+  <div class="calc-empty-title">Calculadora DCF</div>
+  <div class="calc-empty-hint">Digite o código de uma ação da B3 acima para calcular o preço teto por Fluxo de Caixa Descontado.</div>
+</div>
+
 <!-- ══════════════════════════════════════════════════════════
      MAIN
 ══════════════════════════════════════════════════════════════ -->
-<main class="main">
+<main class="main" id="calc-main">
 
   <!-- ── LEFT PANEL ──────────────────────────────────────── -->
   <div class="panel panel-left">
@@ -993,6 +1014,84 @@
 import { fBRL, fShort, fPct, fShares, fInputLL, fInputPctSigned, fInputPct } from './src/formatters.js';
 import { parsePct, parseLL } from './src/parsers.js';
 import { growthRate, runDCF as _runDCF } from './src/dcf-engine.js';
+
+// ── Autocomplete ───────────────────────────────────────────────
+const B3_TICKERS = [
+  'ABCB4','ABEV3','AGRO3','ALOS3','ALPA4','ALUP11','AMBP3','ANIM3','ARML3','ASAI3','AURE3','AZUL4',
+  'AZZA3','B3SA3','BBAS3','BBDC3','BBDC4','BBSE3','BEEF3','BLAU3','BMGB4','BPAC11','BRAP4','BRAV3',
+  'BRBI11','BRFS3','BRPR3','BRSR6','BRKM5','CAML3','CBAV3','CCRO3','CEAB3','CESP6','CGRA4','CIEL3',
+  'CMIG3','CMIG4','CMIN3','COGN3','CPFE3','CPLE6','CRFB3','CSAN3','CSMG3','CSNA3','CVCB3','CXSE3',
+  'CURY3','CYRE3','DASA3','DESK3','DIRR3','DXCO3','ECOR3','EGIE3','ELET3','ELET6','EMBR3','ENBR3',
+  'ENEV3','ENGI11','EQPA3','EQTL3','EVEN3','EZTC3','FLRY3','FRAS3','GFSA3','GGBR3','GGBR4','GGPS3',
+  'GOAU4','GOLL4','GRND3','HAPV3','HBOR3','HBSA3','HYPE3','IGTI11','IRBR3','ISAE4','ITSA4','ITUB3',
+  'ITUB4','JALL3','JBSS3','JHSF3','JSLG3','KEPL3','KLBN11','LAVV3','LEVE3','LJQQ3','LOGN3','LOGG3',
+  'LREN3','LWSA3','MDNE3','MDIA3','MGLU3','MRFG3','MRVE3','MOVI3','MTRE3','MULT3','MYPK3','NATU3',
+  'NEOE3','NTCO3','ONCO3','ODPV3','ORVR3','PARD3','PCAR3','PETR3','PETR4','PETZ3','PLPL3','PNVL3',
+  'POMO4','POSI3','PRIO3','PSSA3','QUAL3','RADL3','RAIL3','RANI3','RAIZ4','RAPT4','RDOR3','RECV3',
+  'RENT3','RIAA3','ROMI3','RRRP3','SANB11','SAPR11','SBSP3','SEER3','SEQL3','SHUL4','SIMH3','SLCE3',
+  'SMFT3','SMTO3','SOJA3','SOMA3','SULA11','SUZB3','TAEE11','TEND3','TGMA3','TIMS3','TOTS3','TRIS3',
+  'TRPL4','TTEN3','TUPY3','UGPA3','UNIP6','USIM5','VALE3','VAMO3','VBBR3','VITT3','VIVT3','VLID3',
+  'VIVA3','VTRU3','VULC3','WEGE3','WIZC3','YDUQ3','CGAS3','ARZZ3',
+];
+
+function setupAutocomplete(inputId, dropdownId, onSelect) {
+  const inp = document.getElementById(inputId);
+  const dd  = document.getElementById(dropdownId);
+  let idx = -1;
+
+  inp.addEventListener('input', () => {
+    const q = inp.value.trim().toUpperCase();
+    if (!q) { dd.style.display = 'none'; return; }
+    const hits = B3_TICKERS.filter(t => t.startsWith(q)).slice(0, 8);
+    if (!hits.length) { dd.style.display = 'none'; return; }
+    idx = -1;
+    dd.innerHTML = hits.map(t => `<div class="autocomplete-item" data-t="${t}">${t}</div>`).join('');
+    dd.style.display = 'block';
+    dd.querySelectorAll('.autocomplete-item').forEach(el => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();
+        inp.value = el.dataset.t;
+        dd.style.display = 'none';
+        onSelect(el.dataset.t);
+      });
+    });
+  });
+
+  inp.addEventListener('keydown', e => {
+    const items = dd.querySelectorAll('.autocomplete-item');
+    if (dd.style.display === 'none' || !items.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      idx = Math.min(idx + 1, items.length - 1);
+      items.forEach((it, i) => it.classList.toggle('focused', i === idx));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      idx = Math.max(idx - 1, -1);
+      items.forEach((it, i) => it.classList.toggle('focused', i === idx));
+    } else if (e.key === 'Enter' && idx >= 0) {
+      const t = items[idx].dataset.t;
+      inp.value = t;
+      dd.style.display = 'none';
+      onSelect(t);
+    } else if (e.key === 'Escape') {
+      dd.style.display = 'none';
+    }
+  });
+
+  document.addEventListener('click', e => {
+    if (!inp.contains(e.target) && !dd.contains(e.target)) dd.style.display = 'none';
+  });
+}
+
+function showCalcContent() {
+  document.getElementById('calc-empty-state').style.display = 'none';
+  document.getElementById('calc-main').style.display = '';
+}
+
+function showCalcEmpty() {
+  document.getElementById('calc-empty-state').style.display = '';
+  document.getElementById('calc-main').style.display = 'none';
+}
 
 // ── A: Constants ──────────────────────────────────────────────
 const SK = 'dcf_'; // localStorage key prefix
@@ -1339,6 +1438,7 @@ async function onSearch(e) {
       document.getElementById('llHint').textContent = `Fonte: ${history[0].year} · ${fShort(history[0].value)}`;
     }
 
+    showCalcContent();
     renderCompany(d);
     renderInputs();
     rerender();
@@ -1570,6 +1670,7 @@ function restore() {
     S.history       = d.history || [];
 
     document.getElementById('tickerInput').value = d.ticker;
+    showCalcContent();
     setYears(S.projYears);
     renderInputs();
     rerender();
@@ -1656,6 +1757,7 @@ async function restoreFromWatchlist(ticker) {
       `Fonte: ${S.history[0].year} · ${fBRL.format(S.history[0].value)}`;
   }
 
+  showCalcContent();
   setYears(S.projYears);
   renderInputs();
   rerender();
@@ -1765,6 +1867,10 @@ document.getElementById('tickerInput').addEventListener('keydown', e => {
 // ── O: Init ───────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   setYears(S.projYears);
+  setupAutocomplete('tickerInput', 'search-autocomplete', ticker => {
+    document.getElementById('tickerInput').value = ticker;
+    onSearch(null);
+  });
   const params    = new URLSearchParams(window.location.search);
   const wlTicker  = params.get('wl');
   const autoTicker = params.get('ticker');
@@ -1774,7 +1880,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('tickerInput').value = autoTicker.toUpperCase();
     onSearch(null);
   } else {
-    restore();
+    showCalcEmpty();
   }
 });
 
