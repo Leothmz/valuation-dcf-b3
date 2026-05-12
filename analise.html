@@ -435,8 +435,17 @@
 
     function showError(msg) {
       const el = document.getElementById('error-msg');
-      if (msg) { el.textContent = msg; el.style.display = 'block'; }
-      else { el.style.display = 'none'; }
+      const tabs = document.getElementById('tabs');
+      const panes = document.querySelectorAll('.tab-pane');
+      if (msg) {
+        el.textContent = msg; el.style.display = 'block';
+        tabs.style.display = 'none';
+        panes.forEach(p => p.style.display = 'none');
+      } else {
+        el.style.display = 'none';
+        tabs.style.display = '';
+        panes.forEach(p => { p.style.display = ''; });
+      }
     }
 
     function renderHero(d) {
@@ -552,7 +561,7 @@
         renderValCard('Peter Lynch', lynch, price, 'LPA × CAGR(%)', 'green'),
         joelEY != null
           ? `<div class="val-card"><div class="val-method">Joel (Magic Formula)</div><div class="val-price amber">${fPct(joelEY)}</div><div class="val-upside" style="color:var(--text-muted)">Earnings Yield</div><div class="val-formula">1 ÷ P/L</div></div>`
-          : `<div class="val-card"><div class="val-method">Joel (Magic Formula)</div><div class="val-insufficient">P/L indisponível</div></div>`,
+          : `<div class="val-card"><div class="val-method">Joel (Magic Formula)</div><div class="val-price amber">—</div><div class="val-formula">1 ÷ P/L</div></div>`,
       ].join('');
 
       document.getElementById('val-grid').innerHTML = html;
@@ -625,7 +634,7 @@
           interval: 'D', timezone: 'America/Sao_Paulo',
           theme: 'dark', style: '1', locale: 'br',
           enable_publishing: false, save_image: false,
-          hide_side_toolbar: false,
+          hide_side_toolbar: true,
           container_id: 'tradingview_chart',
           range: range,
         });
