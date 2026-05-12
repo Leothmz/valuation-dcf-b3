@@ -812,7 +812,7 @@ setInterval(refreshPrices, 3 * 60 * 1000);   // auto-refresh a cada 3 min
     itemAnalise.className = 'context-menu-item';
     itemAnalise.innerHTML = '📊 Ver Análise Avançada';
     itemAnalise.onclick = () => {
-      window.open(`analise.html?ticker=${ticker}`, '_blank');
+      window.open(`analise.html?ticker=${encodeURIComponent(ticker)}`, '_blank');
       closeContextMenu();
     };
 

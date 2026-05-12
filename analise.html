@@ -387,7 +387,7 @@
     function onSearch() {
       const val = document.getElementById('search-input').value.trim().toUpperCase();
       if (!val) return;
-      history.replaceState(null, '', `?ticker=${val}`);
+      history.replaceState(null, '', `?ticker=${encodeURIComponent(val)}`);
       loadTicker(val);
     }
 
@@ -580,8 +580,11 @@
             <strong>Preço Teto DCF não calculado</strong>
             <span>Calcule seu preço justo personalizado com premissas ajustáveis</span>
           </div>
-          <button class="dcf-cta-btn" onclick="location.href='index.html?ticker=${ticker}'">→ Calcular DCF</button>
+          <button class="dcf-cta-btn" id="dcf-calc-btn">→ Calcular DCF</button>
         </div>`;
+        document.getElementById('dcf-calc-btn').addEventListener('click', () => {
+          location.href = `index.html?ticker=${encodeURIComponent(ticker)}`;
+        });
         return;
       }
 
@@ -598,9 +601,12 @@
           </div>
           <div class="dcf-saved-price">${fBRL.format(fair)}</div>
           <div class="val-upside ${uClass}" style="margin-top:4px;">${uTxt} em relação ao preço atual</div>
-          <div class="dcf-saved-meta">Calculado em ${savedDate} · <span class="dcf-saved-recalc" onclick="location.href='index.html?wl=${ticker}'">Recalcular</span></div>
+          <div class="dcf-saved-meta">Calculado em ${savedDate} · <span class="dcf-saved-recalc" id="dcf-recalc-link">Recalcular</span></div>
         </div>
       </div>`;
+      document.getElementById('dcf-recalc-link').addEventListener('click', () => {
+        location.href = `index.html?wl=${encodeURIComponent(ticker)}`;
+      });
     }
 
     function renderHistorico(quote) {
@@ -613,7 +619,7 @@
       tbody.innerHTML = hist.map((h, i) => {
         const prev = hist[i + 1];
         let yoy = '—', yoyClass = 'muted';
-        if (prev) {
+        if (prev && prev.netIncome !== 0) {
           const chg = (h.netIncome - prev.netIncome) / Math.abs(prev.netIncome);
           yoy = (chg >= 0 ? '▲ +' : '▼ ') + fPct(Math.abs(chg));
           yoyClass = chg >= 0 ? 'pos' : 'neg';
