@@ -1,0 +1,1052 @@
+# Análise Avançada de Ações — Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Create `analise.html` — a full fundamental analysis page per ticker (Hero + 4 tabs: Indicadores, Valuations, Histórico, Gráfico), plus context menu on watchlist and sidebar updates on all pages.
+
+**Architecture:** Single vanilla-JS HTML file following the exact pattern of the existing pages (no bundler, `<script type="module">`, same CSS design system). Reuses `/api/fundamentals/<ticker>` and `/api/quote/<ticker>` — no new server endpoints. TradingView widget embedded for chart. Valuations calculated in-frontend from API data. DCF state read from `localStorage['dcf_watchlist']`.
+
+**Tech Stack:** Vanilla JS ES modules, CSS custom properties (existing design tokens), TradingView embed (`https://s3.tradingview.com/tv.js`), Python server unchanged.
+
+---
+
+## File Map
+
+| Action | File | Responsibility |
+|--------|------|----------------|
+| CREATE | `analise.html` | Full new analysis page |
+| MODIFY | `home.html:379-390` | Add sidebar item "Análise" |
+| MODIFY | `index.html:691-703` | Add sidebar item "Análise" |
+| MODIFY | `watchlist.html:410-422` | Add sidebar item "Análise" + context menu |
+| MODIFY | `ranking.html:520-536` | Add sidebar item "Análise" |
+| MODIFY | `CLAUDE.md` | Document new page in file tree + architecture |
+
+---
+
+## Task 1: Add "Análise" to sidebar on all 4 existing pages
+
+**Files:**
+- Modify: `home.html` (around line 388 — after Ranking item)
+- Modify: `index.html` (around line 701 — after Ranking item)
+- Modify: `watchlist.html` (around line 420 — after Ranking item)
+- Modify: `ranking.html` (around line 533 — after Ranking item, which is `.active` here)
+
+- [ ] **Step 1: Add sidebar item to home.html**
+
+Find the Ranking nav item in `home.html` (it ends with `</a>` before `<hr class="sidebar-divider">`). Insert the Análise item immediately after it:
+
+```html
+    <a href="ranking.html" class="sidebar-item">
+      <span class="sidebar-icon">🏆</span><span class="sidebar-label"> Ranking de Ações</span>
+    </a>
+    <a href="analise.html" class="sidebar-item">
+      <span class="sidebar-icon">🔍</span><span class="sidebar-label"> Análise</span>
+    </a>
+    <hr class="sidebar-divider">
+```
+
+- [ ] **Step 2: Add sidebar item to index.html**
+
+Find the Ranking nav item in `index.html`. Insert immediately after:
+
+```html
+    <a href="ranking.html" class="sidebar-item">
+      <span class="sidebar-icon">🏆</span><span class="sidebar-label"> Ranking de Ações</span>
+    </a>
+    <a href="analise.html" class="sidebar-item">
+      <span class="sidebar-icon">🔍</span><span class="sidebar-label"> Análise</span>
+    </a>
+    <hr class="sidebar-divider">
+```
+
+- [ ] **Step 3: Add sidebar item to watchlist.html**
+
+Find the Ranking nav item in `watchlist.html`. Insert immediately after:
+
+```html
+    <a href="ranking.html" class="sidebar-item">
+      <span class="sidebar-icon">🏆</span><span class="sidebar-label"> Ranking de Ações</span>
+    </a>
+    <a href="analise.html" class="sidebar-item">
+      <span class="sidebar-icon">🔍</span><span class="sidebar-label"> Análise</span>
+    </a>
+    <hr class="sidebar-divider">
+```
+
+- [ ] **Step 4: Add sidebar item to ranking.html**
+
+Find the Ranking nav item in `ranking.html` (has class `active`). Insert immediately after:
+
+```html
+    <a href="ranking.html" class="sidebar-item active">
+      <span class="sidebar-icon">🏆</span>
+      <span class="sidebar-label">Ranking de Ações</span>
+    </a>
+    <a href="analise.html" class="sidebar-item">
+      <span class="sidebar-icon">🔍</span>
+      <span class="sidebar-label">Análise</span>
+    </a>
+```
+
+- [ ] **Step 5: Verify in browser**
+
+Open each of the 4 pages at `http://localhost:8000`. Hover over the sidebar — confirm "🔍 Análise" appears between Ranking and the divider on all 4 pages. Clicking navigates to `analise.html` (404 for now — expected).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add home.html index.html watchlist.html ranking.html
+git commit -m "feat(sidebar): add Análise item to all pages"
+```
+
+---
+
+## Task 2: Context menu on watchlist.html
+
+**Files:**
+- Modify: `watchlist.html` — add CSS for `.context-menu`, add JS event handlers
+
+- [ ] **Step 1: Add CSS for context menu**
+
+In `watchlist.html`, find `/* ── Scrollbar ──` in the `<style>` block and add before it:
+
+```css
+    /* ── Context Menu ── */
+    .context-menu {
+      position: fixed;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow-lg);
+      z-index: 9999;
+      min-width: 200px;
+      overflow: hidden;
+    }
+    .context-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      font-size: 13px;
+      color: var(--text-sec);
+      cursor: pointer;
+      transition: background .12s ease, color .12s ease;
+    }
+    .context-menu-item:hover {
+      background: var(--bg-4);
+      color: var(--text);
+    }
+    .context-menu-item.danger:hover {
+      background: var(--red-dim);
+      color: var(--red);
+    }
+```
+
+- [ ] **Step 2: Add context menu JS at end of script block**
+
+In `watchlist.html`, find the closing `</script>` tag and insert before it:
+
+```javascript
+  // ── Context Menu ──────────────────────────────────────────────
+  let _ctxMenu = null;
+
+  function closeContextMenu() {
+    if (_ctxMenu) { _ctxMenu.remove(); _ctxMenu = null; }
+  }
+
+  function showContextMenu(e, ticker) {
+    closeContextMenu();
+    const menu = document.createElement('div');
+    menu.className = 'context-menu';
+
+    const itemAnalise = document.createElement('div');
+    itemAnalise.className = 'context-menu-item';
+    itemAnalise.innerHTML = '📊 Ver Análise Avançada';
+    itemAnalise.onclick = () => {
+      window.open(`analise.html?ticker=${ticker}`, '_blank');
+      closeContextMenu();
+    };
+
+    const itemDelete = document.createElement('div');
+    itemDelete.className = 'context-menu-item danger';
+    itemDelete.innerHTML = '🗑 Excluir da watchlist';
+    itemDelete.onclick = () => {
+      const wl = JSON.parse(localStorage.getItem('dcf_watchlist') || '{}');
+      delete wl[ticker];
+      localStorage.setItem('dcf_watchlist', JSON.stringify(wl));
+      closeContextMenu();
+      renderTable();
+    };
+
+    menu.appendChild(itemAnalise);
+    menu.appendChild(itemDelete);
+
+    const x = Math.min(e.clientX, window.innerWidth - 220);
+    const y = Math.min(e.clientY, window.innerHeight - 100);
+    menu.style.left = x + 'px';
+    menu.style.top  = y + 'px';
+
+    document.body.appendChild(menu);
+    _ctxMenu = menu;
+  }
+
+  document.addEventListener('mousedown', e => {
+    if (_ctxMenu && !_ctxMenu.contains(e.target)) closeContextMenu();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeContextMenu();
+  });
+```
+
+- [ ] **Step 3: Wire contextmenu event to table rows**
+
+In `watchlist.html`, find the `renderTable` function. In the part that creates each `<tr>` element (look for `tr.innerHTML` or `document.createElement('tr')`), add the contextmenu event after the row is created. The row creation looks like:
+
+```javascript
+  // Find where tr is created in renderTable and add after row construction:
+  tr.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    showContextMenu(e, entry.ticker);
+  });
+```
+
+Find the exact location in the `renderTable` function where rows are appended to tbody, and add this event listener to the `tr` before it's appended.
+
+- [ ] **Step 4: Verify in browser**
+
+Open `http://localhost:8000/watchlist.html`. Right-click on any row in the watchlist table. Confirm the context menu appears with "📊 Ver Análise Avançada" and "🗑 Excluir da watchlist". Confirm:
+- Clicking outside closes the menu
+- Pressing Escape closes the menu
+- "Excluir" removes the entry (check localStorage)
+- "Análise Avançada" opens `analise.html?ticker=XXXX` in a new tab (404 for now)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add watchlist.html
+git commit -m "feat(watchlist): add right-click context menu with Análise Avançada option"
+```
+
+---
+
+## Task 3: analise.html — full HTML shell + CSS
+
+**Files:**
+- Create: `analise.html`
+
+- [ ] **Step 1: Create analise.html with complete structure**
+
+Create `analise.html` with the full shell. All JS sections are empty stubs — only structure and CSS:
+
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Análise · DCF B3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://s3.tradingview.com/tv.js" async></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    * { transition: border-color .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease; }
+
+    :root {
+      --bg-0:#060910; --bg-1:#0b0f17; --bg-2:#111827; --bg-3:#1a2233; --bg-4:#1f2a3f;
+      --border:#1e2d42; --border-muted:#151e2d; --border-glow:rgba(6,182,212,.25);
+      --text:#f0f4f8; --text-sec:#94a3b8; --text-muted:#4a5568;
+      --cyan:#06b6d4; --cyan-dim:rgba(6,182,212,.12); --cyan-glow:rgba(6,182,212,.08);
+      --green:#10b981; --green-dim:rgba(16,185,129,.12);
+      --red:#ef4444; --red-dim:rgba(239,68,68,.12);
+      --amber:#f59e0b; --amber-dim:rgba(245,158,11,.12);
+      --purple:#8b5cf6; --purple-dim:rgba(139,92,246,.12);
+      --font-ui:'Inter',-apple-system,system-ui,sans-serif;
+      --font-mono:'JetBrains Mono','Cascadia Code','Fira Code',monospace;
+      --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:20px;
+      --shadow-sm:0 1px 3px rgba(0,0,0,.4);
+      --shadow-md:0 4px 16px rgba(0,0,0,.5);
+      --shadow-lg:0 8px 32px rgba(0,0,0,.6);
+      --glow-cyan:0 0 20px rgba(6,182,212,.15);
+    }
+
+    body { background:var(--bg-1); color:var(--text); font-family:var(--font-ui); font-size:15px; line-height:1.6; height:100vh; overflow:hidden; display:flex; }
+
+    /* ── Sidebar (identical to other pages) ── */
+    .sidebar { width:58px; background:rgba(11,15,23,.95); backdrop-filter:blur(12px); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; height:100%; overflow-y:auto; overflow-x:hidden; transition:width .22s ease; }
+    .sidebar:hover { width:224px; }
+    .sidebar-logo { padding:16px; border-bottom:1px solid var(--border); text-decoration:none; display:block; }
+    .logo-mark { width:26px; height:26px; background:linear-gradient(135deg,#06b6d4,#8b5cf6); border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+    .logo-text { display:none; margin-left:10px; font-size:13px; font-weight:700; background:linear-gradient(135deg,var(--cyan),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .sidebar:hover .logo-text { display:inline; }
+    .sidebar-section { display:none; padding:14px 14px 4px; font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.08em; }
+    .sidebar:hover .sidebar-section { display:block; }
+    .sidebar-item { display:flex; align-items:center; gap:9px; padding:10px; justify-content:center; color:var(--text-sec); text-decoration:none; font-size:13px; font-weight:500; border-left:2px solid transparent; }
+    .sidebar-item:hover { background:rgba(6,182,212,.06); color:var(--text); }
+    .sidebar-item.active { color:var(--cyan); background:rgba(6,182,212,.08); border-left-color:var(--cyan); }
+    .sidebar:hover .sidebar-item { padding:8px 14px; justify-content:flex-start; }
+    .sidebar-item-disabled { display:flex; align-items:center; gap:9px; padding:10px; justify-content:center; color:var(--text-muted); font-size:13px; opacity:.5; cursor:not-allowed; }
+    .sidebar:hover .sidebar-item-disabled { padding:8px 14px; justify-content:flex-start; }
+    .sidebar-label { display:none; }
+    .sidebar:hover .sidebar-label { display:inline; }
+    .sidebar-icon { font-size:15px; flex-shrink:0; }
+    .sidebar-divider { border:none; border-top:1px solid var(--border); margin:8px 0; }
+
+    /* ── Main layout ── */
+    .main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+    /* ── Search bar ── */
+    .search-bar { padding:14px 24px; border-bottom:1px solid var(--border); background:var(--bg-2); display:flex; gap:10px; align-items:center; }
+    .search-input { flex:1; max-width:360px; background:var(--bg-3); border:1px solid var(--border); border-radius:var(--r-md); padding:8px 14px; color:var(--text); font-family:var(--font-mono); font-size:14px; outline:none; }
+    .search-input:focus { border-color:var(--cyan); box-shadow:0 0 0 2px rgba(6,182,212,.15); }
+    .search-input::placeholder { color:var(--text-muted); }
+    .search-btn { background:var(--cyan); color:#000; border:none; border-radius:var(--r-md); padding:8px 20px; font-weight:700; font-size:13px; cursor:pointer; }
+    .search-btn:hover { background:#0891b2; }
+    .search-error { color:var(--red); font-size:13px; }
+
+    /* ── Scrollable content area ── */
+    .content { flex:1; overflow-y:auto; padding:24px; display:flex; flex-direction:column; gap:20px; }
+
+    /* ── Empty state ── */
+    .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:14px; color:var(--text-muted); text-align:center; }
+    .empty-icon { font-size:56px; opacity:.2; }
+    .empty-title { font-size:18px; color:var(--text-sec); font-weight:600; }
+    .empty-hint { font-size:14px; max-width:340px; line-height:1.7; color:var(--text-sec); }
+
+    /* ── Hero ── */
+    .hero { background:linear-gradient(135deg,var(--bg-2),rgba(6,182,212,.04)); border:1px solid var(--border); border-radius:var(--r-lg); padding:20px 24px; }
+    .hero-top { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+    .hero-identity { display:flex; flex-direction:column; gap:4px; }
+    .hero-ticker { font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--cyan); background:var(--cyan-dim); border:1px solid rgba(6,182,212,.2); border-radius:20px; padding:2px 12px; display:inline-block; }
+    .hero-name { font-size:22px; font-weight:700; color:var(--text); margin-top:4px; }
+    .hero-price-block { text-align:right; }
+    .hero-price { font-family:var(--font-mono); font-size:32px; font-weight:700; display:block; }
+    .hero-change { font-size:15px; font-weight:600; display:block; margin-top:2px; }
+    .hero-change.pos { color:var(--green); }
+    .hero-change.neg { color:var(--red); }
+
+    .hero-kpis { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
+    .kpi-chip { background:var(--bg-3); border:1px solid var(--border); border-radius:var(--r-md); padding:8px 14px; display:flex; flex-direction:column; gap:2px; min-width:110px; }
+    .kpi-label { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); }
+    .kpi-value { font-family:var(--font-mono); font-size:15px; font-weight:600; color:var(--text); }
+    .kpi-value.green { color:var(--green); }
+
+    .range-bar-wrap { display:flex; align-items:center; gap:12px; }
+    .range-label { font-family:var(--font-mono); font-size:12px; color:var(--text-sec); min-width:70px; }
+    .range-label:last-child { text-align:right; }
+    .range-bar { flex:1; height:6px; background:var(--bg-3); border-radius:3px; position:relative; }
+    .range-fill { height:100%; background:linear-gradient(90deg,var(--red),var(--amber),var(--green)); border-radius:3px; }
+    .range-dot { width:12px; height:12px; background:var(--text); border:2px solid var(--bg-1); border-radius:50%; position:absolute; top:-3px; transform:translateX(-50%); }
+
+    /* ── Skeleton ── */
+    @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+    .skel { background:linear-gradient(90deg,var(--bg-3) 25%,var(--bg-4) 50%,var(--bg-3) 75%); background-size:200% 100%; animation:shimmer 1.8s infinite; border-radius:var(--r-sm); color:transparent!important; display:inline-block; min-width:60px; }
+
+    /* ── Tabs ── */
+    .tabs { display:flex; border-bottom:1px solid var(--border); gap:0; }
+    .tab { background:none; border:none; border-bottom:2px solid transparent; padding:12px 20px; font-size:14px; font-weight:500; color:var(--text-muted); cursor:pointer; transition:color .15s, border-color .15s; }
+    .tab:hover { color:var(--text-sec); }
+    .tab.active { color:var(--cyan); border-bottom-color:var(--cyan); }
+
+    .tab-pane { display:none; padding-top:20px; }
+    .tab-pane.active { display:block; }
+
+    /* ── Indicator cards ── */
+    .ind-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin-bottom:12px; margin-top:20px; padding-bottom:6px; border-bottom:1px solid var(--border-muted); }
+    .ind-section-title:first-child { margin-top:0; }
+    .ind-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    @media (max-width:900px) { .ind-grid { grid-template-columns:repeat(2,1fr); } }
+    .ind-card { background:var(--bg-3); border:1px solid var(--border); border-radius:var(--r-md); padding:14px 16px; }
+    .ind-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; display:flex; align-items:center; gap:4px; margin-bottom:6px; }
+    .ind-value { font-family:var(--font-mono); font-size:20px; font-weight:700; color:var(--text); }
+    .ind-value.pos { color:var(--green); }
+    .ind-value.neg { color:var(--red); }
+    .ind-value.muted { color:var(--text-muted); font-size:16px; }
+
+    /* ── Tooltip ── */
+    .tooltip-wrap { position:relative; display:inline-flex; align-items:center; }
+    .tooltip-btn { width:14px; height:14px; border-radius:50%; border:1px solid var(--border); color:var(--text-muted); cursor:default; font-size:9px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; }
+    .tooltip-content { display:none; position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r-md); padding:12px 14px; width:230px; font-size:12px; line-height:1.6; color:var(--text-sec); z-index:200; box-shadow:var(--shadow-lg); text-transform:none; letter-spacing:normal; font-weight:400; }
+    .tooltip-wrap:hover .tooltip-content { display:block; }
+    .tooltip-content strong { color:var(--text); display:block; margin-bottom:4px; }
+
+    /* ── Valuation cards ── */
+    .val-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
+    @media (max-width:900px) { .val-grid { grid-template-columns:repeat(2,1fr); } }
+    .val-card { background:var(--bg-3); border:1px solid var(--border); border-radius:var(--r-md); padding:16px; }
+    .val-method { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:6px; }
+    .val-price { font-family:var(--font-mono); font-size:22px; font-weight:700; margin-bottom:4px; }
+    .val-upside { font-size:13px; font-weight:600; margin-bottom:6px; }
+    .val-formula { font-size:11px; color:var(--text-muted); font-family:var(--font-mono); }
+    .val-price.cyan { color:var(--cyan); }
+    .val-price.purple { color:var(--purple); }
+    .val-price.green { color:var(--green); }
+    .val-price.amber { color:var(--amber); }
+    .val-upside.pos { color:var(--green); }
+    .val-upside.neg { color:var(--red); }
+    .val-insufficient { color:var(--text-muted); font-size:13px; margin-top:8px; }
+
+    .current-price-ref { display:flex; align-items:center; justify-content:space-between; background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r-md); padding:10px 16px; margin-bottom:20px; font-size:14px; }
+    .current-price-ref span:first-child { color:var(--text-sec); }
+    .current-price-ref span:last-child { font-family:var(--font-mono); font-weight:700; }
+
+    .dcf-section-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin-bottom:12px; }
+
+    /* DCF not calculated */
+    .dcf-cta { background:rgba(245,158,11,.06); border:1px dashed rgba(245,158,11,.35); border-radius:var(--r-md); padding:20px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .dcf-cta-text strong { display:block; color:var(--amber); font-size:15px; margin-bottom:4px; }
+    .dcf-cta-text span { color:var(--text-sec); font-size:13px; }
+    .dcf-cta-btn { background:var(--amber); color:#000; border:none; border-radius:var(--r-md); padding:10px 22px; font-weight:700; font-size:13px; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+    .dcf-cta-btn:hover { background:#d97706; }
+
+    /* DCF calculated */
+    .dcf-saved { background:rgba(6,182,212,.05); border:1px solid rgba(6,182,212,.25); border-radius:var(--r-md); padding:20px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+    .dcf-saved-price { font-family:var(--font-mono); font-size:28px; font-weight:700; color:var(--cyan); }
+    .dcf-saved-badge { background:rgba(6,182,212,.15); color:var(--cyan); border:1px solid rgba(6,182,212,.25); border-radius:20px; font-size:11px; font-weight:700; padding:2px 10px; }
+    .dcf-saved-meta { font-size:12px; color:var(--text-muted); margin-top:4px; }
+    .dcf-saved-recalc { color:var(--cyan); cursor:pointer; text-decoration:underline; }
+
+    /* ── Histórico table ── */
+    .hist-table { width:100%; border-collapse:collapse; }
+    .hist-table th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); padding:8px 16px; border-bottom:1px solid var(--border); }
+    .hist-table td { padding:12px 16px; border-bottom:1px solid var(--border-muted); font-size:14px; }
+    .hist-table tr:last-child td { border-bottom:none; }
+    .hist-table td:first-child { font-family:var(--font-mono); font-weight:600; color:var(--text-sec); }
+    .hist-table td:nth-child(2) { font-family:var(--font-mono); font-weight:700; }
+    .hist-yoy.pos { color:var(--green); font-weight:600; }
+    .hist-yoy.neg { color:var(--red); font-weight:600; }
+    .hist-yoy.muted { color:var(--text-muted); }
+
+    /* ── Gráfico ── */
+    .period-selector { display:flex; gap:0; border-bottom:1px solid var(--border); margin-bottom:0; }
+    .period-btn { background:none; border:none; border-bottom:2px solid transparent; padding:8px 14px; font-size:12px; font-weight:600; color:var(--text-muted); cursor:pointer; letter-spacing:.03em; }
+    .period-btn:hover { color:var(--text-sec); }
+    .period-btn.active { color:var(--cyan); border-bottom-color:var(--cyan); }
+    #tv-container { margin-top:0; border-radius:0 0 var(--r-lg) var(--r-lg); overflow:hidden; }
+
+    /* ── Error state ── */
+    .error-msg { background:var(--red-dim); border:1px solid rgba(239,68,68,.25); border-radius:var(--r-md); padding:16px 20px; color:var(--red); font-size:14px; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width:5px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  </style>
+</head>
+<body>
+
+  <aside class="sidebar">
+    <a href="home.html" class="sidebar-logo">
+      <div style="display:flex;align-items:center;">
+        <div class="logo-mark">📈</div>
+        <span class="logo-text">DCF B3</span>
+      </div>
+    </a>
+    <nav style="padding:8px 0; flex:1;">
+      <div class="sidebar-section">Ferramentas</div>
+      <a href="home.html" class="sidebar-item">
+        <span class="sidebar-icon">🏠</span><span class="sidebar-label"> Home</span>
+      </a>
+      <a href="index.html" class="sidebar-item">
+        <span class="sidebar-icon">📊</span><span class="sidebar-label"> Calculadora</span>
+      </a>
+      <a href="watchlist.html" class="sidebar-item">
+        <span class="sidebar-icon">📋</span><span class="sidebar-label"> Meus Valuations</span>
+      </a>
+      <a href="ranking.html" class="sidebar-item">
+        <span class="sidebar-icon">🏆</span><span class="sidebar-label"> Ranking de Ações</span>
+      </a>
+      <a href="analise.html" class="sidebar-item active">
+        <span class="sidebar-icon">🔍</span><span class="sidebar-label"> Análise</span>
+      </a>
+      <hr class="sidebar-divider">
+      <div class="sidebar-section">Em Breve</div>
+      <div class="sidebar-item-disabled">
+        <span class="sidebar-icon">⚖️</span><span class="sidebar-label"> Comparativo</span>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="search-bar">
+      <input id="search-input" class="search-input" placeholder="Buscar ticker… (ex: ITUB4)" autocomplete="off" spellcheck="false">
+      <button id="search-btn" class="search-btn">Buscar</button>
+      <span id="search-error" class="search-error" style="display:none"></span>
+    </div>
+
+    <div class="content" id="content">
+
+      <div id="empty-state" class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-title">Análise Avançada de Ações</div>
+        <div class="empty-hint">Digite o código de uma ação da B3 acima para ver indicadores fundamentalistas, gráfico de cotação e valuations.</div>
+      </div>
+
+      <div id="page-content" style="display:none;">
+
+        <!-- Hero -->
+        <div class="hero" id="hero">
+          <div class="hero-top">
+            <div class="hero-identity">
+              <span class="hero-ticker" id="hero-ticker"><span class="skel" style="width:60px;height:20px;display:inline-block;border-radius:20px;"></span></span>
+              <div class="hero-name" id="hero-name"><span class="skel" style="width:240px;height:28px;display:inline-block;"></span></div>
+            </div>
+            <div class="hero-price-block">
+              <span class="hero-price" id="hero-price"><span class="skel" style="width:120px;height:36px;display:inline-block;"></span></span>
+              <span class="hero-change" id="hero-change"><span class="skel" style="width:80px;height:18px;display:inline-block;"></span></span>
+            </div>
+          </div>
+          <div class="hero-kpis" id="hero-kpis">
+            <div class="kpi-chip"><div class="kpi-label">Mkt Cap</div><div class="kpi-value" id="kpi-mktcap"><span class="skel" style="width:70px;height:18px;display:inline-block;"></span></div></div>
+            <div class="kpi-chip"><div class="kpi-label">52s Mín</div><div class="kpi-value" id="kpi-52low"><span class="skel" style="width:60px;height:18px;display:inline-block;"></span></div></div>
+            <div class="kpi-chip"><div class="kpi-label">52s Máx</div><div class="kpi-value" id="kpi-52high"><span class="skel" style="width:60px;height:18px;display:inline-block;"></span></div></div>
+            <div class="kpi-chip"><div class="kpi-label">DY</div><div class="kpi-value green" id="kpi-dy"><span class="skel" style="width:50px;height:18px;display:inline-block;"></span></div></div>
+            <div class="kpi-chip"><div class="kpi-label">P/L</div><div class="kpi-value" id="kpi-pl"><span class="skel" style="width:50px;height:18px;display:inline-block;"></span></div></div>
+          </div>
+          <div class="range-bar-wrap">
+            <span class="range-label" id="range-low">—</span>
+            <div class="range-bar">
+              <div class="range-fill" id="range-fill" style="width:100%"></div>
+              <div class="range-dot" id="range-dot" style="left:50%"></div>
+            </div>
+            <span class="range-label" id="range-high">—</span>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div id="error-msg" class="error-msg" style="display:none;"></div>
+
+        <!-- Tabs -->
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="indicadores">Indicadores</button>
+          <button class="tab" data-tab="valuations">Valuations</button>
+          <button class="tab" data-tab="historico">Histórico</button>
+          <button class="tab" data-tab="grafico">Gráfico</button>
+        </div>
+
+        <!-- Pane: Indicadores -->
+        <div id="pane-indicadores" class="tab-pane active">
+          <div class="ind-section-title">Valuation</div>
+          <div class="ind-grid" id="grid-valuation">
+            <!-- cards rendered by JS -->
+          </div>
+          <div class="ind-section-title">Rentabilidade</div>
+          <div class="ind-grid" id="grid-rentabilidade">
+          </div>
+          <div class="ind-section-title">Estrutura de Capital</div>
+          <div class="ind-grid" id="grid-estrutura">
+          </div>
+        </div>
+
+        <!-- Pane: Valuations -->
+        <div id="pane-valuations" class="tab-pane">
+          <div class="val-grid" id="val-grid"></div>
+          <div class="current-price-ref">
+            <span>Preço atual</span>
+            <span id="val-current-price">—</span>
+          </div>
+          <div class="dcf-section-title">Valuation por Fluxo de Caixa Descontado (DCF)</div>
+          <div id="dcf-block"></div>
+        </div>
+
+        <!-- Pane: Histórico -->
+        <div id="pane-historico" class="tab-pane">
+          <table class="hist-table">
+            <thead>
+              <tr>
+                <th>Ano</th>
+                <th>Lucro Líquido</th>
+                <th>Variação YoY</th>
+              </tr>
+            </thead>
+            <tbody id="hist-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Pane: Gráfico -->
+        <div id="pane-grafico" class="tab-pane">
+          <div class="period-selector" id="period-selector">
+            <button class="period-btn" data-range="1D">1 DIA</button>
+            <button class="period-btn" data-range="5D">7 DIAS</button>
+            <button class="period-btn" data-range="1M">30 DIAS</button>
+            <button class="period-btn" data-range="6M">6 MESES</button>
+            <button class="period-btn" data-range="YTD">YTD</button>
+            <button class="period-btn active" data-range="12M">1 ANO</button>
+            <button class="period-btn" data-range="60M">5 ANOS</button>
+            <button class="period-btn" data-range="ALL">10 ANOS</button>
+          </div>
+          <div id="tv-container" style="height:520px;"></div>
+        </div>
+
+      </div><!-- /#page-content -->
+    </div><!-- /.content -->
+  </div><!-- /.main -->
+
+  <script type="module">
+    // ── A: Formatters ──────────────────────────────────────────────
+    import { fBRL, fPct } from './src/formatters.js';
+
+    function fMktCap(n) {
+      if (!n) return '—';
+      if (n >= 1e12) return 'R$ ' + (n/1e12).toLocaleString('pt-BR', {maximumFractionDigits:1}) + 'T';
+      if (n >= 1e9)  return 'R$ ' + (n/1e9).toLocaleString('pt-BR',  {maximumFractionDigits:1}) + 'B';
+      if (n >= 1e6)  return 'R$ ' + (n/1e6).toLocaleString('pt-BR',  {maximumFractionDigits:1}) + 'M';
+      return fBRL.format(n);
+    }
+
+    function fNum(n, dec = 2) {
+      if (n == null || isNaN(n)) return '—';
+      return n.toLocaleString('pt-BR', {minimumFractionDigits: dec, maximumFractionDigits: dec});
+    }
+
+    function fVal(n) { return n != null ? fBRL.format(n) : '—'; }
+    function fPctVal(n) { return n != null ? fPct(n) : '—'; }
+
+    // ── B: State ───────────────────────────────────────────────────
+    const S = { ticker: null, fundamentals: null, quote: null, activeTab: 'indicadores', activeRange: '12M' };
+
+    // ── C: URL param + init ────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const ticker = params.get('ticker');
+      if (ticker) {
+        document.getElementById('search-input').value = ticker.toUpperCase();
+        loadTicker(ticker.toUpperCase());
+      }
+      bindEvents();
+    });
+
+    // ── D: Events ──────────────────────────────────────────────────
+    function bindEvents() {
+      document.getElementById('search-btn').addEventListener('click', onSearch);
+      document.getElementById('search-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') onSearch();
+      });
+
+      document.querySelectorAll('.tab').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+      });
+
+      document.getElementById('period-selector').addEventListener('click', e => {
+        const btn = e.target.closest('.period-btn');
+        if (!btn) return;
+        S.activeRange = btn.dataset.range;
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        loadChart(S.activeRange);
+      });
+    }
+
+    function onSearch() {
+      const val = document.getElementById('search-input').value.trim().toUpperCase();
+      if (!val) return;
+      history.replaceState(null, '', `?ticker=${val}`);
+      loadTicker(val);
+    }
+
+    // ── E: Tab switching ───────────────────────────────────────────
+    function switchTab(tab) {
+      S.activeTab = tab;
+      document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `pane-${tab}`));
+      if (tab === 'grafico' && S.ticker) loadChart(S.activeRange);
+    }
+
+    // ── F: Data loading ────────────────────────────────────────────
+    async function loadTicker(ticker) {
+      showContent();
+      showError(null);
+      S.ticker = ticker;
+      S.fundamentals = null;
+      S.quote = null;
+
+      const [fundRes, quoteRes] = await Promise.allSettled([
+        fetch(`/api/fundamentals/${ticker}`).then(r => r.json()),
+        fetch(`/api/quote/${ticker}`).then(r => r.json()),
+      ]);
+
+      const fund = fundRes.status === 'fulfilled' ? fundRes.value : null;
+      const quote = quoteRes.status === 'fulfilled' ? quoteRes.value : null;
+
+      if (!fund || fund.code === 'NOT_FOUND' || fund.code === 'NO_YFINANCE') {
+        showError(fund?.error || `Ticker "${ticker}" não encontrado`);
+        return;
+      }
+
+      S.fundamentals = fund;
+      S.quote = quote;
+
+      renderHero(fund);
+      renderIndicadores(fund);
+      renderValuations(fund);
+      renderHistorico(quote);
+      if (S.activeTab === 'grafico') loadChart(S.activeRange);
+    }
+
+    function showContent() {
+      document.getElementById('empty-state').style.display = 'none';
+      document.getElementById('page-content').style.display = 'block';
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      if (msg) { el.textContent = msg; el.style.display = 'block'; }
+      else { el.style.display = 'none'; }
+    }
+
+    // ── G: Hero ────────────────────────────────────────────────────
+    function renderHero(d) {
+      document.getElementById('hero-ticker').textContent = d.ticker;
+      document.getElementById('hero-name').textContent = d.name;
+
+      const price = d.price ?? 0;
+      document.getElementById('hero-price').textContent = fBRL.format(price);
+
+      const chg = d.changePercent ?? 0;
+      const chgEl = document.getElementById('hero-change');
+      chgEl.textContent = (chg >= 0 ? '▲ +' : '▼ ') + fPct(chg / 100);
+      chgEl.className = 'hero-change ' + (chg >= 0 ? 'pos' : 'neg');
+
+      document.getElementById('kpi-mktcap').textContent = fMktCap(d.marketCap);
+      document.getElementById('kpi-52low').textContent  = d.fiftyTwoWeekLow  ? fBRL.format(d.fiftyTwoWeekLow)  : '—';
+      document.getElementById('kpi-52high').textContent = d.fiftyTwoWeekHigh ? fBRL.format(d.fiftyTwoWeekHigh) : '—';
+      document.getElementById('kpi-dy').textContent = d.dy ? fPct(d.dy) : '—';
+      document.getElementById('kpi-pl').textContent = d.pl ? fNum(d.pl) : '—';
+
+      const lo = d.fiftyTwoWeekLow, hi = d.fiftyTwoWeekHigh;
+      if (lo && hi && hi > lo) {
+        const pct = Math.min(100, Math.max(0, ((price - lo) / (hi - lo)) * 100));
+        document.getElementById('range-low').textContent  = fBRL.format(lo);
+        document.getElementById('range-high').textContent = fBRL.format(hi);
+        document.getElementById('range-dot').style.left   = pct + '%';
+      }
+    }
+
+    // ── H: Indicator cards ─────────────────────────────────────────
+    const INDICATORS = {
+      valuation: [
+        { id:'pl',   label:'P/L',   field:'pl',   fmt:'num',  tip:'<strong>Preço / Lucro</strong>Quantos anos de lucro para recuperar o investimento ao preço atual. Quanto menor, mais barata a ação em relação ao lucro.' },
+        { id:'pvp',  label:'P/VP',  field:'pvp',  fmt:'num',  tip:'<strong>Preço / Valor Patrimonial</strong>Compara o preço com o patrimônio líquido por ação. Abaixo de 1 indica desconto ao patrimônio.' },
+        { id:'lpa',  label:'LPA',   field:'lpa',  fmt:'brl4', tip:'<strong>Lucro por Ação</strong>Lucro líquido dividido pelo número de ações (TTM — últimos 12 meses).' },
+        { id:'vpa',  label:'VPA',   field:'vpa',  fmt:'brl4', tip:'<strong>Valor Patrimonial por Ação</strong>Patrimônio líquido dividido pelo número de ações.' },
+      ],
+      rentabilidade: [
+        { id:'roe',  label:'ROE',   field:'roe',  fmt:'pct',  tip:'<strong>Retorno sobre Patrimônio Líquido</strong>Lucro Líquido / Patrimônio Líquido. Mede a eficiência no uso do capital próprio. Acima de 15% = bom.' },
+        { id:'roic', label:'ROIC',  field:'roic', fmt:'pct',  tip:'<strong>Retorno sobre Capital Investido</strong>Mede o retorno gerado para cada R$ de capital total investido no negócio.' },
+        { id:'ml',   label:'Marg. Líquida', field:'margemLiquida', fmt:'pct', tip:'<strong>Margem Líquida</strong>Lucro Líquido / Receita Líquida. Percentual de cada R$ de receita que vira lucro.' },
+        { id:'cg',   label:'Cresc. Lucros', field:'crescimentoLucros', fmt:'pct', tip:'<strong>Crescimento de Lucros (YoY)</strong>Variação do lucro em relação ao ano anterior. Fonte: yfinance earningsGrowth.' },
+        { id:'peg',  label:'PEG Ratio', field:'pegRatio', fmt:'num', tip:'<strong>PEG Ratio</strong>P/L dividido pelo crescimento de lucros (%). Abaixo de 1 pode indicar ação subavaliada em relação ao crescimento.' },
+        { id:'dpa',  label:'DPA',   field:'dpa',  fmt:'brl4', tip:'<strong>Dividendo por Ação</strong>Total de dividendos pagos por ação nos últimos 12 meses (TTM).' },
+      ],
+      estrutura: [
+        { id:'dl',   label:'DL/EBITDA', field:'dividaLiquidaEbit', fmt:'num', tip:'<strong>Dívida Líquida / EBITDA</strong>Quantos anos de geração de caixa operacional para pagar a dívida. Abaixo de 2 é saudável. Não se aplica a bancos.' },
+        { id:'dy',   label:'DY',    field:'dy',   fmt:'pct',  tip:'<strong>Dividend Yield</strong>Dividendos por ação / Preço atual. Rendimento em dividendos dos últimos 12 meses.' },
+        { id:'pvp2', label:'P/VP',  field:'pvp',  fmt:'num',  tip:'<strong>Preço / Valor Patrimonial</strong>Mesmo indicador da seção Valuation.' },
+        { id:'liq',  label:'Liq. Média', field:'liquidezMedia', fmt:'liq', tip:'<strong>Liquidez Média Diária</strong>Volume médio diário negociado em R$. Indica facilidade de compra/venda no mercado.' },
+      ],
+    };
+
+    function makeCard(cfg, data) {
+      const rawVal = data[cfg.field];
+      let display;
+      if (rawVal == null || isNaN(rawVal)) {
+        display = '<span class="ind-value muted">—</span>';
+      } else {
+        let txt;
+        if      (cfg.fmt === 'pct')  txt = fPct(rawVal);
+        else if (cfg.fmt === 'brl4') txt = fBRL.format(rawVal);
+        else if (cfg.fmt === 'liq')  txt = fMktCap(rawVal);
+        else                         txt = fNum(rawVal);
+        display = `<span class="ind-value">${txt}</span>`;
+      }
+      return `
+        <div class="ind-card">
+          <div class="ind-label">${cfg.label}
+            <span class="tooltip-wrap">
+              <span class="tooltip-btn">?</span>
+              <div class="tooltip-content">${cfg.tip}</div>
+            </span>
+          </div>
+          ${display}
+        </div>`;
+    }
+
+    function renderIndicadores(d) {
+      document.getElementById('grid-valuation').innerHTML      = INDICATORS.valuation.map(c => makeCard(c, d)).join('');
+      document.getElementById('grid-rentabilidade').innerHTML  = INDICATORS.rentabilidade.map(c => makeCard(c, d)).join('');
+      document.getElementById('grid-estrutura').innerHTML      = INDICATORS.estrutura.map(c => makeCard(c, d)).join('');
+    }
+
+    // ── I: Valuations ──────────────────────────────────────────────
+    function calcUpside(fair, price) {
+      if (!fair || !price) return null;
+      return (fair - price) / fair;
+    }
+
+    function renderValCard(method, fair, price, formula, colorClass) {
+      if (fair == null) {
+        return `<div class="val-card">
+          <div class="val-method">${method}</div>
+          <div class="val-formula">${formula}</div>
+          <div class="val-insufficient">Dados insuficientes</div>
+        </div>`;
+      }
+      const upside = calcUpside(fair, price);
+      const uSign  = upside >= 0 ? 'pos' : 'neg';
+      const uTxt   = (upside >= 0 ? '↑ +' : '↓ ') + fPct(Math.abs(upside));
+      return `<div class="val-card">
+        <div class="val-method">${method}</div>
+        <div class="val-price ${colorClass}">${fBRL.format(fair)}</div>
+        <div class="val-upside ${uSign}">${uTxt} upside</div>
+        <div class="val-formula">${formula}</div>
+      </div>`;
+    }
+
+    function renderValuations(d) {
+      const price = d.price;
+
+      const bazin   = d.dpa ? d.dpa / 0.06 : null;
+      const graham  = (d.lpa > 0 && d.vpa > 0) ? Math.sqrt(22.5 * d.lpa * d.vpa) : null;
+      const lynch   = (d.lpa && d.crescimentoLucros > 0) ? d.lpa * (d.crescimentoLucros * 100) : null;
+      const joelEY  = (d.pl > 0) ? (1 / d.pl) : null;
+
+      const html = [
+        renderValCard('Bazin', bazin, price, 'DPA ÷ 6%', 'cyan'),
+        renderValCard('Graham', graham, price, '√(22.5 × LPA × VPA)', 'purple'),
+        renderValCard('Peter Lynch', lynch, price, 'LPA × CAGR(%)', 'green'),
+        joelEY != null
+          ? `<div class="val-card"><div class="val-method">Joel (Magic Formula)</div><div class="val-price amber">${fPct(joelEY)}</div><div class="val-upside" style="color:var(--text-muted)">Earnings Yield</div><div class="val-formula">1 ÷ P/L</div></div>`
+          : `<div class="val-card"><div class="val-method">Joel (Magic Formula)</div><div class="val-insufficient">P/L indisponível</div></div>`,
+      ].join('');
+
+      document.getElementById('val-grid').innerHTML = html;
+      document.getElementById('val-current-price').textContent = fBRL.format(price);
+
+      renderDCFBlock(d.ticker, price);
+    }
+
+    function renderDCFBlock(ticker, price) {
+      const wl = JSON.parse(localStorage.getItem('dcf_watchlist') || '{}');
+      const entry = wl[ticker];
+      const el = document.getElementById('dcf-block');
+
+      if (!entry) {
+        el.innerHTML = `
+          <div class="dcf-cta">
+            <div class="dcf-cta-text">
+              <strong>Preço Teto DCF não calculado</strong>
+              <span>Calcule seu preço justo personalizado com premissas ajustáveis</span>
+            </div>
+            <button class="dcf-cta-btn" onclick="location.href='index.html?ticker=${ticker}'">→ Calcular DCF</button>
+          </div>`;
+        return;
+      }
+
+      const fair = entry.fairPrice;
+      const upside = calcUpside(fair, price);
+      const uClass = upside >= 0 ? 'pos' : 'neg';
+      const uTxt = (upside >= 0 ? '↑ +' : '↓ ') + fPct(Math.abs(upside));
+      const savedDate = new Date(entry.savedAt).toLocaleDateString('pt-BR');
+
+      el.innerHTML = `
+        <div class="dcf-saved">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+              <span class="dcf-saved-badge">salvo</span>
+            </div>
+            <div class="dcf-saved-price">${fBRL.format(fair)}</div>
+            <div class="val-upside ${uClass}" style="margin-top:4px;">${uTxt} em relação ao preço atual</div>
+            <div class="dcf-saved-meta">Calculado em ${savedDate} · <span class="dcf-saved-recalc" onclick="location.href='index.html?wl=${ticker}'">Recalcular</span></div>
+          </div>
+        </div>`;
+    }
+
+    // ── J: Histórico ───────────────────────────────────────────────
+    function renderHistorico(quote) {
+      const tbody = document.getElementById('hist-tbody');
+      if (!quote || !quote.netIncomeHistory || quote.netIncomeHistory.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="color:var(--text-muted);text-align:center;padding:24px">Dados históricos indisponíveis</td></tr>';
+        return;
+      }
+      const hist = quote.netIncomeHistory;
+      const rows = hist.map((h, i) => {
+        const prev = hist[i + 1];
+        let yoy = '—', yoyClass = 'muted';
+        if (prev) {
+          const chg = (h.netIncome - prev.netIncome) / Math.abs(prev.netIncome);
+          yoy = (chg >= 0 ? '▲ +' : '▼ ') + fPct(Math.abs(chg));
+          yoyClass = chg >= 0 ? 'pos' : 'neg';
+        }
+        return `<tr>
+          <td>${h.year}</td>
+          <td>${fMktCap(h.netIncome)}</td>
+          <td class="hist-yoy ${yoyClass}">${yoy}</td>
+        </tr>`;
+      });
+      tbody.innerHTML = rows.join('');
+    }
+
+    // ── K: TradingView chart ───────────────────────────────────────
+    function loadChart(range) {
+      if (!S.ticker) return;
+      const container = document.getElementById('tv-container');
+      container.innerHTML = '<div id="tradingview_chart"></div>';
+
+      function initWidget() {
+        if (typeof TradingView === 'undefined') {
+          setTimeout(initWidget, 200);
+          return;
+        }
+        new TradingView.widget({
+          width: '100%',
+          height: 520,
+          symbol: `BMFBOVESPA:${S.ticker}`,
+          interval: 'D',
+          timezone: 'America/Sao_Paulo',
+          theme: 'dark',
+          style: '1',
+          locale: 'br',
+          enable_publishing: false,
+          save_image: false,
+          hide_side_toolbar: false,
+          container_id: 'tradingview_chart',
+          range: range,
+        });
+      }
+      initWidget();
+    }
+  </script>
+</body>
+</html>
+```
+
+- [ ] **Step 2: Start server and verify page loads**
+
+```bash
+python server.py
+```
+
+Open `http://localhost:8000/analise.html`. Confirm:
+- Sidebar shows "🔍 Análise" as active item
+- Empty state visible with magnifying glass + instruction text
+- No console errors
+
+- [ ] **Step 3: Verify search + ticker load**
+
+In browser, type `ITUB4` in the search box and click Buscar. Confirm:
+- URL updates to `?ticker=ITUB4`
+- Hero section populates (name, price, change, KPI chips, range bar)
+- Aba Indicadores shows cards in 3 groups with "?" tooltips
+- Hover over a "?" button shows tooltip popup
+- Aba Valuations shows 4 valuation cards + DCF block (CTA or saved)
+- Aba Histórico shows net income table
+- Aba Gráfico shows TradingView chart period selector; clicking "Gráfico" tab loads chart
+
+- [ ] **Step 4: Verify URL param on load**
+
+Open `http://localhost:8000/analise.html?ticker=PETR4` directly. Confirm it auto-loads PETR4 data.
+
+- [ ] **Step 5: Verify error state**
+
+Search for `XYZXYZ999`. Confirm error message appears in red, hero stays in skeleton state (not showing stale data).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add analise.html
+git commit -m "feat: add analise.html — advanced stock analysis page"
+```
+
+---
+
+## Task 4: Wire "Análise Avançada" link from watchlist context menu
+
+This was already done in Task 2. Verify end-to-end:
+
+- [ ] **Step 1: Verify watchlist → analise.html flow**
+
+Open `http://localhost:8000/watchlist.html`. Right-click on a saved ticker row. Click "📊 Ver Análise Avançada". Confirm `analise.html?ticker=XXXX` opens in a new tab with the correct ticker loaded.
+
+- [ ] **Step 2: Verify from ranking.html**
+
+The spec doesn't require a context menu on ranking.html. Skip.
+
+---
+
+## Task 5: Update CLAUDE.md
+
+**Files:**
+- Modify: `CLAUDE.md`
+
+- [ ] **Step 1: Add analise.html to file tree**
+
+In `CLAUDE.md`, find the file tree section under `## Estrutura de Arquivos`. Add `analise.html` after `ranking.html`:
+
+```markdown
+├── analise.html    — Análise avançada individual de ações (Hero + Indicadores/Valuations/Histórico/Gráfico)
+```
+
+- [ ] **Step 2: Add analise.html architecture section**
+
+After the `ranking.html` JS structure table in `CLAUDE.md`, add:
+
+```markdown
+---
+
+### analise.html — Estrutura JavaScript
+
+| Seção | Conteúdo |
+|-------|----------|
+| **A** | Formatadores locais (`fMktCap`, `fNum`, `fVal`) |
+| **B** | Estado global `S` (`ticker`, `fundamentals`, `quote`, `activeTab`, `activeRange`) |
+| **C** | Init — lê `?ticker=` da URL e dispara `loadTicker` |
+| **D** | Event bindings (search, tabs, period selector) |
+| **E** | Tab switching (`switchTab`) |
+| **F** | Data loading (`loadTicker` — paralelo: `/api/fundamentals/` + `/api/quote/`) |
+| **G** | Hero rendering (`renderHero`) |
+| **H** | Indicator cards (`INDICATORS` config + `makeCard` + `renderIndicadores`) |
+| **I** | Valuation tab (`renderValuations`, `renderDCFBlock` — lê `dcf_watchlist`) |
+| **J** | Histórico tab (`renderHistorico`) |
+| **K** | TradingView chart (`loadChart` — recria widget com novo `range`) |
+
+**Acesso:** `analise.html?ticker=XXXX` (URL param), sidebar item "🔍 Análise", menu de contexto na watchlist (botão direito nas linhas).
+
+**APIs usadas:** `/api/fundamentals/<ticker>` + `/api/quote/<ticker>` em paralelo. Sem novos endpoints.
+
+**TradingView:** ticker mapeado como `BMFBOVESPA:XXXX`. Range default: `12M`. Seletor de período customizado: 1D / 5D / 1M / 6M / YTD / 12M / 60M / ALL.
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add CLAUDE.md
+git commit -m "docs(CLAUDE.md): document analise.html page and architecture"
+```
+
+---
+
+## Self-Review
+
+**Spec coverage check:**
+
+| Spec section | Implemented in |
+|-------------|---------------|
+| 2. Arquivo e Acesso | Task 1 (sidebar), Task 3 (page + URL param) |
+| 3. Layout Hero + Abas | Task 3 (HTML shell) |
+| 4. Hero Header | Task 3 (renderHero) |
+| 5. Aba Indicadores | Task 3 (INDICATORS config + makeCard + renderIndicadores) |
+| 6. Aba Valuations | Task 3 (renderValuations + renderDCFBlock) |
+| 7. Aba Histórico | Task 3 (renderHistorico) |
+| 8. Aba Gráfico | Task 3 (loadChart + period selector) |
+| 9. Context menu watchlist | Task 2 |
+| 10. Sidebar item | Task 1 |
+| 11. API (no new endpoints) | ✓ reuses existing endpoints |
+| 12. Testes manuais | Verified in Task 3 steps 3-5 |
+| 13. CLAUDE.md | Task 5 |
+
+**All spec requirements covered.** No gaps found.
+
+**Type consistency:** `fPct` imported from `src/formatters.js` and used consistently throughout. `fBRL` from same import. Local `fMktCap`, `fNum` defined at top of script block and used consistently. `S.ticker` always uppercase string. `S.fundamentals` is the raw API response object (field names match API spec).
+
+**No placeholders found.**
