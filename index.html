@@ -258,7 +258,9 @@
       font-size: 13px;
       padding: 6px 8px;
       text-align: right;
-      width: 96px;
+      width: auto;
+      min-width: 56px;
+      field-sizing: content;
       outline: none;
     }
     .assume-input:focus   { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(6,182,212,.08); }
@@ -522,13 +524,18 @@
       font-size: 13px;
       padding: 4px 6px;
       text-align: right;
-      width: 100%;
+      width: auto;
+      min-width: 4ch;
+      field-sizing: content;
       outline: none;
       cursor: text;
     }
     .tbl-inp:hover  { border-color: var(--border); background: var(--bg-3); }
     .tbl-inp:focus  { border-color: var(--cyan); background: var(--bg-3); }
     .tbl-inp.tbl-inp-ovrd { border-color: var(--amber); background: rgba(245,158,11,.06); }
+    .tbl-cell-wrap { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+    .tbl-prefix { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+    .tbl-suffix { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
 
     /* ── Skeleton shimmer ─────────────────────────────────── */
     @keyframes shimmer {
@@ -693,6 +700,9 @@
     </a>
     <a href="ranking.html" class="sidebar-item">
       <span class="sidebar-icon">🏆</span><span class="sidebar-label"> Ranking de Ações</span>
+    </a>
+    <a href="analise.html" class="sidebar-item">
+      <span class="sidebar-icon">🔍</span><span class="sidebar-label"> Análise</span>
     </a>
     <hr class="sidebar-divider">
     <div class="sidebar-section">Em Breve</div>
@@ -1180,9 +1190,9 @@ function renderTable() {
 
   let html = '';
 
-  // Historical rows (oldest → newest-1)
+  // Historical rows (oldest → second-most-recent; base year shown separately below)
   const histReversed = [...S.history].reverse();
-  for (let i = 0; i < histReversed.length; i++) {
+  for (let i = 0; i < histReversed.length - 1; i++) {
     const h = histReversed[i];
     const prev = histReversed[i - 1];
     const g = prev ? (h.value / prev.value - 1) : null;
@@ -1201,10 +1211,17 @@ function renderTable() {
   // Base year highlight (most recent historical = projection anchor)
   if (S.history.length) {
     const base = S.history[0];
+    const baseLL = S.assumptions.ll ?? base.value;
+    let baseGTxt = '<span class="dash">—</span>';
+    if (S.history.length > 1) {
+      const prevYear = S.history[1];
+      const baseG = baseLL / prevYear.value - 1;
+      baseGTxt = `<span class="${baseG >= 0 ? 'g-pos' : 'g-neg'}">${baseG >= 0 ? '+' : ''}${fPct(baseG)}</span>`;
+    }
     html += `<tr class="base-yr">
       <td class="yr-cell" style="color:var(--cyan)">${base.year} <span style="font-size:11px;color:var(--text-muted)">(base)</span></td>
-      <td style="color:var(--cyan)">${fShort(base.value)}</td>
-      <td class="dash">—</td>
+      <td style="color:var(--cyan)">${fShort(baseLL)}</td>
+      <td>${baseGTxt}</td>
       <td class="dash">–</td>
     </tr>`;
   }
@@ -1218,19 +1235,25 @@ function renderTable() {
     html += `<tr class="proj">
       <td class="yr-cell">${pv.year}</td>
       <td style="padding:5px 16px">
-        <input type="text"
-               class="tbl-inp${isOverridden ? ' tbl-inp-ovrd' : ''}"
-               value="${fInputLL(pv.cf)}"
-               data-year="${pv.year}"
-               title="Edite o Lucro Líquido para simular cenários">
+        <div class="tbl-cell-wrap">
+          <span class="tbl-prefix">R$</span>
+          <input type="text"
+                 class="tbl-inp${isOverridden ? ' tbl-inp-ovrd' : ''}"
+                 value="${fInputLL(pv.cf)}"
+                 data-year="${pv.year}"
+                 title="Edite o Lucro Líquido para simular cenários">
+        </div>
       </td>
       <td id="g-cell-${pv.year}" class="${pv.g >= 0 ? 'g-pos' : 'g-neg'}" style="padding:5px 16px">
-        <input type="text"
-               class="tbl-inp tbl-g-inp${isOverridden ? ' tbl-inp-ovrd' : ''}"
-               value="${fInputPctSigned(pv.g)}"
-               data-year="${pv.year}"
-               title="Edite o crescimento (%) para simular cenários"
-               style="color:inherit;text-align:right">
+        <div class="tbl-cell-wrap">
+          <input type="text"
+                 class="tbl-inp tbl-g-inp${isOverridden ? ' tbl-inp-ovrd' : ''}"
+                 value="${fInputPctSigned(pv.g)}"
+                 data-year="${pv.year}"
+                 title="Edite o crescimento (%) para simular cenários"
+                 style="color:inherit;text-align:right">
+          <span class="tbl-suffix">%</span>
+        </div>
       </td>
       <td id="pv-cell-${pv.year}">${fShort(pv.pv)}</td>
     </tr>`;
@@ -1370,7 +1393,13 @@ function onInputChange(field, rawVal) {
     const { payout, roe } = S.assumptions;
     if (payout != null && roe != null) {
       S.assumptions.g = growthRate(payout, roe);
+      clearSubsequentYearOverrides();
     }
+  }
+
+  // If g was directly overridden, subsequent projected years follow the new g
+  if (field === 'g') {
+    clearSubsequentYearOverrides();
   }
 
   renderInputs([`inp-${field}`]); // don't clobber the field user is typing in
@@ -1473,6 +1502,14 @@ function updateTablePVCells() {
 
 const debouncedRerender = debounce(rerender, 300);
 
+function clearSubsequentYearOverrides() {
+  if (!S.history.length) return;
+  const firstProjYear = S.history[0].year + 1;
+  Object.keys(S.yearOverrides).forEach(yr => {
+    if (parseInt(yr) > firstProjYear) delete S.yearOverrides[yr];
+  });
+}
+
 function restoreField(field) {
   S.overrides.delete(field);
   if (field === 'g') {
@@ -1482,6 +1519,7 @@ function restoreField(field) {
     } else {
       S.assumptions.g = S.apiVals.g;
     }
+    clearSubsequentYearOverrides();
   } else {
     S.assumptions[field] = S.apiVals[field] ?? null;
   }
