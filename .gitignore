@@ -25,6 +25,7 @@ package-lock.json
 .claude/
 CLAUDE.md
 .superpowers/
+docs/superpowers/
 
 # OS
 .DS_Store
