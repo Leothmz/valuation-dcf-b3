@@ -44,6 +44,7 @@
       --shadow-md:  0 4px 16px rgba(0,0,0,.5);
       --shadow-lg:  0 8px 32px rgba(0,0,0,.6);
       --glow-cyan:  0 0 20px rgba(6,182,212,.15);
+      --glow-green: 0 0 20px rgba(16,185,129,.15);
     }
 
     body {
@@ -153,105 +154,135 @@
       min-width: 0; height: 100%; overflow: hidden;
     }
 
-    /* ── Rank header ──────────────────────────────────────────── */
-    .rank-header {
-      background: var(--bg-2);
+    /* ── Hero header ──────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(180deg, #0d1829 0%, #0b0f17 100%);
       border-bottom: 1px solid var(--border);
-      padding: 12px 24px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
+      padding: 14px 24px;
       flex-shrink: 0;
     }
-    .rank-title { font-size: 15px; font-weight: 700; }
-    .rank-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+    .hero-top {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .hero-title {
+      font-size: 18px; font-weight: 800;
+      background: linear-gradient(135deg, var(--text) 40%, var(--text-sec) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      line-height: 1.2;
+    }
+    .hero-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
 
-    /* ── Filter panel ─────────────────────────────────────────── */
-    .filter-panel {
-      background: var(--bg-2);
-      border-bottom: 1px solid var(--border);
-      padding: 12px 24px 10px;
-      flex-shrink: 0;
+    /* Method pills */
+    .method-pills { display: flex; gap: 4px; align-items: center; }
+    .mpill {
+      font-size: 12px; font-weight: 600;
+      padding: 6px 14px; border-radius: 99px;
+      border: 1px solid var(--border); color: var(--text-muted);
+      cursor: pointer; background: var(--bg-2); white-space: nowrap;
+      font-family: var(--font-ui);
     }
-    .filter-row {
-      display: flex; gap: 8px; flex-wrap: wrap;
-      align-items: flex-end; margin-bottom: 8px;
+    .mpill:hover { color: var(--text-sec); border-color: #2d3f57; }
+    .mpill.active {
+      background: linear-gradient(135deg, rgba(6,182,212,.18), rgba(139,92,246,.12));
+      border-color: var(--cyan); color: var(--cyan);
     }
-    .filter-row:last-child { margin-bottom: 0; }
-    .filter-group { display: flex; flex-direction: column; gap: 3px; }
-    .filter-label { font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; letter-spacing: .04em; text-transform: uppercase; }
-    .filter-input {
+    .thomaz-gear {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border-radius: 99px;
+      background: rgba(139,92,246,.2); border: 1px solid rgba(139,92,246,.4);
+      color: var(--purple); font-size: 9px; margin-left: 5px;
+      cursor: pointer; vertical-align: middle; flex-shrink: 0;
+    }
+    .thomaz-gear:hover { background: rgba(139,92,246,.3); }
+
+    /* ── Filter chips ─────────────────────────────────────────── */
+    .filter-chips {
+      background: var(--bg-1); border-bottom: 1px solid var(--border);
+      padding: 9px 24px; display: flex; align-items: center;
+      gap: 7px; flex-wrap: wrap; flex-shrink: 0;
+    }
+    .fchip {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: 99px; color: var(--text-sec); font-size: 12px;
+      padding: 5px 13px; cursor: pointer;
+      display: flex; align-items: center; gap: 5px;
+      font-family: var(--font-mono); position: relative;
+    }
+    .fchip:hover { border-color: var(--cyan); color: var(--text); background: var(--bg-3); }
+    .fchip.active {
+      background: rgba(6,182,212,.08); border-color: rgba(6,182,212,.4);
+      color: var(--cyan);
+    }
+    .chip-label {
+      font-size: 9px; font-family: var(--font-ui); font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted);
+      margin-right: 1px;
+    }
+    .fchip.active .chip-label { color: rgba(6,182,212,.6); }
+    .chip-val { color: var(--text-sec); }
+    .fchip.active .chip-val { color: var(--cyan); }
+    .chip-edit { font-size: 9px; color: var(--text-muted); margin-left: 2px; opacity: .6; }
+
+    /* Filter popover */
+    .filter-popover {
+      position: absolute; top: calc(100% + 8px); left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px; min-width: 200px;
+      z-index: 200; box-shadow: var(--shadow-lg);
+    }
+    .filter-popover::before {
+      content: ''; position: absolute; top: -6px; left: 50%;
+      width: 10px; height: 10px; background: var(--bg-2);
+      border-top: 1px solid var(--border); border-left: 1px solid var(--border);
+      transform: translateX(-50%) rotate(45deg);
+    }
+    .fp-title {
+      font-size: 10px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px;
+    }
+    .fp-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .fp-label { font-size: 11px; color: var(--text-sec); width: 80px; flex-shrink: 0; }
+    .fp-input {
       background: var(--bg-3); border: 1px solid var(--border);
-      border-radius: var(--r-md); color: var(--text); font-size: 13px;
-      padding: 6px 10px; width: 120px; outline: none;
+      border-radius: var(--r-sm); color: var(--text); font-size: 12px;
+      padding: 5px 9px; width: 90px; outline: none;
       font-family: var(--font-mono);
     }
-    .filter-input:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(6,182,212,.06); }
-    .filter-input.wide { width: 145px; }
-    .filter-select {
+    .fp-input:focus { border-color: var(--cyan); }
+    .fp-actions { display: flex; gap: 6px; margin-top: 10px; }
+    .fp-btn {
+      background: linear-gradient(135deg, var(--cyan), #0891b2);
+      border: none; border-radius: var(--r-sm); color: #060910;
+      font-size: 11px; font-weight: 700; padding: 5px 12px;
+      cursor: pointer; flex: 1; font-family: var(--font-ui);
+    }
+    .fp-btn2 {
       background: var(--bg-3); border: 1px solid var(--border);
-      border-radius: var(--r-md); color: var(--text); font-size: 13px;
-      padding: 6px 10px; outline: none; cursor: pointer;
-      min-width: 120px; font-family: var(--font-ui);
+      border-radius: var(--r-sm); color: var(--text-sec); font-size: 11px;
+      padding: 5px 10px; cursor: pointer; font-family: var(--font-ui);
     }
-    .filter-select:focus { border-color: var(--cyan); }
-    .filter-select option { background: var(--bg-3); }
+    .fp-btn2:hover { color: var(--text); border-color: var(--border-glow); }
 
-    .filter-section-label {
-      font-size: 11px; font-weight: 600; color: var(--text-muted);
-      letter-spacing: .1em; text-transform: uppercase;
-      padding-bottom: 6px; display: block;
-    }
-
-    /* Extras toggle */
-    .extras-toggle {
-      width: 100%; background: rgba(6,182,212,.04);
-      border: 1px solid rgba(6,182,212,.15); border-radius: var(--r-md);
-      color: var(--cyan); font-size: 12px; padding: 5px 12px;
-      cursor: pointer; text-align: left; font-family: var(--font-ui);
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 8px;
-    }
-    .extras-toggle:hover { background: rgba(6,182,212,.08); }
-    #filter-extras { overflow: hidden; }
-
-    /* Action buttons */
-    .btn-filter {
-      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-      border: none; border-radius: var(--r-md);
-      color: #060910; cursor: pointer; font-size: 13px; font-weight: 600;
-      font-family: var(--font-ui);
-      padding: 7px 16px; white-space: nowrap;
-      box-shadow: 0 2px 6px rgba(6,182,212,.2);
-    }
-    .btn-filter:hover { opacity: .9; transform: translateY(-1px); }
-    .btn-secondary-action {
-      background: var(--bg-3); border: 1px solid var(--border);
-      border-radius: var(--r-md); color: var(--text-sec); cursor: pointer;
-      font-size: 13px; font-family: var(--font-ui);
-      padding: 7px 12px; white-space: nowrap;
-    }
-    .btn-secondary-action:hover { color: var(--text); background: var(--bg-4); border-color: var(--border-glow); }
-
-    /* Method dropdown */
-    .method-dropdown-wrap { margin-left: auto; position: relative; }
-    .method-select {
-      background: var(--bg-3); border: 1px solid var(--border);
-      border-radius: var(--r-md); color: var(--text); font-size: 13px; font-weight: 500;
-      padding: 7px 32px 7px 12px; cursor: pointer; outline: none;
+    /* Action buttons in chip row */
+    .btn-chips-saved {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: 99px; color: var(--text-sec); font-size: 12px;
+      padding: 5px 13px; cursor: pointer; white-space: nowrap;
       font-family: var(--font-ui);
     }
-    .method-select:focus { border-color: var(--cyan); }
-    .method-select option { background: var(--bg-3); }
-
-    /* Thomaz config button */
-    .btn-thomaz-config {
-      background: var(--purple-dim); border: 1px solid rgba(139,92,246,.3);
-      border-radius: var(--r-md); color: var(--purple); cursor: pointer;
-      font-size: 13px; font-family: var(--font-ui);
-      padding: 7px 12px; white-space: nowrap;
+    .btn-chips-saved:hover { color: var(--text); background: var(--bg-3); }
+    .btn-chips-reset {
+      background: linear-gradient(135deg, var(--cyan), #0891b2);
+      border: none; border-radius: 99px; color: #060910;
+      font-size: 12px; font-weight: 700; padding: 5px 16px;
+      cursor: pointer; margin-left: auto; white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(6,182,212,.25); font-family: var(--font-ui);
     }
-    .btn-thomaz-config:hover { background: rgba(139,92,246,.18); }
+    .btn-chips-reset:hover { opacity: .9; }
+
+    /* Keep method-dropdown-wrap hidden (select stays in DOM as hidden bridge) */
+    .method-dropdown-wrap { display: none; }
 
     /* ── Sector tabs ──────────────────────────────────────────── */
     .sector-tabs {
@@ -394,17 +425,25 @@
     .neg { color: var(--red); }
     .neutral { color: var(--text-sec); }
 
-    /* Score badge */
-    .score-badge {
+    /* Rank badges — by position */
+    .rb {
       display: inline-flex; align-items: center; justify-content: center;
-      min-width: 38px; height: 24px; padding: 0 7px;
-      border-radius: var(--r-sm); font-size: 13px; font-weight: 700;
-      font-family: var(--font-mono);
+      width: 24px; height: 24px; border-radius: 8px;
+      font-size: 11px; font-weight: 800; font-family: var(--font-mono);
+      flex-shrink: 0;
     }
-    .score-ex   { background: rgba(16,185,129,.15); color: #10b981; border: 1px solid rgba(16,185,129,.25); }
-    .score-good { background: rgba(6,182,212,.12);  color: #06b6d4; border: 1px solid rgba(6,182,212,.2); }
-    .score-ok   { background: rgba(245,158,11,.12); color: #f59e0b; border: 1px solid rgba(245,158,11,.2); }
-    .score-bad  { background: rgba(239,68,68,.12);  color: #ef4444; border: 1px solid rgba(239,68,68,.2); }
+    .rb-1 { background: linear-gradient(135deg,#10b981,#059669); color: #fff; box-shadow: 0 0 10px rgba(16,185,129,.45); }
+    .rb-2 { background: linear-gradient(135deg,#06b6d4,#0891b2); color: #fff; box-shadow: 0 0 10px rgba(6,182,212,.4); }
+    .rb-3 { background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; box-shadow: 0 0 10px rgba(245,158,11,.4); }
+    .rb-ok { background: var(--bg-3); border: 1px solid var(--border); color: var(--text-sec); }
+
+    /* "TOP" tag — rank 1 only */
+    .top-tag {
+      display: inline-block; background: rgba(16,185,129,.12); color: #10b981;
+      font-size: 9px; font-weight: 700; padding: 1px 6px;
+      border-radius: 3px; margin-left: 5px; letter-spacing: .04em;
+      font-family: var(--font-ui);
+    }
 
     /* Empty / loading */
     .empty-row {
@@ -557,110 +596,49 @@
 <!-- ── Page wrapper ───────────────────────────────────────────── -->
 <div class="page-wrapper">
 
-  <!-- Header -->
-  <header class="rank-header">
-    <div>
-      <div class="rank-title">Ranking de Ações</div>
-      <div class="rank-sub">Screening fundamentalista · B3 · dados via yfinance</div>
-    </div>
-  </header>
-
-  <!-- Filter panel -->
-  <div class="filter-panel" id="filter-panel">
-
-    <!-- Linha 1: Taxas de cálculo -->
-    <div class="filter-row">
-      <span class="filter-section-label" style="align-self:center;margin-bottom:0;padding-bottom:0;">Taxas:</span>
-      <div class="filter-group">
-        <label class="filter-label">Taxa Bazin (%)</label>
-        <input type="number" id="fi-taxa-bazin" class="filter-input" value="6.00" min="1" max="20" step="0.5">
+  <!-- Hero header -->
+  <div class="hero">
+    <div class="hero-top">
+      <div>
+        <div class="hero-title">Ranking de Ações</div>
+        <div class="hero-sub">Screening fundamentalista · B3 · dados via yfinance</div>
       </div>
-      <div class="filter-group">
-        <label class="filter-label">Múltiplo Graham</label>
-        <input type="number" id="fi-taxa-graham" class="filter-input" value="22.50" min="10" max="40" step="0.5">
-      </div>
-      <div class="filter-group">
-        <label class="filter-label">Ref. Peter Lynch</label>
-        <input type="number" id="fi-taxa-lynch" class="filter-input" value="3.00" min="0.5" max="10" step="0.5">
-      </div>
-    </div>
-
-    <!-- Linha 2: Filtros principais -->
-    <div class="filter-row">
-      <div class="filter-group">
-        <label class="filter-label">P/L Mín.</label>
-        <input type="number" id="fi-pl-min" class="filter-input" value="3.00" step="0.5">
-      </div>
-      <div class="filter-group">
-        <label class="filter-label">P/L Máx.</label>
-        <input type="number" id="fi-pl-max" class="filter-input" value="15.00" step="0.5">
-      </div>
-      <div class="filter-group">
-        <label class="filter-label">DL/EBITDA Mín.</label>
-        <input type="number" id="fi-de-min" class="filter-input" placeholder="—" step="0.5">
-      </div>
-      <div class="filter-group">
-        <label class="filter-label">DL/EBITDA Máx.</label>
-        <input type="number" id="fi-de-max" class="filter-input" value="5.00" step="0.5">
-      </div>
-      <div class="filter-group">
-        <label class="filter-label">DY Mín. (%)</label>
-        <input type="number" id="fi-dy-min" class="filter-input" value="6.00" min="0" max="50" step="0.5">
-      </div>
-      <div class="filter-group">
-        <label class="filter-label">Mostrar</label>
-        <select id="fi-show" class="filter-select">
-          <option value="todos">Todos</option>
-          <option value="favoritos">Favoritos</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Filtros extras (collapsible) -->
-    <button class="extras-toggle" id="extras-toggle">
-      <span id="extras-toggle-label">Clique para expandir filtros extras</span>
-      <span id="extras-toggle-icon">▶</span>
-    </button>
-    <div id="filter-extras" style="display:none">
-      <div class="filter-row">
-        <div class="filter-group">
-          <label class="filter-label">Margem Líquida Mín. (%)</label>
-          <input type="number" id="fi-margem-min" class="filter-input" value="10.00" min="0" max="100" step="1">
+      <div class="method-pills" id="method-pills">
+        <div class="mpill active" data-method="thomaz">
+          Rank Thomaz
+          <span class="thomaz-gear" id="thomaz-gear-btn" title="Configurações Método Thomaz">⚙</span>
         </div>
-        <div class="filter-group">
-          <label class="filter-label">ROE Mín. (%)</label>
-          <input type="number" id="fi-roe-min" class="filter-input" value="10.00" min="0" max="100" step="1">
-        </div>
-        <div class="filter-group">
-          <label class="filter-label">Liquidez Mín. (R$)</label>
-          <input type="number" id="fi-liquidez-min" class="filter-input wide" value="1000000" min="0" step="100000">
-        </div>
-      </div>
-    </div>
-
-    <!-- Linha de ações -->
-    <div class="filter-row" style="margin-top:6px;margin-bottom:0">
-      <button class="btn-filter" id="apply-filters-btn">Filtrar</button>
-      <div style="position:relative">
-        <button class="btn-secondary-action" id="saved-filters-btn">Filtros Salvos</button>
-        <div class="saved-filters-popup" id="saved-filters-popup" style="display:none"></div>
-      </div>
-      <button class="btn-secondary-action" id="reset-filters-btn">↺ Reiniciar filtros</button>
-      <button class="btn-secondary-action" id="clear-filters-btn">✕ Limpar filtros</button>
-      <div id="thomaz-config-wrap" style="display:none">
-        <button class="btn-thomaz-config" id="thomaz-config-btn">⚙ Configurações (Método Thomaz)</button>
-      </div>
-      <div class="method-dropdown-wrap">
-        <select id="method-select" class="method-select">
-          <option value="thomaz">Rank Thomaz</option>
-          <option value="bazin">Rank Bazin</option>
-          <option value="graham">Rank Graham</option>
-          <option value="lynch">Rank Peter Lynch</option>
-          <option value="joel">Rank Joel</option>
-        </select>
+        <div class="mpill" data-method="bazin">Bazin</div>
+        <div class="mpill" data-method="graham">Graham</div>
+        <div class="mpill" data-method="lynch">Lynch</div>
+        <div class="mpill" data-method="joel">Joel</div>
       </div>
     </div>
   </div>
+
+  <!-- Filter chips -->
+  <div class="filter-chips" id="filter-chips">
+    <!-- chips injected by renderFilterChips() -->
+    <div class="filter-chips-actions" style="display:contents">
+      <div style="position:relative">
+        <button class="btn-chips-saved" id="saved-filters-btn">Filtros Salvos</button>
+        <div class="saved-filters-popup" id="saved-filters-popup" style="display:none"></div>
+      </div>
+      <button class="btn-chips-reset" id="reset-filters-btn">↺ Reiniciar</button>
+    </div>
+  </div>
+
+  <!-- Hidden select: state bridge for method (do not remove) -->
+  <select id="method-select" style="display:none">
+    <option value="thomaz">Rank Thomaz</option>
+    <option value="bazin">Rank Bazin</option>
+    <option value="graham">Rank Graham</option>
+    <option value="lynch">Rank Peter Lynch</option>
+    <option value="joel">Rank Joel</option>
+  </select>
+  <!-- Hidden thomaz config button: event bridge (do not remove) -->
+  <button id="thomaz-config-btn" style="display:none"></button>
+  <div id="thomaz-config-wrap" style="display:none"></div>
 
   <!-- Sector tabs -->
   <div class="sector-tabs">
@@ -867,6 +845,115 @@ function trunc(s, n) {
   return s.length > n ? s.slice(0, n) + '…' : s;
 }
 function sectorPt(s) { return SECTOR_PT[s] || s || '—'; }
+
+// ── B2: Filter chips config ────────────────────────────────────────
+const FILTER_CHIPS = [
+  {
+    key: 'dy', label: 'DY',
+    display(fc) { return fc.dyMin != null ? `≥ ${(fc.dyMin * 100).toFixed(1)}%` : null; },
+    nullable: true,
+    fields: [
+      { prop: 'dyMin', label: 'Mínimo (%)',
+        get: v => v != null ? (v * 100).toFixed(1) : '',
+        set: v => v.trim() !== '' ? parseFloat(v) / 100 : null }
+    ]
+  },
+  {
+    key: 'pl', label: 'P/L',
+    display(fc) {
+      const mn = fc.plMin, mx = fc.plMax;
+      if (mn == null && mx == null) return null;
+      if (mn != null && mx != null) return `${mn} – ${mx}`;
+      return mn != null ? `≥ ${mn}` : `≤ ${mx}`;
+    },
+    nullable: true,
+    fields: [
+      { prop: 'plMin', label: 'Mínimo', get: v => v ?? '', set: v => v.trim() !== '' ? parseFloat(v) : null },
+      { prop: 'plMax', label: 'Máximo', get: v => v ?? '', set: v => v.trim() !== '' ? parseFloat(v) : null }
+    ]
+  },
+  {
+    key: 'de', label: 'DL/EBITDA',
+    display(fc) {
+      const mn = fc.deMin, mx = fc.deMax;
+      if (mn == null && mx == null) return null;
+      if (mn != null && mx != null) return `${mn} – ${mx}`;
+      return mn != null ? `≥ ${mn}` : `≤ ${mx}`;
+    },
+    nullable: true,
+    fields: [
+      { prop: 'deMin', label: 'Mínimo', get: v => v ?? '', set: v => v.trim() !== '' ? parseFloat(v) : null },
+      { prop: 'deMax', label: 'Máximo', get: v => v ?? '', set: v => v.trim() !== '' ? parseFloat(v) : null }
+    ]
+  },
+  {
+    key: 'bazin', label: 'Bazin',
+    display(fc) { return `${(fc.taxaBazin * 100).toFixed(1)}%`; },
+    nullable: false,
+    fields: [
+      { prop: 'taxaBazin', label: 'Taxa (%)',
+        get: v => (v * 100).toFixed(1),
+        set: v => parseFloat(v) / 100 }
+    ]
+  },
+  {
+    key: 'graham', label: 'Graham',
+    display(fc) { return `${fc.taxaGraham}×`; },
+    nullable: false,
+    fields: [
+      { prop: 'taxaGraham', label: 'Múltiplo',
+        get: v => v,
+        set: v => parseFloat(v) }
+    ]
+  },
+  {
+    key: 'lynch', label: 'Lynch',
+    display(fc) { return `${fc.taxaLynch}`; },
+    nullable: false,
+    fields: [
+      { prop: 'taxaLynch', label: 'Referência',
+        get: v => v,
+        set: v => parseFloat(v) }
+    ]
+  },
+  {
+    key: 'margem', label: 'Margem Líq.',
+    display(fc) { return fc.margemMin != null ? `≥ ${(fc.margemMin * 100).toFixed(0)}%` : null; },
+    nullable: true,
+    fields: [
+      { prop: 'margemMin', label: 'Mínimo (%)',
+        get: v => v != null ? (v * 100).toFixed(0) : '',
+        set: v => v.trim() !== '' ? parseFloat(v) / 100 : null }
+    ]
+  },
+  {
+    key: 'roe', label: 'ROE',
+    display(fc) { return fc.roeMin != null ? `≥ ${(fc.roeMin * 100).toFixed(0)}%` : null; },
+    nullable: true,
+    fields: [
+      { prop: 'roeMin', label: 'Mínimo (%)',
+        get: v => v != null ? (v * 100).toFixed(0) : '',
+        set: v => v.trim() !== '' ? parseFloat(v) / 100 : null }
+    ]
+  },
+  {
+    key: 'liquidez', label: 'Liquidez',
+    display(fc) { return fc.liquidezMin > 0 ? `≥ R$${(fc.liquidezMin / 1e6).toFixed(0)}M` : null; },
+    nullable: true,
+    fields: [
+      { prop: 'liquidezMin', label: 'Mínimo (R$)',
+        get: v => v ?? 0,
+        set: v => parseFloat(v) || 0 }
+    ]
+  },
+  {
+    key: 'show', label: 'Favoritos',
+    display(fc) { return fc.show === 'favoritos' ? 'Ativos' : null; },
+    nullable: true,
+    toggle: true,
+    fields: []
+  },
+];
 
 // ── C: Estado global ───────────────────────────────────────────────
 const DEFAULT_FILTER_CONFIG = {
@@ -1105,6 +1192,99 @@ function sortStocks(stocks) {
   });
 }
 
+// ── H0: Filter chips rendering ─────────────────────────────────────
+function renderFilterChips() {
+  const container = document.getElementById('filter-chips');
+  if (!container) return;
+  const fc = S.filterConfig;
+  const actionsEl = container.querySelector('.filter-chips-actions');
+
+  container.querySelectorAll('.fchip').forEach(el => el.remove());
+
+  FILTER_CHIPS.forEach(def => {
+    const val = def.display(fc);
+    const isActive = val !== null;
+    const chip = document.createElement('div');
+    chip.className = 'fchip' + (isActive ? ' active' : '');
+    chip.dataset.filterKey = def.key;
+    chip.innerHTML =
+      `<span class="chip-label">${def.label}</span>` +
+      `<span class="chip-val">${isActive ? val : '—'}</span>` +
+      `<span class="chip-edit">✎</span>`;
+    chip.addEventListener('click', e => { e.stopPropagation(); openFilterPopover(def.key, chip); });
+    container.insertBefore(chip, actionsEl);
+  });
+}
+
+let _openPopoverKey = null;
+
+function openFilterPopover(filterKey, chipEl) {
+  closeFilterPopover();
+  const def = FILTER_CHIPS.find(d => d.key === filterKey);
+  if (!def) return;
+
+  if (def.toggle) {
+    S.filterConfig.show = S.filterConfig.show === 'favoritos' ? 'todos' : 'favoritos';
+    renderFilterChips();
+    rerender();
+    return;
+  }
+
+  _openPopoverKey = filterKey;
+
+  const popover = document.createElement('div');
+  popover.className = 'filter-popover';
+  popover.id = 'active-filter-popover';
+
+  const fieldsHTML = def.fields.map(f =>
+    `<div class="fp-row">
+       <label class="fp-label">${f.label}</label>
+       <input class="fp-input" data-prop="${f.prop}" value="${f.get(S.filterConfig[f.prop])}">
+     </div>`
+  ).join('');
+
+  const clearLabel = def.nullable ? 'Limpar' : 'Fechar';
+
+  popover.innerHTML =
+    `<div class="fp-title">${def.label}</div>` +
+    fieldsHTML +
+    `<div class="fp-actions">
+       <button class="fp-btn" id="fp-apply">Aplicar</button>
+       <button class="fp-btn2" id="fp-clear">${clearLabel}</button>
+     </div>`;
+
+  chipEl.appendChild(popover);
+
+  popover.querySelector('#fp-apply').addEventListener('click', e => {
+    e.stopPropagation();
+    def.fields.forEach(f => {
+      const input = popover.querySelector(`[data-prop="${f.prop}"]`);
+      S.filterConfig[f.prop] = f.set(input.value);
+    });
+    closeFilterPopover();
+    renderFilterChips();
+    rerender();
+  });
+
+  popover.querySelector('#fp-clear').addEventListener('click', e => {
+    e.stopPropagation();
+    if (def.nullable) {
+      def.fields.forEach(f => { S.filterConfig[f.prop] = null; });
+      closeFilterPopover();
+      renderFilterChips();
+      rerender();
+    } else {
+      closeFilterPopover();
+    }
+  });
+}
+
+function closeFilterPopover() {
+  const existing = document.getElementById('active-filter-popover');
+  if (existing) existing.remove();
+  _openPopoverKey = null;
+}
+
 // ── H: Renderização ────────────────────────────────────────────────
 function renderTable() {
   const tbody = document.getElementById('rank-tbody');
@@ -1129,18 +1309,18 @@ function renderTable() {
   tbody.innerHTML = S.filtered.map(renderRow).join('');
 }
 
+function _rankBadge(rank) {
+  if (rank == null) return '—';
+  const cls = rank === 1 ? 'rb-1' : rank === 2 ? 'rb-2' : rank === 3 ? 'rb-3' : 'rb-ok';
+  return `<div class="rb ${cls}">${rank}</div>`;
+}
+
 function renderRow(s) {
   const isFav  = S.favorites.has(s.ticker);
   const sc     = s.score;
 
   const deVal   = s.dividaLiquidaEbit;
   const deClass = deVal == null ? '' : deVal > 3 ? ' neg' : deVal < 0 ? ' pos' : '';
-
-  const scoreClass = sc == null ? ''
-                   : sc >= 75 ? 'score-ex'
-                   : sc >= 50 ? 'score-good'
-                   : sc >= 25 ? 'score-ok'
-                   : 'score-bad';
 
   const bazinFP  = s.bazinFairPrice;
   const grahamFP = s.grahamFairPrice;
@@ -1149,12 +1329,13 @@ function renderRow(s) {
 
   return `<tr>
     <td class="td-rank">
-      ${sc != null ? `<span class="score-badge ${scoreClass}">${s.rank ?? '—'}</span>` : (s.rank ?? '—')}
+      ${_rankBadge(s.rank)}
     </td>
     <td>
       <div class="ticker-cell">
         <button class="fav-btn${isFav ? ' active' : ''}" data-ticker="${s.ticker}" title="Favorito">★</button>
         <a href="index.html?ticker=${s.ticker}" class="ticker-link">${s.ticker}</a>
+        ${s.rank === 1 ? '<span class="top-tag">TOP</span>' : ''}
       </div>
     </td>
     <td class="td-num">${fBRL(s.price)}</td>
@@ -1257,6 +1438,15 @@ function restoreCache() {
 }
 
 // ── J: Sync de UI <-> estado ───────────────────────────────────────
+function syncMethodPills() {
+  document.querySelectorAll('.mpill').forEach(pill => {
+    const isActive = pill.dataset.method === S.method;
+    pill.classList.toggle('active', isActive);
+    const gear = pill.querySelector('.thomaz-gear');
+    if (gear) gear.style.display = isActive ? '' : 'none';
+  });
+}
+
 function syncWeightsFromUI() {
   S.weights.dy                = +document.getElementById('w-dy').value;
   S.weights.pl                = +document.getElementById('w-pl').value;
@@ -1267,66 +1457,14 @@ function syncWeightsFromUI() {
 }
 
 function syncFilterInputsFromState() {
-  const fc = S.filterConfig;
-  document.getElementById('fi-taxa-bazin').value  = (fc.taxaBazin * 100).toFixed(2);
-  document.getElementById('fi-taxa-graham').value = fc.taxaGraham.toFixed(2);
-  document.getElementById('fi-taxa-lynch').value  = fc.taxaLynch.toFixed(2);
-  document.getElementById('fi-pl-min').value      = fc.plMin  ?? '';
-  document.getElementById('fi-pl-max').value      = fc.plMax  ?? '';
-  document.getElementById('fi-de-min').value      = fc.deMin  ?? '';
-  document.getElementById('fi-de-max').value      = fc.deMax  ?? '';
-  document.getElementById('fi-dy-min').value      = fc.dyMin != null ? (fc.dyMin * 100).toFixed(2) : '';
-  document.getElementById('fi-show').value        = fc.show || 'todos';
-  document.getElementById('fi-margem-min').value  = fc.margemMin != null ? (fc.margemMin * 100).toFixed(2) : '';
-  document.getElementById('fi-roe-min').value     = fc.roeMin    != null ? (fc.roeMin    * 100).toFixed(2) : '';
-  document.getElementById('fi-liquidez-min').value = fc.liquidezMin ?? '';
-
-  // Extras open state
-  const extrasEl = document.getElementById('filter-extras');
-  const lblEl    = document.getElementById('extras-toggle-label');
-  const iconEl   = document.getElementById('extras-toggle-icon');
-  if (fc.extrasOpen) {
-    extrasEl.style.display = '';
-    lblEl.textContent  = 'Clique para recolher filtros extras';
-    iconEl.textContent = '▼';
-  } else {
-    extrasEl.style.display = 'none';
-    lblEl.textContent  = 'Clique para expandir filtros extras';
-    iconEl.textContent = '▶';
-  }
+  renderFilterChips();
 }
 
-function readFilterInputsToState() {
-  const fc = S.filterConfig;
-  const getNum = (id) => {
-    const v = document.getElementById(id).value.trim();
-    return v === '' ? null : parseFloat(v);
-  };
-
-  fc.taxaBazin  = (getNum('fi-taxa-bazin')  ?? 6)   / 100;
-  fc.taxaGraham = getNum('fi-taxa-graham')  ?? 22.5;
-  fc.taxaLynch  = getNum('fi-taxa-lynch')   ?? 3.0;
-  fc.plMin      = getNum('fi-pl-min');
-  fc.plMax      = getNum('fi-pl-max');
-  fc.deMin      = getNum('fi-de-min');
-  fc.deMax      = getNum('fi-de-max');
-  const dyVal   = getNum('fi-dy-min');
-  fc.dyMin      = dyVal != null ? dyVal / 100 : null;
-  fc.show       = document.getElementById('fi-show').value;
-  const mgVal   = getNum('fi-margem-min');
-  fc.margemMin  = mgVal != null ? mgVal / 100 : null;
-  const roeVal  = getNum('fi-roe-min');
-  fc.roeMin     = roeVal != null ? roeVal / 100 : null;
-  fc.liquidezMin = getNum('fi-liquidez-min') ?? 0;
-}
 
 function syncUIFromState() {
-  // Method select
+  // Method select (hidden bridge) + pills
   document.getElementById('method-select').value = S.method;
-
-  // Thomaz config button visibility
-  document.getElementById('thomaz-config-wrap').style.display =
-    S.method === 'thomaz' ? '' : 'none';
+  syncMethodPills();
 
   // Sliders
   document.getElementById('w-dy').value   = S.weights.dy;
@@ -1392,7 +1530,6 @@ function saveCurrentFilter() {
   const nameEl = document.getElementById('sf-name-input');
   const name   = nameEl ? nameEl.value.trim() : '';
   if (!name) return;
-  readFilterInputsToState();
   S.savedFilters.push({ name, config: { ...S.filterConfig } });
   persistSettings();
   renderSavedFiltersPopup();
@@ -1431,45 +1568,34 @@ document.getElementById('cancel-btn').addEventListener('click', () => {
 // Method select
 document.getElementById('method-select').addEventListener('change', e => {
   S.method = e.target.value;
-  document.getElementById('thomaz-config-wrap').style.display =
-    S.method === 'thomaz' ? '' : 'none';
+  syncMethodPills();
   if (S.stocks.length > 0) rerender();
   persistSettings();
 });
 
-// Apply filters button
-document.getElementById('apply-filters-btn').addEventListener('click', () => {
-  readFilterInputsToState();
-  rerender();
+// Method pills
+document.getElementById('method-pills').addEventListener('click', e => {
+  const pill = e.target.closest('.mpill');
+  const gear = e.target.closest('.thomaz-gear');
+  if (gear) {
+    document.getElementById('thomaz-modal').style.display = 'flex';
+    return;
+  }
+  if (!pill) return;
+  const method = pill.dataset.method;
+  if (!method || method === S.method) return;
+  S.method = method;
+  const sel = document.getElementById('method-select');
+  sel.value = method;
+  sel.dispatchEvent(new Event('change'));
 });
 
 // Reset filters
 document.getElementById('reset-filters-btn').addEventListener('click', () => {
+  closeFilterPopover();
   Object.assign(S.filterConfig, DEFAULT_FILTER_CONFIG);
-  syncFilterInputsFromState();
+  renderFilterChips();
   rerender();
-});
-
-// Clear filters — zero all filter values, keep calculation rates
-document.getElementById('clear-filters-btn').addEventListener('click', () => {
-  S.filterConfig.plMin      = null;
-  S.filterConfig.plMax      = null;
-  S.filterConfig.deMin      = null;
-  S.filterConfig.deMax      = null;
-  S.filterConfig.dyMin      = null;
-  S.filterConfig.margemMin  = null;
-  S.filterConfig.roeMin     = null;
-  S.filterConfig.liquidezMin = 0;
-  S.filterConfig.show       = 'todos';
-  syncFilterInputsFromState();
-  rerender();
-});
-
-// Extras toggle
-document.getElementById('extras-toggle').addEventListener('click', () => {
-  S.filterConfig.extrasOpen = !S.filterConfig.extrasOpen;
-  syncFilterInputsFromState();
-  persistSettings();
 });
 
 // Saved filters popup toggle
@@ -1488,6 +1614,12 @@ document.addEventListener('click', e => {
   const popup = document.getElementById('saved-filters-popup');
   if (!popup.contains(e.target) && e.target.id !== 'saved-filters-btn') {
     closeSavedFiltersPopup();
+  }
+});
+
+document.addEventListener('mousedown', e => {
+  if (_openPopoverKey && !e.target.closest('.fchip') && !e.target.closest('.filter-popover')) {
+    closeFilterPopover();
   }
 });
 
