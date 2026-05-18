@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     * { transition: border-color .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease; }
@@ -139,7 +140,9 @@
     .sidebar-label { flex: 1; display: none; }
     .sidebar:hover .sidebar-label { display: inline; }
 
-    .sidebar-icon { font-size: 15px; flex-shrink: 0; }
+    .sidebar-icon { display: flex; align-items: center; flex-shrink: 0; }
+    .sidebar-icon svg { width: 16px; height: 16px; stroke-width: 1.75; }
+    .thomaz-gear svg { width: 14px; height: 14px; }
     .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
     .sidebar-footer { display: none; padding: 14px; border-top: 1px solid var(--border); }
     .sidebar-footer-title {
@@ -558,33 +561,33 @@
   <nav class="sidebar-nav">
     <div class="sidebar-section">Ferramentas</div>
     <a href="home.html" class="sidebar-item">
-      <span class="sidebar-icon">🏠</span>
+      <span class="sidebar-icon"><i data-lucide="home"></i></span>
       <span class="sidebar-label">Home</span>
     </a>
     <a href="index.html" class="sidebar-item">
-      <span class="sidebar-icon">📊</span>
+      <span class="sidebar-icon"><i data-lucide="calculator"></i></span>
       <span class="sidebar-label">Calculadora</span>
     </a>
     <a href="watchlist.html" class="sidebar-item">
-      <span class="sidebar-icon">📋</span>
+      <span class="sidebar-icon"><i data-lucide="bookmark"></i></span>
       <span class="sidebar-label">Meus Valuations</span>
     </a>
     <a href="ranking.html" class="sidebar-item active">
-      <span class="sidebar-icon">🏆</span>
+      <span class="sidebar-icon"><i data-lucide="trophy"></i></span>
       <span class="sidebar-label">Ranking de Ações</span>
     </a>
     <a href="analise.html" class="sidebar-item">
-      <span class="sidebar-icon">🔍</span>
+      <span class="sidebar-icon"><i data-lucide="activity"></i></span>
       <span class="sidebar-label">Análise</span>
     </a>
     <hr class="sidebar-divider">
     <div class="sidebar-section">Em Breve</div>
     <div class="sidebar-item-disabled">
-      <span class="sidebar-icon">⚖️</span>
+      <span class="sidebar-icon"><i data-lucide="scale"></i></span>
       <span class="sidebar-label">Comparativo</span>
     </div>
     <div class="sidebar-item-disabled">
-      <span class="sidebar-icon">📈</span>
+      <span class="sidebar-icon"><i data-lucide="clock"></i></span>
       <span class="sidebar-label">Histórico</span>
     </div>
   </nav>
@@ -606,7 +609,7 @@
       <div class="method-pills" id="method-pills">
         <div class="mpill active" data-method="thomaz">
           Rank Thomaz
-          <span class="thomaz-gear" id="thomaz-gear-btn" title="Configurações Método Thomaz">⚙</span>
+          <span class="thomaz-gear" id="thomaz-gear-btn" title="Configurações Método Thomaz"><i data-lucide="settings-2"></i></span>
         </div>
         <div class="mpill" data-method="bazin">Bazin</div>
         <div class="mpill" data-method="graham">Graham</div>
@@ -656,7 +659,7 @@
       <input type="checkbox" id="sticky-header-cb" checked>
       Fixar cabeçalho
     </label>
-    <input type="text" id="search-input" class="search-input" placeholder="🔍 Pesquisar...">
+    <input type="text" id="search-input" class="search-input" placeholder="Pesquisar...">
     <div class="table-controls-right">
       <div class="progress-wrap" id="progress-wrap" style="display:none">
         <div class="progress-bar">
@@ -1741,5 +1744,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
+<script>lucide.createIcons();</script>
 </body>
 </html>

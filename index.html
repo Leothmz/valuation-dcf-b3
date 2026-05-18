@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     * { transition: border-color .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease; }
@@ -103,7 +104,8 @@
 
     /* ── Empty state ── */
     .calc-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; gap:14px; color:var(--text-muted); text-align:center; padding:40px; }
-    .calc-empty-icon { font-size:56px; opacity:.2; }
+    .calc-empty-icon { opacity:.15; color:var(--cyan); display:flex; justify-content:center; }
+    .calc-empty-icon svg { width:56px; height:56px; stroke-width:1.2; }
     .calc-empty-title { font-size:18px; color:var(--text-sec); font-weight:600; }
     .calc-empty-hint { font-size:14px; max-width:340px; line-height:1.7; color:var(--text-sec); }
 
@@ -471,7 +473,8 @@
       color: var(--text-muted);
       text-align: center;
     }
-    .empty-icon { font-size: 44px; opacity: .2; }
+    .empty-icon { opacity:.15; color:var(--cyan); display:flex; justify-content:center; }
+    .empty-icon svg { width:44px; height:44px; stroke-width:1.2; }
     .empty-title { font-size: 15px; color: var(--text-sec); }
     .empty-hint { font-size: 13px; max-width: 280px; }
 
@@ -667,7 +670,10 @@
     .sidebar:hover .sidebar-item-disabled { padding: 8px 14px; justify-content: flex-start; }
     .sidebar-label { display: none; }
     .sidebar:hover .sidebar-label { display: inline; }
-    .sidebar-icon { font-size: 15px; flex-shrink: 0; }
+    .sidebar-icon { display: flex; align-items: center; flex-shrink: 0; }
+    .sidebar-icon svg { width: 16px; height: 16px; stroke-width: 1.75; }
+    .settings-btn svg { width: 14px; height: 14px; vertical-align: middle; margin-right: 2px; }
+    .btn-icon-sm svg { width: 14px; height: 14px; }
     .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
     .sidebar-footer { display: none; padding: 14px; border-top: 1px solid var(--border); }
     .sidebar:hover .sidebar-footer { display: block; }
@@ -702,27 +708,27 @@
   <nav class="sidebar-nav">
     <div class="sidebar-section">Ferramentas</div>
     <a href="home.html" class="sidebar-item">
-      <span class="sidebar-icon">🏠</span><span class="sidebar-label"> Home</span>
+      <span class="sidebar-icon"><i data-lucide="home"></i></span><span class="sidebar-label"> Home</span>
     </a>
     <a href="index.html" class="sidebar-item active">
-      <span class="sidebar-icon">📊</span><span class="sidebar-label"> Calculadora</span>
+      <span class="sidebar-icon"><i data-lucide="calculator"></i></span><span class="sidebar-label"> Calculadora</span>
     </a>
     <a href="watchlist.html" class="sidebar-item">
-      <span class="sidebar-icon">📋</span><span class="sidebar-label"> Meus Valuations</span>
+      <span class="sidebar-icon"><i data-lucide="bookmark"></i></span><span class="sidebar-label"> Meus Valuations</span>
     </a>
     <a href="ranking.html" class="sidebar-item">
-      <span class="sidebar-icon">🏆</span><span class="sidebar-label"> Ranking de Ações</span>
+      <span class="sidebar-icon"><i data-lucide="trophy"></i></span><span class="sidebar-label"> Ranking de Ações</span>
     </a>
     <a href="analise.html" class="sidebar-item">
-      <span class="sidebar-icon">🔍</span><span class="sidebar-label"> Análise</span>
+      <span class="sidebar-icon"><i data-lucide="activity"></i></span><span class="sidebar-label"> Análise</span>
     </a>
     <hr class="sidebar-divider">
     <div class="sidebar-section">Em Breve</div>
     <div class="sidebar-item-disabled">
-      <span class="sidebar-icon">⚖️</span><span class="sidebar-label"> Comparativo</span>
+      <span class="sidebar-icon"><i data-lucide="scale"></i></span><span class="sidebar-label"> Comparativo</span>
     </div>
     <div class="sidebar-item-disabled">
-      <span class="sidebar-icon">📈</span><span class="sidebar-label"> Histórico</span>
+      <span class="sidebar-icon"><i data-lucide="clock"></i></span><span class="sidebar-label"> Histórico</span>
     </div>
   </nav>
   <div class="sidebar-footer">
@@ -745,13 +751,13 @@
     </div>
     <button type="submit" class="btn" id="searchBtn">Buscar</button>
   </form>
-  <button class="settings-btn" id="settingsBtn">⚙ Configurações</button>
+  <button class="settings-btn" id="settingsBtn"><i data-lucide="settings-2"></i> Configurações</button>
 </header>
 
 <div id="notifications"></div>
 
 <div id="calc-empty-state" class="calc-empty" style="display:none">
-  <div class="calc-empty-icon">📊</div>
+  <div class="calc-empty-icon"><i data-lucide="calculator"></i></div>
   <div class="calc-empty-title">Calculadora DCF</div>
   <div class="calc-empty-hint">Digite o código de uma ação da B3 acima para calcular o preço teto por Fluxo de Caixa Descontado.</div>
 </div>
@@ -868,7 +874,7 @@
     <hr class="results-sep">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div class="sec-title" style="margin-bottom:0">Realidade Projetada</div>
-      <button class="btn-icon-sm" id="dcfMethodBtn" title="Configurações do método DCF">⚙</button>
+      <button class="btn-icon-sm" id="dcfMethodBtn" title="Configurações do método DCF"><i data-lucide="settings-2"></i></button>
     </div>
 
     <div class="fair-card">
@@ -917,7 +923,7 @@
 
     <!-- Empty state -->
     <div class="empty-state" id="emptyState">
-      <div class="empty-icon">📊</div>
+      <div class="empty-icon"><i data-lucide="calculator"></i></div>
       <div class="empty-title">Nenhum ativo selecionado</div>
       <div class="empty-hint">Digite o código de uma ação da B3 no campo de busca acima</div>
     </div>
@@ -964,7 +970,7 @@
 ══════════════════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="settingsModal">
   <div class="modal">
-    <div class="modal-title">⚙ Configurações</div>
+    <div class="modal-title">Configurações</div>
     <div class="modal-field">
       <label class="modal-lbl">Fonte de dados</label>
       <div style="font-size:13px;color:var(--text-sec);line-height:1.6">
@@ -1884,6 +1890,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+  lucide.createIcons();
 </script>
 </body>
 </html>

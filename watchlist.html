@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     * { transition: border-color .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease; }
@@ -277,7 +278,8 @@
       justify-content: center; padding: 90px 24px; gap: 12px;
       color: var(--text-muted); text-align: center;
     }
-    .empty-icon { font-size: 52px; opacity: .2; }
+    .empty-icon { opacity:.15; color:var(--cyan); display:flex; justify-content:center; }
+    .empty-icon svg { width:52px; height:52px; stroke-width:1.2; }
     .empty-title { font-size: 17px; color: var(--text-sec); font-weight: 600; }
     .empty-hint { font-size: 14px; max-width: 300px; line-height: 1.7; color: var(--text-sec); }
 
@@ -404,7 +406,8 @@
     .sidebar:hover .sidebar-item-disabled { padding: 8px 14px; justify-content: flex-start; }
     .sidebar-label { display: none; }
     .sidebar:hover .sidebar-label { display: inline; }
-    .sidebar-icon { font-size: 15px; flex-shrink: 0; }
+    .sidebar-icon { display: flex; align-items: center; flex-shrink: 0; }
+    .sidebar-icon svg { width: 16px; height: 16px; stroke-width: 1.75; }
     .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
     .sidebar-footer { display: none; padding: 14px; border-top: 1px solid var(--border); }
     .sidebar:hover .sidebar-footer { display: block; }
@@ -439,27 +442,27 @@
   <nav class="sidebar-nav">
     <div class="sidebar-section">Ferramentas</div>
     <a href="home.html" class="sidebar-item">
-      <span class="sidebar-icon">🏠</span><span class="sidebar-label"> Home</span>
+      <span class="sidebar-icon"><i data-lucide="home"></i></span><span class="sidebar-label"> Home</span>
     </a>
     <a href="index.html" class="sidebar-item">
-      <span class="sidebar-icon">📊</span><span class="sidebar-label"> Calculadora</span>
+      <span class="sidebar-icon"><i data-lucide="calculator"></i></span><span class="sidebar-label"> Calculadora</span>
     </a>
     <a href="watchlist.html" class="sidebar-item active">
-      <span class="sidebar-icon">📋</span><span class="sidebar-label"> Meus Valuations</span>
+      <span class="sidebar-icon"><i data-lucide="bookmark"></i></span><span class="sidebar-label"> Meus Valuations</span>
     </a>
     <a href="ranking.html" class="sidebar-item">
-      <span class="sidebar-icon">🏆</span><span class="sidebar-label"> Ranking de Ações</span>
+      <span class="sidebar-icon"><i data-lucide="trophy"></i></span><span class="sidebar-label"> Ranking de Ações</span>
     </a>
     <a href="analise.html" class="sidebar-item">
-      <span class="sidebar-icon">🔍</span><span class="sidebar-label"> Análise</span>
+      <span class="sidebar-icon"><i data-lucide="activity"></i></span><span class="sidebar-label"> Análise</span>
     </a>
     <hr class="sidebar-divider">
     <div class="sidebar-section">Em Breve</div>
     <div class="sidebar-item-disabled">
-      <span class="sidebar-icon">⚖️</span><span class="sidebar-label"> Comparativo</span>
+      <span class="sidebar-icon"><i data-lucide="scale"></i></span><span class="sidebar-label"> Comparativo</span>
     </div>
     <div class="sidebar-item-disabled">
-      <span class="sidebar-icon">📈</span><span class="sidebar-label"> Histórico</span>
+      <span class="sidebar-icon"><i data-lucide="clock"></i></span><span class="sidebar-label"> Histórico</span>
     </div>
   </nav>
   <div class="sidebar-footer">
@@ -489,13 +492,13 @@
 
   <div class="toolbar">
     <input id="filterInput" class="filter-input" type="text"
-           placeholder="🔍  Filtrar por ticker ou empresa…">
+           placeholder="Filtrar por ticker ou empresa…">
     <span class="refresh-meta" id="refreshMeta"></span>
   </div>
 
   <!-- Empty state -->
   <div id="emptyState" class="empty-state" style="display:none">
-    <div class="empty-icon">📋</div>
+    <div class="empty-icon"><i data-lucide="bookmark"></i></div>
     <div class="empty-title">Nenhum valuation salvo ainda</div>
     <div class="empty-hint">Calcule o valuation de uma ação e clique em "Salvar Preço Teto" para acompanhar aqui.</div>
     <a href="index.html" class="btn" style="margin-top:16px">＋ Calcular primeiro valuation</a>
@@ -810,7 +813,7 @@ setInterval(refreshPrices, 3 * 60 * 1000);   // auto-refresh a cada 3 min
 
     const itemAnalise = document.createElement('div');
     itemAnalise.className = 'context-menu-item';
-    itemAnalise.innerHTML = '📊 Ver Análise Avançada';
+    itemAnalise.innerHTML = 'Ver Análise Avançada';
     itemAnalise.onclick = () => {
       window.open(`analise.html?ticker=${encodeURIComponent(ticker)}`, '_blank');
       closeContextMenu();
@@ -818,7 +821,7 @@ setInterval(refreshPrices, 3 * 60 * 1000);   // auto-refresh a cada 3 min
 
     const itemDelete = document.createElement('div');
     itemDelete.className = 'context-menu-item danger';
-    itemDelete.innerHTML = '🗑 Excluir da watchlist';
+    itemDelete.innerHTML = 'Excluir da watchlist';
     itemDelete.onclick = () => {
       const wl = JSON.parse(localStorage.getItem('dcf_watchlist') || '{}');
       delete wl[ticker];
@@ -846,6 +849,7 @@ setInterval(refreshPrices, 3 * 60 * 1000);   // auto-refresh a cada 3 min
     if (e.key === 'Escape') closeContextMenu();
   });
 
+  lucide.createIcons();
 </script>
 
 </div><!-- /page-wrapper -->
