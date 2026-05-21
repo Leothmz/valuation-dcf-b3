@@ -228,42 +228,35 @@
 
     /* Filter popover */
     .filter-popover {
-      position: absolute; top: calc(100% + 8px); left: 50%;
-      transform: translateX(-50%);
-      background: var(--bg-2); border: 1px solid var(--border);
-      border-radius: 12px; padding: 14px; min-width: 200px;
-      z-index: 200; box-shadow: var(--shadow-lg);
-    }
-    .filter-popover::before {
-      content: ''; position: absolute; top: -6px; left: 50%;
-      width: 10px; height: 10px; background: var(--bg-2);
-      border-top: 1px solid var(--border); border-left: 1px solid var(--border);
-      transform: translateX(-50%) rotate(45deg);
+      position: fixed;
+      background: var(--bg-3); border: 1px solid var(--border-glow);
+      border-radius: 12px; padding: 16px; min-width: 210px;
+      z-index: 9000; box-shadow: 0 12px 40px rgba(0,0,0,.8), 0 0 0 1px rgba(6,182,212,.08);
     }
     .fp-title {
-      font-size: 10px; font-weight: 700; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px;
+      font-size: 10px; font-weight: 700; color: var(--cyan);
+      text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px;
     }
     .fp-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-    .fp-label { font-size: 11px; color: var(--text-sec); width: 80px; flex-shrink: 0; }
+    .fp-label { font-size: 12px; color: var(--text); width: 80px; flex-shrink: 0; }
     .fp-input {
-      background: var(--bg-3); border: 1px solid var(--border);
-      border-radius: var(--r-sm); color: var(--text); font-size: 12px;
-      padding: 5px 9px; width: 90px; outline: none;
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); color: var(--text); font-size: 13px;
+      padding: 6px 10px; width: 90px; outline: none;
       font-family: var(--font-mono);
     }
-    .fp-input:focus { border-color: var(--cyan); }
-    .fp-actions { display: flex; gap: 6px; margin-top: 10px; }
+    .fp-input:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(6,182,212,.15); }
+    .fp-actions { display: flex; gap: 6px; margin-top: 12px; }
     .fp-btn {
       background: linear-gradient(135deg, var(--cyan), #0891b2);
       border: none; border-radius: var(--r-sm); color: #060910;
-      font-size: 11px; font-weight: 700; padding: 5px 12px;
+      font-size: 12px; font-weight: 700; padding: 6px 14px;
       cursor: pointer; flex: 1; font-family: var(--font-ui);
     }
     .fp-btn2 {
-      background: var(--bg-3); border: 1px solid var(--border);
-      border-radius: var(--r-sm); color: var(--text-sec); font-size: 11px;
-      padding: 5px 10px; cursor: pointer; font-family: var(--font-ui);
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); color: var(--text-sec); font-size: 12px;
+      padding: 6px 10px; cursor: pointer; font-family: var(--font-ui);
     }
     .fp-btn2:hover { color: var(--text); border-color: var(--border-glow); }
 
@@ -1282,7 +1275,18 @@ function openFilterPopover(filterKey, chipEl) {
        <button class="fp-btn2" id="fp-clear">${clearLabel}</button>
      </div>`;
 
-  chipEl.appendChild(popover);
+  document.body.appendChild(popover);
+
+  // Position fixed relative to chip, clamped to viewport
+  const chipRect = chipEl.getBoundingClientRect();
+  const popW = 210;
+  let left = chipRect.left + chipRect.width / 2 - popW / 2;
+  const margin = 8;
+  left = Math.max(margin, Math.min(left, window.innerWidth - popW - margin));
+  popover.style.position = 'fixed';
+  popover.style.top = (chipRect.bottom + 8) + 'px';
+  popover.style.left = left + 'px';
+  popover.style.width = popW + 'px';
 
   popover.querySelector('#fp-apply').addEventListener('click', e => {
     e.stopPropagation();
