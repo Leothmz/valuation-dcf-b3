@@ -539,6 +539,32 @@
       font-weight: 600; padding: 4px 10px;
     }
 
+    /* ── Context Menu ── */
+    .context-menu {
+      position: fixed;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow-lg);
+      z-index: 9999;
+      min-width: 200px;
+      overflow: hidden;
+    }
+    .context-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      font-size: 13px;
+      color: var(--text-sec);
+      cursor: pointer;
+      transition: background .12s ease, color .12s ease;
+    }
+    .context-menu-item:hover {
+      background: var(--bg-4);
+      color: var(--text);
+    }
+
     /* Scrollbar */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -1310,6 +1336,13 @@ function renderTable() {
   }
 
   tbody.innerHTML = S.filtered.map(renderRow).join('');
+
+  tbody.querySelectorAll('tr[data-ticker]').forEach(tr => {
+    tr.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      showContextMenu(e, tr.dataset.ticker);
+    });
+  });
 }
 
 function _rankBadge(rank) {
@@ -1330,7 +1363,7 @@ function renderRow(s) {
   const lynchPEG = s.lynchVal;
   const joelEY   = s.joelVal;
 
-  return `<tr>
+  return `<tr data-ticker="${s.ticker}">
     <td class="td-rank">
       ${_rankBadge(s.rank)}
     </td>
@@ -1618,6 +1651,52 @@ document.addEventListener('click', e => {
   if (!popup.contains(e.target) && e.target.id !== 'saved-filters-btn') {
     closeSavedFiltersPopup();
   }
+});
+
+// ── Context Menu ──────────────────────────────────────────────
+let _ctxMenu = null;
+
+function closeContextMenu() {
+  if (_ctxMenu) { _ctxMenu.remove(); _ctxMenu = null; }
+}
+
+function showContextMenu(e, ticker) {
+  closeContextMenu();
+  const menu = document.createElement('div');
+  menu.className = 'context-menu';
+
+  const itemAnalise = document.createElement('div');
+  itemAnalise.className = 'context-menu-item';
+  itemAnalise.innerHTML = 'Ver Análise Avançada';
+  itemAnalise.onclick = () => {
+    window.open(`analise.html?ticker=${encodeURIComponent(ticker)}`, '_blank');
+    closeContextMenu();
+  };
+
+  const itemCalc = document.createElement('div');
+  itemCalc.className = 'context-menu-item';
+  itemCalc.innerHTML = 'Abrir Calculadora DCF';
+  itemCalc.onclick = () => {
+    window.open(`index.html?ticker=${encodeURIComponent(ticker)}`, '_blank');
+    closeContextMenu();
+  };
+
+  menu.appendChild(itemAnalise);
+  menu.appendChild(itemCalc);
+
+  const vw = window.innerWidth, vh = window.innerHeight;
+  menu.style.left = (e.clientX + 160 > vw ? e.clientX - 160 : e.clientX) + 'px';
+  menu.style.top  = (e.clientY + 80  > vh ? e.clientY - 80  : e.clientY) + 'px';
+
+  document.body.appendChild(menu);
+  _ctxMenu = menu;
+}
+
+document.addEventListener('mousedown', e => {
+  if (_ctxMenu && !_ctxMenu.contains(e.target)) closeContextMenu();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeContextMenu();
 });
 
 document.addEventListener('mousedown', e => {
