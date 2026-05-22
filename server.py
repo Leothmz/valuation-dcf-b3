@@ -4,7 +4,7 @@ Servidor local - Valuation DCF B3
 Serve arquivos estáticos + API de dados via yfinance (gratuito, sem token)
 """
 
-import datetime, json, os, sys, urllib.parse, urllib.request, re
+import datetime, json, os, sys, time, urllib.parse, urllib.request, re
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
@@ -401,6 +401,101 @@ def _r(v, d=2):
     return round(v, d) if v is not None and v == v else None
 
 
+# ── Fundamentus FII cache ───────────────────────────────────────────
+_fundamentus_fii_cache: dict | None = None
+_fundamentus_fii_cache_ts: float = 0.0
+_FUNDAMENTUS_TTL = 1800  # 30 min
+
+
+def _parse_fundamentus_table(html: str) -> dict:
+    """Parse the fundamentus FII results table. Returns {TICKER: {fields}} dict."""
+    result: dict = {}
+    rows = re.findall(r'<tr[^>]*>(.*?)</tr>', html, re.DOTALL | re.IGNORECASE)
+    if not rows:
+        return result
+
+    def _cells(row: str) -> list[str]:
+        raw = re.findall(r'<t[hd][^>]*>(.*?)</t[hd]>', row, re.DOTALL | re.IGNORECASE)
+        return [re.sub(r'<[^>]+>', '', c).strip() for c in raw]
+
+    headers: list[str] = []
+    header_row_idx = -1
+    for i, row in enumerate(rows):
+        cells = _cells(row)
+        if cells and ('Papel' in cells or 'FFO Yield' in cells):
+            headers = cells
+            header_row_idx = i
+            break
+
+    if not headers:
+        return result
+
+    col = {h: i for i, h in enumerate(headers)}
+
+    def _pct(texts: list[str], key: str) -> float | None:
+        idx = col.get(key, -1)
+        if idx < 0 or idx >= len(texts):
+            return None
+        v = texts[idx].replace('%', '').replace(',', '.').strip()
+        try:
+            return float(v) / 100
+        except ValueError:
+            return None
+
+    def _int(texts: list[str], key: str) -> int | None:
+        idx = col.get(key, -1)
+        if idx < 0 or idx >= len(texts):
+            return None
+        v = re.sub(r'[^\d]', '', texts[idx])
+        try:
+            return int(v)
+        except ValueError:
+            return None
+
+    for row in rows[header_row_idx + 1:]:
+        cells = _cells(row)
+        if not cells or not cells[0]:
+            continue
+        ticker = cells[0].upper()
+        entry: dict = {}
+        ffo = _pct(cells, 'FFO Yield')
+        if ffo is not None:
+            entry['ffoYield'] = ffo
+        vac = _pct(cells, 'Vacância Média')
+        if vac is not None:
+            entry['vacancia'] = vac
+        nim = _int(cells, 'Qtd de imóveis')
+        if nim is not None:
+            entry['numImoveis'] = nim
+        if entry:
+            result[ticker] = entry
+
+    return result
+
+
+def _get_fundamentus_fii_data(ticker: str) -> dict:
+    """Fetch FII metrics from fundamentus.com.br (cached 30 min). Fail silently."""
+    global _fundamentus_fii_cache, _fundamentus_fii_cache_ts
+    try:
+        now = time.time()
+        if _fundamentus_fii_cache is None or (now - _fundamentus_fii_cache_ts) > _FUNDAMENTUS_TTL:
+            url = "https://www.fundamentus.com.br/fii_resultado.php"
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "text/html,application/xhtml+xml",
+            })
+            with urllib.request.urlopen(req, timeout=8) as r:
+                html = r.read().decode("latin-1", errors="replace")
+            _fundamentus_fii_cache = _parse_fundamentus_table(html)
+            _fundamentus_fii_cache_ts = now
+            print(f"[fundamentus] tabela carregada: {len(_fundamentus_fii_cache)} FIIs")
+        raw = ticker.upper().replace(".SA", "")
+        return _fundamentus_fii_cache.get(raw, {})
+    except Exception as e:
+        print(f"[fundamentus] erro: {e}")
+        return {}
+
+
 def _get_statusinvest_fii_data(ticker: str) -> dict:
     """
     Scraping de dados extras de FIIs via statusinvest.com.br.
@@ -683,6 +778,17 @@ def get_fii_data(ticker: str) -> dict:
                 result[k] = v
     except Exception:
         pass
+
+    # Fallback: fundamentus para campos que statusinvest não retornou
+    _fii_nullable = ('ffoYield', 'vacancia', 'numImoveis')
+    if any(result.get(k) is None for k in _fii_nullable):
+        try:
+            fund = _get_fundamentus_fii_data(ticker)
+            for k in _fii_nullable:
+                if result.get(k) is None and fund.get(k) is not None:
+                    result[k] = fund[k]
+        except Exception:
+            pass
 
     # Histórico de dividendos — últimos 24 pagamentos, mais recente primeiro
     dividends_list = []

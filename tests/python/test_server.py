@@ -251,9 +251,10 @@ def _make_fii_mock_ticker_with_divs(divs):
 
 # ── Testes: get_fii_data ──────────────────────────────────────────
 
+@mock.patch('server._get_fundamentus_fii_data', return_value={})
 @mock.patch('yfinance.Ticker')
 @mock.patch('server._get_statusinvest_fii_data', return_value={})
-def test_fii_returns_expected_fields(mock_si, mock_ticker_cls):
+def test_fii_returns_expected_fields(mock_si, mock_ticker_cls, mock_fund):
     mock_ticker_cls.return_value = _make_fii_mock_ticker()
     result = server.get_fii_data("HGLG11")
     assert result['ticker'] == 'HGLG11'
@@ -268,30 +269,34 @@ def test_fii_returns_expected_fields(mock_si, mock_ticker_cls):
     assert 'dividends' in result
     assert isinstance(result['dividends'], list)
 
+@mock.patch('server._get_fundamentus_fii_data', return_value={})
 @mock.patch('yfinance.Ticker')
 @mock.patch('server._get_statusinvest_fii_data', return_value={})
-def test_fii_adds_sa_suffix(mock_si, mock_ticker_cls):
+def test_fii_adds_sa_suffix(mock_si, mock_ticker_cls, mock_fund):
     mock_ticker_cls.return_value = _make_fii_mock_ticker()
     server.get_fii_data("hglg11")
     mock_ticker_cls.assert_called_once_with("HGLG11.SA")
 
+@mock.patch('server._get_fundamentus_fii_data', return_value={})
 @mock.patch('yfinance.Ticker')
 @mock.patch('server._get_statusinvest_fii_data', return_value={})
-def test_fii_not_duplicates_sa_suffix(mock_si, mock_ticker_cls):
+def test_fii_not_duplicates_sa_suffix(mock_si, mock_ticker_cls, mock_fund):
     mock_ticker_cls.return_value = _make_fii_mock_ticker()
     server.get_fii_data("HGLG11.SA")
     mock_ticker_cls.assert_called_once_with("HGLG11.SA")
 
+@mock.patch('server._get_fundamentus_fii_data', return_value={})
 @mock.patch('yfinance.Ticker')
 @mock.patch('server._get_statusinvest_fii_data', return_value={})
-def test_fii_not_found_when_no_price(mock_si, mock_ticker_cls):
+def test_fii_not_found_when_no_price(mock_si, mock_ticker_cls, mock_fund):
     mock_ticker_cls.return_value = _make_fii_mock_ticker(info={})
     result = server.get_fii_data("XPTO11")
     assert result.get('code') == 'NOT_FOUND'
 
+@mock.patch('server._get_fundamentus_fii_data', return_value={})
 @mock.patch('yfinance.Ticker')
 @mock.patch('server._get_statusinvest_fii_data', return_value={'segmento': 'Logística', 'vacancia': 0.03, 'ffoYield': 0.091, 'numImoveis': 22})
-def test_fii_merges_statusinvest_data(mock_si, mock_ticker_cls):
+def test_fii_merges_statusinvest_data(mock_si, mock_ticker_cls, mock_fund):
     mock_ticker_cls.return_value = _make_fii_mock_ticker()
     result = server.get_fii_data("HGLG11")
     assert result['segmento'] == 'Logística'
@@ -299,9 +304,10 @@ def test_fii_merges_statusinvest_data(mock_si, mock_ticker_cls):
     assert result['ffoYield'] == 0.091
     assert result['numImoveis'] == 22
 
+@mock.patch('server._get_fundamentus_fii_data', return_value={})
 @mock.patch('yfinance.Ticker')
 @mock.patch('server._get_statusinvest_fii_data', side_effect=Exception("timeout"))
-def test_fii_survives_scraping_error(mock_si, mock_ticker_cls):
+def test_fii_survives_scraping_error(mock_si, mock_ticker_cls, mock_fund):
     mock_ticker_cls.return_value = _make_fii_mock_ticker()
     result = server.get_fii_data("HGLG11")
     # deve retornar dados do yfinance + mapa canônico mesmo com scraping falhando
@@ -316,9 +322,10 @@ def test_fii_no_yfinance_error():
     assert result.get('code') == 'NO_YFINANCE'
 
 
+@mock.patch('server._get_fundamentus_fii_data', return_value={})
 @mock.patch('yfinance.Ticker')
 @mock.patch('server._get_statusinvest_fii_data', return_value={})
-def test_fii_returns_dividends_list(mock_si, mock_ticker_cls):
+def test_fii_returns_dividends_list(mock_si, mock_ticker_cls, mock_fund):
     divs = pd.Series({
         pd.Timestamp("2025-03-15"): 1.70,
         pd.Timestamp("2025-04-15"): 1.75,
@@ -330,9 +337,10 @@ def test_fii_returns_dividends_list(mock_si, mock_ticker_cls):
     assert result["dividends"][0]["amount"] == 1.75  # mais recente primeiro
     assert "date" in result["dividends"][0]
 
+@mock.patch('server._get_fundamentus_fii_data', return_value={})
 @mock.patch('yfinance.Ticker')
 @mock.patch('server._get_statusinvest_fii_data', return_value={})
-def test_fii_dividends_limited_to_24(mock_si, mock_ticker_cls):
+def test_fii_dividends_limited_to_24(mock_si, mock_ticker_cls, mock_fund):
     import datetime
     today = datetime.date.today()
     big_divs = pd.Series({
