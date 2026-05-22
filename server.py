@@ -684,6 +684,22 @@ def get_fii_data(ticker: str) -> dict:
     except Exception:
         pass
 
+    # Histórico de dividendos — últimos 24 pagamentos, mais recente primeiro
+    dividends_list = []
+    try:
+        divs = stock.dividends
+        if divs is not None and not divs.empty:
+            for ts, amount in divs.sort_index(ascending=False).items():
+                dividends_list.append({
+                    "date": ts.strftime("%Y-%m-%d"),
+                    "amount": round(float(amount), 4)
+                })
+                if len(dividends_list) >= 24:
+                    break
+    except Exception:
+        pass
+    result["dividends"] = dividends_list
+
     return result
 
 

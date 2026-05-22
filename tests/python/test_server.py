@@ -242,6 +242,12 @@ def _make_fii_mock_ticker(info=None):
     m.info = info if info is not None else FII_MOCK_INFO
     return m
 
+def _make_fii_mock_ticker_with_divs(divs):
+    m = mock.MagicMock()
+    m.info = FII_MOCK_INFO
+    m.dividends = divs
+    return m
+
 
 # ── Testes: get_fii_data ──────────────────────────────────────────
 
@@ -259,6 +265,8 @@ def test_fii_returns_expected_fields(mock_si, mock_ticker_cls):
     assert 'vacancia' in result
     assert 'numImoveis' in result
     assert 'segmento' in result
+    assert 'dividends' in result
+    assert isinstance(result['dividends'], list)
 
 @mock.patch('yfinance.Ticker')
 @mock.patch('server._get_statusinvest_fii_data', return_value={})
@@ -306,3 +314,31 @@ def test_fii_no_yfinance_error():
     srv = importlib.reload(server)
     result = srv.get_fii_data("HGLG11")
     assert result.get('code') == 'NO_YFINANCE'
+
+
+@mock.patch('yfinance.Ticker')
+@mock.patch('server._get_statusinvest_fii_data', return_value={})
+def test_fii_returns_dividends_list(mock_si, mock_ticker_cls):
+    divs = pd.Series({
+        pd.Timestamp("2025-03-15"): 1.70,
+        pd.Timestamp("2025-04-15"): 1.75,
+    })
+    mock_ticker_cls.return_value = _make_fii_mock_ticker_with_divs(divs)
+    result = server.get_fii_data("HGLG11")
+    assert isinstance(result["dividends"], list)
+    assert len(result["dividends"]) == 2
+    assert result["dividends"][0]["amount"] == 1.75  # mais recente primeiro
+    assert "date" in result["dividends"][0]
+
+@mock.patch('yfinance.Ticker')
+@mock.patch('server._get_statusinvest_fii_data', return_value={})
+def test_fii_dividends_limited_to_24(mock_si, mock_ticker_cls):
+    import datetime
+    today = datetime.date.today()
+    big_divs = pd.Series({
+        pd.Timestamp(today - datetime.timedelta(days=30 * i)): 1.50
+        for i in range(30)
+    })
+    mock_ticker_cls.return_value = _make_fii_mock_ticker_with_divs(big_divs)
+    result = server.get_fii_data("HGLG11")
+    assert len(result["dividends"]) <= 24
