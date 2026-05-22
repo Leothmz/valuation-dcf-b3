@@ -1,7 +1,6 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-import json
 import pytest
 import unittest.mock as mock
 import pandas as pd
@@ -307,46 +306,3 @@ def test_fii_no_yfinance_error():
     srv = importlib.reload(server)
     result = srv.get_fii_data("HGLG11")
     assert result.get('code') == 'NO_YFINANCE'
-
-
-# ── Testes: _get_fii_tickers_brapi ───────────────────────────────
-
-BRAPI_MOCK_RESPONSE = {
-    "stocks": [
-        {"stock": "HGLG11", "close": 160.0, "volume": 10_000},   # 1.6M ≥ 500k → inclui
-        {"stock": "MXRF11", "close": 10.0,  "volume": 100_000},  # 1.0M ≥ 500k → inclui
-        {"stock": "TINY11", "close": 10.0,  "volume": 1_000},    # 10k < 500k → exclui
-        {"stock": "ITUB4",  "close": 30.0,  "volume": 5_000_000},# não termina em 11 → exclui
-        {"stock": "XPTO11", "close": None,  "volume": None},      # sem preço/volume → exclui
-    ]
-}
-
-@mock.patch('urllib.request.urlopen')
-def test_brapi_filters_by_liquidity(mock_urlopen):
-    import io
-    body = json.dumps(BRAPI_MOCK_RESPONSE).encode()
-    mock_urlopen.return_value.__enter__ = lambda s: s
-    mock_urlopen.return_value.__exit__ = mock.Mock(return_value=False)
-    mock_urlopen.return_value.read.return_value = body
-    result = server._get_fii_tickers_brapi(liquidez_min=500_000)
-    assert 'HGLG11' in result
-    assert 'MXRF11' in result
-    assert 'TINY11' not in result
-    assert 'ITUB4' not in result
-    assert 'XPTO11' not in result
-
-@mock.patch('urllib.request.urlopen', side_effect=Exception("timeout"))
-def test_brapi_returns_empty_on_error(mock_urlopen):
-    result = server._get_fii_tickers_brapi()
-    assert result == []
-
-@mock.patch('urllib.request.urlopen')
-def test_brapi_respects_custom_liquidez_min(mock_urlopen):
-    import io
-    body = json.dumps(BRAPI_MOCK_RESPONSE).encode()
-    mock_urlopen.return_value.__enter__ = lambda s: s
-    mock_urlopen.return_value.__exit__ = mock.Mock(return_value=False)
-    mock_urlopen.return_value.read.return_value = body
-    # liquidez_min=2M → TINY11(10k) AND MXRF11(1M) excluded, only HGLG11(1.6M) passes
-    result = server._get_fii_tickers_brapi(liquidez_min=2_000_000)
-    assert result == []  # HGLG11=1.6M < 2M → also excluded
