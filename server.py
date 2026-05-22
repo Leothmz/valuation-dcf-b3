@@ -470,6 +470,24 @@ def _get_statusinvest_fii_data(ticker: str) -> dict:
             except ValueError:
                 pass
 
+        # P/VP — ex: "0,97" ou "1.02"
+        _pvp_patterns = [
+            r'P\s*/\s*VP[^<]{0,80}?class="[^"]*value[^"]*"[^>]*>\s*([\d]+[,\.][\d]+)',
+            r'P\s*/\s*VP[^<]{0,80}?<strong[^>]*>\s*([\d]+[,\.][\d]+)',
+            r'P\s*/\s*VP[^<]{0,30}>\s*([\d]+[,\.][\d]+)\s*<',
+            r'"p_vp"\s*:\s*([\d]+\.[\d]+)',
+        ]
+        for _pat in _pvp_patterns:
+            _m = re.search(_pat, html, re.IGNORECASE | re.DOTALL)
+            if _m:
+                try:
+                    _v = float(_m.group(1).replace(',', '.'))
+                    if 0.01 < _v < 20:
+                        result['pvp'] = round(_v, 2)
+                        break
+                except ValueError:
+                    pass
+
         print(f"[statusinvest] {ticker}: {list(result.keys())}")
         return result
 
@@ -490,17 +508,25 @@ _FII_SEGMENTO_MAP: dict[str, str] = {
     'AIEC11': 'Logística', 'FIIP11': 'Logística', 'BCIA11': 'Logística',
     'VHFA11': 'Logística', 'ARRI11': 'Logística', 'CPSH11': 'Logística',
     'BLCA11': 'Logística', 'SNFZ11': 'Logística',
+    'CPLG11': 'Logística', 'ITRI11': 'Logística', 'XPIN11': 'Logística',
+    'KISU11': 'Logística', 'SNEL11': 'Logística',
     # ── Shoppings ─────────────────────────────────────────────────────────
     'XPML11': 'Shoppings', 'VISC11': 'Shoppings', 'HSML11': 'Shoppings',
     'MALL11': 'Shoppings', 'FIGS11': 'Shoppings', 'ABCP11': 'Shoppings',
     'SHOP11': 'Shoppings', 'SHPP11': 'Shoppings', 'SHPH11': 'Shoppings',
     'BPML11': 'Shoppings', 'MGHT11': 'Shoppings',
+    'GZIT11': 'Shoppings', 'PQDP11': 'Shoppings', 'PMLL11': 'Shoppings',
+    'ADSH11': 'Shoppings', 'LASC11': 'Shoppings', 'HPDP11': 'Shoppings',
     # ── Lajes Corp. ───────────────────────────────────────────────────────
     'BRCR11': 'Lajes Corp.', 'RBRP11': 'Lajes Corp.', 'PVBI11': 'Lajes Corp.',
     'RCRB11': 'Lajes Corp.', 'JSRE11': 'Lajes Corp.', 'BTWR11': 'Lajes Corp.',
     'HGRE11': 'Lajes Corp.', 'VINO11': 'Lajes Corp.', 'SPTW11': 'Lajes Corp.',
     'RECT11': 'Lajes Corp.', 'EDGA11': 'Lajes Corp.', 'PATC11': 'Lajes Corp.',
     'BLMG11': 'Lajes Corp.', 'ALMI11': 'Lajes Corp.',
+    'BLMO11': 'Lajes Corp.', 'BROF11': 'Lajes Corp.', 'BTAL11': 'Lajes Corp.',
+    'FATN11': 'Lajes Corp.', 'GARE11': 'Lajes Corp.', 'HSRE11': 'Lajes Corp.',
+    'MFII11': 'Lajes Corp.', 'RVBI11': 'Lajes Corp.', 'TEPP11': 'Lajes Corp.',
+    'VIUR11': 'Lajes Corp.', 'XPCI11': 'Lajes Corp.', 'PORD11': 'Lajes Corp.',
     # ── Papel / CRI ───────────────────────────────────────────────────────
     'MXRF11': 'Papel/CRI', 'KNCR11': 'Papel/CRI', 'IRDM11': 'Papel/CRI',
     'BCRI11': 'Papel/CRI', 'HGCR11': 'Papel/CRI', 'VRTA11': 'Papel/CRI',
@@ -527,6 +553,15 @@ _FII_SEGMENTO_MAP: dict[str, str] = {
     'VVMR11': 'Papel/CRI', 'DVFF11': 'Papel/CRI', 'CXRI11': 'Papel/CRI',
     'BBRC11': 'Papel/CRI', 'JGPX11': 'Papel/CRI', 'FZDA11': 'Papel/CRI',
     'FZDB11': 'Papel/CRI', 'RZLC11': 'Papel/CRI', 'RZZR11': 'Papel/CRI',
+    'AFHI11': 'Papel/CRI', 'AZPL11': 'Papel/CRI', 'BTHF11': 'Papel/CRI',
+    'CACR11': 'Papel/CRI', 'CLIN11': 'Papel/CRI', 'CPUR11': 'Papel/CRI',
+    'EMET11': 'Papel/CRI', 'GSFI11': 'Papel/CRI', 'HIRE11': 'Papel/CRI',
+    'HSAF11': 'Papel/CRI', 'IBBP11': 'Papel/CRI', 'IRIM11': 'Papel/CRI',
+    'KNUQ11': 'Papel/CRI', 'MANA11': 'Papel/CRI', 'PCIP11': 'Papel/CRI',
+    'PSEC11': 'Papel/CRI', 'RPRI11': 'Papel/CRI', 'RZAT11': 'Papel/CRI',
+    'SPXS11': 'Papel/CRI', 'TOPP11': 'Papel/CRI', 'TRBL11': 'Papel/CRI',
+    'TVRI11': 'Papel/CRI', 'VGHF11': 'Papel/CRI', 'VGIA11': 'Papel/CRI',
+    'VGIP11': 'Papel/CRI', 'VGRI11': 'Papel/CRI', 'VXXV11': 'Papel/CRI',
     # ── Residencial ───────────────────────────────────────────────────────
     'RZAK11': 'Residencial', 'HOSI11': 'Residencial',
     'NAUI11': 'Residencial', 'PLCA11': 'Residencial',
@@ -539,6 +574,7 @@ _FII_SEGMENTO_MAP: dict[str, str] = {
     'KNRI11': 'Híbrido', 'HFOF11': 'Híbrido', 'KFOF11': 'Híbrido',
     'CPOF11': 'Híbrido', 'BBFO11': 'Híbrido', 'SNFF11': 'Híbrido',
     'JSAF11': 'Híbrido',  'RBVA11': 'Híbrido',
+    'AURB11': 'Híbrido', 'BBIG11': 'Híbrido', 'MCLO11': 'Híbrido',
     # ── Agronegócio ───────────────────────────────────────────────────────
     'RZAG11': 'Agro', 'IAGR11': 'Agro', 'HAAA11': 'Agro',
     'LMAI11': 'Agro', 'SNAG11': 'Agro', 'PLAG11': 'Agro',
@@ -547,6 +583,7 @@ _FII_SEGMENTO_MAP: dict[str, str] = {
     'ZAGH11': 'Agro', 'ZAVC11': 'Agro', 'ZAVI11': 'Agro',
     'ZIFI11': 'Agro', 'PQAG11': 'Agro', 'LSAG11': 'Agro',
     'RZTR11': 'Agro', 'GCOI11': 'Agro',
+    'MIDW11': 'Agro', 'RURA11': 'Agro', 'VCRA11': 'Agro', 'XPCA11': 'Agro',
     # ── Hotel ─────────────────────────────────────────────────────────────
     'HTMX11': 'Hotel', 'EURO11': 'Hotel',
     # ── Educacional ───────────────────────────────────────────────────────
