@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ranking de FIIs · B3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    * { transition: border-color .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease; }
+
+    :root {
+      --bg-0: #060910; --bg-1: #0b0f17; --bg-2: #111827; --bg-3: #1a2233; --bg-4: #1f2a3f;
+      --border: #1e2d42; --border-muted: #151e2d; --border-glow: rgba(6,182,212,.25);
+      --text: #f0f4f8; --text-sec: #94a3b8; --text-muted: #4a5568;
+      --cyan: #06b6d4; --cyan-dim: rgba(6,182,212,.12); --cyan-glow: rgba(6,182,212,.08);
+      --green: #10b981; --green-dim: rgba(16,185,129,.12);
+      --red: #ef4444; --red-dim: rgba(239,68,68,.12);
+      --amber: #f59e0b; --amber-dim: rgba(245,158,11,.12);
+      --purple: #8b5cf6; --purple-dim: rgba(139,92,246,.12);
+      --font-ui: 'Inter', -apple-system, system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+      --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.4);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.5);
+      --glow-cyan: 0 0 20px rgba(6,182,212,.15);
+      --glow-green: 0 0 20px rgba(16,185,129,.15);
+    }
+
+    body { background: var(--bg-1); color: var(--text); font-family: var(--font-ui); font-size: 15px; line-height: 1.6; height: 100vh; overflow: hidden; display: flex; }
+
+    /* ── Sidebar ── */
+    .sidebar { width: 58px; background: rgba(11,15,23,.95); backdrop-filter: blur(12px); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; height: 100%; overflow-y: auto; overflow-x: hidden; transition: width 0.22s ease; }
+    .sidebar:hover { width: 224px; }
+    .sidebar-logo { padding: 16px; border-bottom: 1px solid var(--border); text-decoration: none; display: block; white-space: nowrap; overflow: hidden; }
+    .sidebar-logo:hover { background: var(--bg-3); }
+    .sidebar-logo-title { display: none; font-size: 14px; font-weight: 700; background: linear-gradient(135deg,#06b6d4,#0891b2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .sidebar-logo-sub { display: none; font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+    .sidebar-logo-collapsed { font-size: 11px; font-weight: 700; color: var(--cyan); text-align: center; padding: 4px 0; font-family: var(--font-mono); }
+    .sidebar:hover .sidebar-logo-collapsed { display: none; }
+    .sidebar:hover .sidebar-logo-title, .sidebar:hover .sidebar-logo-sub { display: block; }
+    .sidebar-nav { flex: 1; padding: 8px 0; }
+    .sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; text-decoration: none; color: var(--text-sec); white-space: nowrap; overflow: hidden; }
+    .sidebar-item:hover { background: var(--bg-3); color: var(--text); }
+    .sidebar-item.active { color: var(--cyan); background: rgba(6,182,212,.08); border-left: 2px solid var(--cyan); padding-left: 14px; }
+    .sidebar-icon { width: 26px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .sidebar-icon svg { width: 18px; height: 18px; }
+    .sidebar-label { font-size: 13px; font-weight: 500; opacity: 0; transition: opacity .15s ease; }
+    .sidebar:hover .sidebar-label { opacity: 1; }
+    .sidebar-section { padding: 16px 16px 4px; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; white-space: nowrap; overflow: hidden; opacity: 0; transition: opacity .15s ease; }
+    .sidebar:hover .sidebar-section { opacity: 1; }
+
+    /* ── Main layout ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .content { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; }
+
+    /* ── Hero ── */
+    .hero { background: linear-gradient(135deg, rgba(6,182,212,.06) 0%, var(--bg-2) 60%); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 28px 32px; }
+    .hero-top { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .hero-icon { width: 48px; height: 48px; background: var(--cyan-dim); border: 1px solid rgba(6,182,212,.3); border-radius: var(--r-lg); display: flex; align-items: center; justify-content: center; }
+    .hero-icon svg { width: 24px; height: 24px; color: var(--cyan); }
+    .hero-title { font-size: 24px; font-weight: 800; }
+    .hero-sub { font-size: 13px; color: var(--text-sec); margin-top: 2px; }
+    .hero-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+    .hero-stat { background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 20px; text-align: center; min-width: 110px; }
+    .hero-stat-val { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--cyan); }
+    .hero-stat-lbl { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+    /* ── Segment pills ── */
+    .seg-tabs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .seg-tab { padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg-3); color: var(--text-sec); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; user-select: none; }
+    .seg-tab:hover { border-color: rgba(6,182,212,.3); color: var(--text); }
+    .seg-tab.active { background: var(--cyan-dim); border-color: rgba(6,182,212,.4); color: var(--cyan); }
+
+    /* ── Filter chips ── */
+    .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .filter-chip { position: relative; padding: 5px 14px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg-3); color: var(--text-muted); font-size: 12px; cursor: pointer; user-select: none; white-space: nowrap; }
+    .filter-chip:hover { border-color: rgba(6,182,212,.3); color: var(--text-sec); }
+    .filter-chip.active { background: var(--cyan-dim); border-color: rgba(6,182,212,.35); color: var(--cyan); }
+    .count-label { margin-left: auto; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+    .btn-refresh { padding: 5px 14px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg-3); color: var(--text-muted); font-size: 12px; cursor: pointer; }
+    .btn-refresh:hover { color: var(--cyan); border-color: rgba(6,182,212,.3); }
+
+    /* ── Filter popover ── */
+    .popover { position: absolute; top: calc(100% + 6px); left: 0; z-index: 100; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px; min-width: 200px; box-shadow: var(--shadow-md); }
+    .popover label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .4px; }
+    .popover input { width: 100%; padding: 6px 10px; background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-size: 13px; font-family: var(--font-mono); }
+    .popover input:focus { outline: none; border-color: var(--cyan); }
+    .popover-row { margin-bottom: 10px; }
+    .popover-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .btn-apply { flex: 1; padding: 7px; background: var(--cyan-dim); border: 1px solid rgba(6,182,212,.4); border-radius: var(--r-sm); color: var(--cyan); font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-apply:hover { background: rgba(6,182,212,.2); }
+    .btn-clear { padding: 7px 12px; background: transparent; border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text-muted); font-size: 12px; cursor: pointer; }
+
+    /* ── Table ── */
+    .table-wrap { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; flex: 1; }
+    .table-scroll { overflow-y: auto; max-height: calc(100vh - 420px); }
+    table { width: 100%; border-collapse: collapse; }
+    thead { position: sticky; top: 0; z-index: 10; }
+    thead tr { background: var(--bg-3); border-bottom: 1px solid var(--border); }
+    th { padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
+    th.num { text-align: right; }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--border-muted); font-size: 13px; vertical-align: middle; }
+    td.num { text-align: right; font-family: var(--font-mono); font-size: 12px; }
+    tbody tr:hover td { background: rgba(255,255,255,.02); cursor: pointer; }
+    .empty-row td { text-align: center; padding: 40px; color: var(--text-muted); }
+
+    /* ── Skeleton ── */
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    .skel { background: linear-gradient(90deg, var(--bg-3) 25%, var(--bg-4) 50%, var(--bg-3) 75%); background-size: 200% 100%; animation: shimmer 1.8s infinite; border-radius: 4px; color: transparent !important; display: inline-block; }
+
+    /* ── Position badges ── */
+    .pos-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 22px; border-radius: 6px; font-family: var(--font-mono); font-size: 11px; font-weight: 700; padding: 0 6px; }
+    .pos-1 { background: linear-gradient(135deg,rgba(16,185,129,.25),rgba(16,185,129,.1)); border: 1px solid rgba(16,185,129,.35); color: #10b981; }
+    .pos-2 { background: linear-gradient(135deg,rgba(6,182,212,.2),rgba(6,182,212,.08)); border: 1px solid rgba(6,182,212,.3); color: #06b6d4; }
+    .pos-3 { background: linear-gradient(135deg,rgba(245,158,11,.2),rgba(245,158,11,.08)); border: 1px solid rgba(245,158,11,.3); color: #f59e0b; }
+    .pos-n { background: var(--bg-3); border: 1px solid var(--border); color: var(--text-muted); }
+
+    /* ── Ticker cell ── */
+    .ticker-cell { display: flex; align-items: center; gap: 8px; }
+    .ticker-code { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--cyan); }
+    .ticker-name { font-size: 11px; color: var(--text-muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .star-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 15px; padding: 0; line-height: 1; }
+    .star-btn.fav { color: var(--amber); }
+
+    /* ── Segmento badges ── */
+    .seg-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+    .seg-logistica   { background: rgba(16,185,129,.1);  border: 1px solid rgba(16,185,129,.25); color: #10b981; }
+    .seg-shoppings   { background: var(--amber-dim);     border: 1px solid rgba(245,158,11,.25); color: var(--amber); }
+    .seg-lajes       { background: var(--cyan-dim);      border: 1px solid rgba(6,182,212,.25);  color: var(--cyan); }
+    .seg-papel       { background: var(--purple-dim);    border: 1px solid rgba(139,92,246,.25); color: var(--purple); }
+    .seg-residencial { background: var(--red-dim);       border: 1px solid rgba(239,68,68,.25);  color: var(--red); }
+    .seg-hibrido     { background: var(--bg-4);          border: 1px solid var(--border);        color: var(--text-sec); }
+    .seg-default     { background: var(--bg-3);          border: 1px solid var(--border);        color: var(--text-muted); }
+
+    /* ── Perfil badges ── */
+    .perfil-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; letter-spacing: .3px; white-space: nowrap; }
+    .perfil-ancoragem   { background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.3); color: #10b981; }
+    .perfil-crescimento { background: var(--amber-dim);     border: 1px solid rgba(245,158,11,.3); color: var(--amber); }
+    .perfil-risco       { background: var(--red-dim);       border: 1px solid rgba(239,68,68,.3);  color: var(--red); }
+
+    /* ── Legend ── */
+    .legend { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; padding: 10px 16px; background: rgba(6,182,212,.04); border: 1px dashed rgba(6,182,212,.2); border-radius: var(--r-md); }
+    .legend-lbl { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-sec); }
+
+    /* ── Up/Down colors ── */
+    .up { color: var(--green); }
+    .dn { color: var(--red); }
+    .muted { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar">
+    <a href="home.html" class="sidebar-logo">
+      <div class="sidebar-logo-collapsed">V</div>
+      <div class="sidebar-logo-title">Valuation B3</div>
+      <div class="sidebar-logo-sub">Dashboard</div>
+    </a>
+    <div class="sidebar-nav">
+      <div class="sidebar-section">Ferramentas</div>
+      <a href="index.html" class="sidebar-item">
+        <span class="sidebar-icon"><i data-lucide="calculator"></i></span>
+        <span class="sidebar-label">Calculadora DCF</span>
+      </a>
+      <a href="watchlist.html" class="sidebar-item">
+        <span class="sidebar-icon"><i data-lucide="bookmark"></i></span>
+        <span class="sidebar-label">Watchlist</span>
+      </a>
+      <a href="ranking.html" class="sidebar-item">
+        <span class="sidebar-icon"><i data-lucide="bar-chart-2"></i></span>
+        <span class="sidebar-label">Ranking</span>
+      </a>
+      <a href="fii.html" class="sidebar-item active">
+        <span class="sidebar-icon"><i data-lucide="building-2"></i></span>
+        <span class="sidebar-label">FIIs</span>
+      </a>
+      <a href="analise.html" class="sidebar-item">
+        <span class="sidebar-icon"><i data-lucide="search"></i></span>
+        <span class="sidebar-label">Análise</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- ── Main ── -->
+  <div class="main">
+    <div class="content">
+
+      <!-- Hero -->
+      <div class="hero">
+        <div class="hero-top">
+          <div class="hero-icon"><i data-lucide="building-2"></i></div>
+          <div>
+            <div class="hero-title">Ranking de FIIs · B3</div>
+            <div class="hero-sub">Método 2em1 — rank DY + rank P/VP</div>
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <div class="hero-stat-val" id="stat-count">—</div>
+            <div class="hero-stat-lbl">FIIs analisados</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-val" id="stat-dy" style="color:var(--green)">—</div>
+            <div class="hero-stat-lbl">DY médio</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-val" id="stat-pvp">—</div>
+            <div class="hero-stat-lbl">P/VP médio</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-val" id="stat-vac" style="color:var(--amber)">—</div>
+            <div class="hero-stat-lbl">Vacância média</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Segment tabs -->
+      <div class="seg-tabs" id="seg-tabs">
+        <div class="seg-tab active" data-seg="todos">Todos</div>
+        <div class="seg-tab" data-seg="Logística">🏭 Logística</div>
+        <div class="seg-tab" data-seg="Shoppings">🛍 Shoppings</div>
+        <div class="seg-tab" data-seg="Lajes Corp.">🏢 Lajes Corp.</div>
+        <div class="seg-tab" data-seg="Papel/CRI">📄 Papel/CRI</div>
+        <div class="seg-tab" data-seg="Residencial">🏘 Residencial</div>
+        <div class="seg-tab" data-seg="Híbrido">⚡ Híbrido</div>
+      </div>
+
+      <!-- Filter chips -->
+      <div class="filter-row" id="filter-row">
+        <div class="filter-chip active" id="chip-dy" data-filter="dy">DY ≥ 6%</div>
+        <div class="filter-chip active" id="chip-liq" data-filter="liq">Liq ≥ 500k</div>
+        <div class="filter-chip active" id="chip-vac" data-filter="vac">Vac ≤ 25%</div>
+        <div class="filter-chip" id="chip-pvp" data-filter="pvp">P/VP máx</div>
+        <div class="filter-chip" id="chip-ffo" data-filter="ffo">FFO Yield mín</div>
+        <div class="filter-chip" id="chip-add" data-filter="add">+ Ticker</div>
+        <button class="btn-refresh" id="btn-refresh">↺ Atualizar</button>
+        <span class="count-label" id="count-label">Carregando...</span>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:44px">#</th>
+                <th>Ticker</th>
+                <th>Segmento</th>
+                <th>Perfil</th>
+                <th class="num">Cotação</th>
+                <th class="num">DY</th>
+                <th class="num">P/VP</th>
+                <th class="num">FFO Yield</th>
+                <th class="num">Vacância</th>
+                <th class="num">Liquidez</th>
+              </tr>
+            </thead>
+            <tbody id="fii-tbody">
+              <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted)">Carregando FIIs...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Perfil legend -->
+      <div class="legend">
+        <span class="legend-lbl">PERFIL (P/VP):</span>
+        <div class="legend-item"><span class="perfil-badge perfil-ancoragem">⚓ Ancoragem</span> &gt; 0,95</div>
+        <div class="legend-item"><span class="perfil-badge perfil-crescimento">📈 Crescimento</span> 0,81–0,95</div>
+        <div class="legend-item"><span class="perfil-badge perfil-risco">⚡ Risco</span> ≤ 0,80</div>
+      </div>
+
+    </div>
+  </div>
+
+  <script type="module">
+    import { calc2em1Score, classifyPerfil } from './src/fii-scores.js';
+
+    // ── A: Constantes ──────────────────────────────────────────────
+
+    const FII_TICKERS = [
+      'HGLG11','BRCO11','XPLG11','VILG11','BTLG11','LVBI11','CXCE11',
+      'XPML11','VISC11','HSML11','MALL11','FIGS11','ABCP11',
+      'KNRI11','BRCR11','RBRP11','PVBI11','RCRB11','JSRE11',
+      'MXRF11','KNCR11','IRDM11','BCRI11','HGCR11','VRTA11','RBRY11',
+      'RZAK11','HOSI11',
+      'HGRU11','VGIR11','GGRC11','GTWR11','TRXF11','RBRF11',
+      'BCFF11','BPFF11','RFOF11',
+    ];
+
+    const CACHE_KEY     = 'fii_cache_v1';
+    const CACHE_TTL     = 30 * 60 * 1000;
+    const SETTINGS_KEY  = 'fii_ranking_settings';
+    const FAVORITES_KEY = 'fii_favorites';
+    const CUSTOM_KEY    = 'fii_custom_tickers';
+
+    // ── B: Formatadores ────────────────────────────────────────────
+
+    const fBRL  = v => v == null ? '—' : 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    const fPct  = v => v == null ? '—' : (v * 100).toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1}) + '%';
+    const fNum2 = v => v == null ? '—' : v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    const fLiq  = v => {
+      if (v == null) return '—';
+      if (v >= 1e9) return 'R$ ' + (v/1e9).toLocaleString('pt-BR',{maximumFractionDigits:1}) + 'B';
+      if (v >= 1e6) return 'R$ ' + (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1}) + 'M';
+      if (v >= 1e3) return 'R$ ' + (v/1e3).toLocaleString('pt-BR',{maximumFractionDigits:0}) + 'k';
+      return 'R$ ' + v.toLocaleString('pt-BR');
+    };
+
+    // ── C: Estado global ───────────────────────────────────────────
+
+    const S = {
+      fiis: [],
+      ranked: [],
+      segmento: 'todos',
+      filterConfig: {
+        dyMin:       0.06,
+        liquidezMin: 500_000,
+        vacanciMax:  0.25,
+        pvpMax:      null,
+        ffoYieldMin: null,
+      },
+      customTickers: [],
+      favorites: new Set(),
+    };
+
+    // ── E: API ─────────────────────────────────────────────────────
+
+    async function fetchFii(ticker) {
+      const r = await fetch(`/api/fii/${ticker}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    }
+
+    async function loadRanking(forceRefresh = false) {
+      setCountLabel('Carregando...');
+
+      if (!forceRefresh) {
+        try {
+          const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+          if (cached && Date.now() - cached.ts < CACHE_TTL) {
+            S.fiis = cached.data;
+            applyPipeline();
+            return;
+          }
+        } catch {}
+      }
+
+      const allTickers = [...new Set([...FII_TICKERS, ...S.customTickers])];
+      const results = await Promise.allSettled(allTickers.map(fetchFii));
+      S.fiis = results
+        .filter(r => r.status === 'fulfilled' && !r.value.code)
+        .map(r => r.value);
+
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: S.fiis }));
+      } catch {}
+
+      applyPipeline();
+    }
+
+    // ── F: Pipeline ────────────────────────────────────────────────
+
+    function applyPipeline() {
+      const fc = S.filterConfig;
+      let filtered = S.fiis.filter(f => {
+        if (fc.dyMin       != null && (f.dy       == null || f.dy       < fc.dyMin))       return false;
+        if (fc.liquidezMin != null && (f.liquidez == null || f.liquidez < fc.liquidezMin)) return false;
+        if (fc.vacanciMax  != null && f.vacancia  != null && f.vacancia > fc.vacanciMax)   return false;
+        if (fc.pvpMax      != null && f.pvp       != null && f.pvp      > fc.pvpMax)       return false;
+        if (fc.ffoYieldMin != null && (f.ffoYield == null || f.ffoYield < fc.ffoYieldMin)) return false;
+        return true;
+      });
+
+      if (S.segmento !== 'todos') {
+        filtered = filtered.filter(f => f.segmento === S.segmento);
+      }
+
+      S.ranked = calc2em1Score(filtered);
+      renderTable();
+      updateHeroStats();
+    }
+
+    // ── G: Renderização ────────────────────────────────────────────
+
+    function renderTable() {
+      const tbody = document.getElementById('fii-tbody');
+      if (S.ranked.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted)">Nenhum FII encontrado com os filtros atuais.</td></tr>';
+        setCountLabel('0 FIIs');
+        return;
+      }
+      tbody.innerHTML = S.ranked.map((f, i) => renderRow(f, i)).join('');
+      setCountLabel(`${S.ranked.length} FII${S.ranked.length !== 1 ? 's' : ''}`);
+    }
+
+    function renderRow(f, i) {
+      const pos    = i + 1;
+      const isFav  = S.favorites.has(f.ticker);
+      const perfil = classifyPerfil(f.pvp);
+      const seg    = f.segmento;
+
+      const posClass = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : 'pos-n';
+
+      const segMap = {
+        'Logística':   'seg-logistica',
+        'Shoppings':   'seg-shoppings',
+        'Lajes Corp.': 'seg-lajes',
+        'Papel/CRI':   'seg-papel',
+        'Residencial': 'seg-residencial',
+        'Híbrido':     'seg-hibrido',
+      };
+      const segClass = seg ? (segMap[seg] || 'seg-default') : 'seg-default';
+      const segLabel = seg || '—';
+
+      const perfilMap = {
+        ancoragem:   '<span class="perfil-badge perfil-ancoragem">⚓ Ancoragem</span>',
+        crescimento: '<span class="perfil-badge perfil-crescimento">📈 Crescimento</span>',
+        risco:       '<span class="perfil-badge perfil-risco">⚡ Risco</span>',
+      };
+      const perfilBadge = perfil ? perfilMap[perfil] : '—';
+
+      const dyColor  = f.dy  != null ? (f.dy  >= 0.06 ? 'up' : '') : 'muted';
+      const pvpColor = f.pvp != null ? (f.pvp < 1 ? 'up' : f.pvp > 1.1 ? 'dn' : '') : 'muted';
+
+      return `
+        <tr data-ticker="${f.ticker}" class="fii-row">
+          <td><span class="pos-badge ${posClass}">${pos}</span></td>
+          <td>
+            <div class="ticker-cell">
+              <button class="star-btn ${isFav ? 'fav' : ''}" data-ticker="${f.ticker}">
+                ${isFav ? '★' : '☆'}
+              </button>
+              <div>
+                <div class="ticker-code">${f.ticker}</div>
+                <div class="ticker-name">${f.name || ''}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="seg-badge ${segClass}">${segLabel}</span></td>
+          <td>${perfilBadge}</td>
+          <td class="num">${fBRL(f.price)}</td>
+          <td class="num ${dyColor}">${fPct(f.dy)}</td>
+          <td class="num ${pvpColor}">${fNum2(f.pvp)}</td>
+          <td class="num">${fPct(f.ffoYield)}</td>
+          <td class="num">${fPct(f.vacancia)}</td>
+          <td class="num">${fLiq(f.liquidez)}</td>
+        </tr>`;
+    }
+
+    function updateHeroStats() {
+      const data = S.ranked;
+      if (!data.length) {
+        ['stat-count','stat-dy','stat-pvp','stat-vac'].forEach(id => {
+          document.getElementById(id).textContent = '—';
+        });
+        return;
+      }
+      const valid = k => data.filter(f => f[k] != null);
+      const avg   = (arr, k) => arr.reduce((s, f) => s + f[k], 0) / arr.length;
+
+      document.getElementById('stat-count').textContent = data.length;
+
+      const dyArr = valid('dy');
+      document.getElementById('stat-dy').textContent = dyArr.length ? fPct(avg(dyArr,'dy')) : '—';
+
+      const pvpArr = valid('pvp');
+      document.getElementById('stat-pvp').textContent = pvpArr.length ? fNum2(avg(pvpArr,'pvp')) : '—';
+
+      const vacArr = valid('vacancia');
+      document.getElementById('stat-vac').textContent = vacArr.length ? fPct(avg(vacArr,'vacancia')) : '—';
+    }
+
+    function setCountLabel(txt) {
+      document.getElementById('count-label').textContent = txt;
+    }
+
+    // ── H: Persistência ────────────────────────────────────────────
+
+    function persistSettings() {
+      try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+          segmento: S.segmento,
+          filterConfig: S.filterConfig,
+        }));
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify([...S.favorites]));
+        localStorage.setItem(CUSTOM_KEY, JSON.stringify(S.customTickers));
+      } catch {}
+    }
+
+    function restoreSettings() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
+        if (saved) {
+          S.segmento     = saved.segmento    || 'todos';
+          S.filterConfig = { ...S.filterConfig, ...saved.filterConfig };
+        }
+        const favs = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+        S.favorites = new Set(favs);
+        const custom = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]');
+        S.customTickers = custom;
+      } catch {}
+    }
+
+    // ── I: Sync UI ─────────────────────────────────────────────────
+
+    function syncSegTabs() {
+      document.querySelectorAll('.seg-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.seg === S.segmento);
+      });
+    }
+
+    function syncFilterChips() {
+      const fc = S.filterConfig;
+      const chip = (id, val, fmt) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.toggle('active', val != null);
+        if (val != null) el.textContent = fmt(val);
+      };
+      chip('chip-dy',  fc.dyMin,       v => `DY ≥ ${fPct(v)}`);
+      chip('chip-liq', fc.liquidezMin, v => `Liq ≥ ${fLiq(v)}`);
+      chip('chip-vac', fc.vacanciMax,  v => `Vac ≤ ${fPct(v)}`);
+      chip('chip-pvp', fc.pvpMax,      v => `P/VP ≤ ${fNum2(v)}`);
+      chip('chip-ffo', fc.ffoYieldMin, v => `FFO ≥ ${fPct(v)}`);
+
+      const addChip = document.getElementById('chip-add');
+      if (addChip) {
+        addChip.textContent = S.customTickers.length
+          ? `+ ${S.customTickers.length} ticker${S.customTickers.length > 1 ? 's' : ''}`
+          : '+ Ticker';
+        addChip.classList.toggle('active', S.customTickers.length > 0);
+      }
+    }
+
+    // ── J: Event handlers ─────────────────────────────────────────
+
+    document.getElementById('seg-tabs').addEventListener('click', e => {
+      const tab = e.target.closest('.seg-tab');
+      if (!tab) return;
+      S.segmento = tab.dataset.seg;
+      syncSegTabs();
+      applyPipeline();
+      persistSettings();
+    });
+
+    document.getElementById('btn-refresh').addEventListener('click', () => {
+      localStorage.removeItem(CACHE_KEY);
+      loadRanking(true);
+    });
+
+    document.getElementById('fii-tbody').addEventListener('click', e => {
+      const starBtn = e.target.closest('.star-btn');
+      if (starBtn) {
+        e.stopPropagation();
+        const ticker = starBtn.dataset.ticker;
+        if (S.favorites.has(ticker)) S.favorites.delete(ticker);
+        else S.favorites.add(ticker);
+        persistSettings();
+        renderTable();
+        return;
+      }
+    });
+
+    let activePopover = null;
+
+    function closePopover() {
+      if (activePopover) { activePopover.remove(); activePopover = null; }
+    }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.filter-chip') && !e.target.closest('.popover')) {
+        closePopover();
+      }
+    });
+
+    document.getElementById('filter-row').addEventListener('click', e => {
+      const chip = e.target.closest('.filter-chip');
+      if (!chip) return;
+      const filter = chip.dataset.filter;
+      if (!filter) return;
+      closePopover();
+      if (filter === 'add') { openAddTickerPopover(chip); return; }
+      openFilterPopover(chip, filter);
+    });
+
+    function openFilterPopover(anchor, filter) {
+      const fc = S.filterConfig;
+      const popover = document.createElement('div');
+      popover.className = 'popover';
+
+      const configs = {
+        dy:  { label: 'DY mínimo (%)',        key: 'dyMin',       toDisplay: v => v != null ? (v*100).toFixed(1) : '',  fromInput: v => v === '' ? null : parseFloat(v.replace(',','.'))/100 },
+        liq: { label: 'Liquidez mínima (R$)',  key: 'liquidezMin', toDisplay: v => v != null ? String(v) : '',           fromInput: v => v === '' ? null : parseFloat(v.replace(/\./g,'').replace(',','.')) },
+        vac: { label: 'Vacância máxima (%)',   key: 'vacanciMax',  toDisplay: v => v != null ? (v*100).toFixed(1) : '',  fromInput: v => v === '' ? null : parseFloat(v.replace(',','.'))/100 },
+        pvp: { label: 'P/VP máximo',           key: 'pvpMax',      toDisplay: v => v != null ? v.toFixed(2) : '',        fromInput: v => v === '' ? null : parseFloat(v.replace(',','.')) },
+        ffo: { label: 'FFO Yield mínimo (%)',  key: 'ffoYieldMin', toDisplay: v => v != null ? (v*100).toFixed(1) : '',  fromInput: v => v === '' ? null : parseFloat(v.replace(',','.'))/100 },
+      };
+
+      const cfg = configs[filter];
+      if (!cfg) return;
+
+      popover.innerHTML = `
+        <div class="popover-row">
+          <label>${cfg.label}</label>
+          <input type="text" id="pop-input" value="${cfg.toDisplay(fc[cfg.key])}">
+        </div>
+        <div class="popover-actions">
+          <button class="btn-clear" id="pop-clear">Limpar</button>
+          <button class="btn-apply" id="pop-apply">Aplicar</button>
+        </div>`;
+
+      anchor.style.position = 'relative';
+      anchor.appendChild(popover);
+      activePopover = popover;
+      popover.querySelector('#pop-input').focus();
+
+      popover.querySelector('#pop-apply').addEventListener('click', () => {
+        const raw = popover.querySelector('#pop-input').value.trim();
+        fc[cfg.key] = cfg.fromInput(raw);
+        closePopover();
+        syncFilterChips();
+        applyPipeline();
+        persistSettings();
+      });
+
+      popover.querySelector('#pop-clear').addEventListener('click', () => {
+        fc[cfg.key] = null;
+        closePopover();
+        syncFilterChips();
+        applyPipeline();
+        persistSettings();
+      });
+
+      popover.querySelector('#pop-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') popover.querySelector('#pop-apply').click();
+        if (e.key === 'Escape') closePopover();
+      });
+    }
+
+    function openAddTickerPopover(anchor) {
+      const popover = document.createElement('div');
+      popover.className = 'popover';
+      popover.innerHTML = `
+        <div class="popover-row">
+          <label>Adicionar ticker (ex: HGBS11)</label>
+          <input type="text" id="pop-ticker-input" placeholder="XXXX11" style="text-transform:uppercase">
+        </div>
+        ${S.customTickers.length ? `
+          <div style="margin-bottom:8px">
+            ${S.customTickers.map(t => `
+              <span style="display:inline-flex;align-items:center;gap:4px;margin:2px;padding:2px 8px;background:var(--bg-3);border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:var(--font-mono)">
+                ${t} <span data-remove="${t}" style="cursor:pointer;color:var(--red)">✕</span>
+              </span>`).join('')}
+          </div>` : ''}
+        <div class="popover-actions">
+          <button class="btn-apply" id="pop-add-btn">Adicionar</button>
+        </div>`;
+
+      anchor.style.position = 'relative';
+      anchor.appendChild(popover);
+      activePopover = popover;
+      popover.querySelector('#pop-ticker-input').focus();
+
+      popover.querySelector('#pop-add-btn').addEventListener('click', async () => {
+        const ticker = popover.querySelector('#pop-ticker-input').value.trim().toUpperCase();
+        if (!ticker || S.customTickers.includes(ticker) || FII_TICKERS.includes(ticker)) return;
+        S.customTickers.push(ticker);
+        persistSettings();
+        closePopover();
+        localStorage.removeItem(CACHE_KEY);
+        await loadRanking(true);
+        syncFilterChips();
+      });
+
+      popover.addEventListener('click', e => {
+        const removeBtn = e.target.closest('[data-remove]');
+        if (removeBtn) {
+          const t = removeBtn.dataset.remove;
+          S.customTickers = S.customTickers.filter(x => x !== t);
+          persistSettings();
+          closePopover();
+          applyPipeline();
+          syncFilterChips();
+        }
+      });
+
+      popover.querySelector('#pop-ticker-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') popover.querySelector('#pop-add-btn').click();
+        if (e.key === 'Escape') closePopover();
+      });
+    }
+
+    // ── K: Init ────────────────────────────────────────────────────
+
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      restoreSettings();
+      syncSegTabs();
+      syncFilterChips();
+      loadRanking();
+    });
+  </script>
+</body>
+</html>
