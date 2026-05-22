@@ -481,7 +481,8 @@ def get_fii_data(ticker: str) -> dict:
         symbol += ".SA"
 
     try:
-        info = yf.Ticker(symbol).info or {}
+        stock = yf.Ticker(symbol)
+        info = stock.info or {}
     except Exception as e:
         return {"code": "ERROR", "error": str(e)}
 
@@ -495,14 +496,32 @@ def get_fii_data(ticker: str) -> dict:
     avg_vol  = info.get("averageVolume") or 0
     liquidez = _r(avg_vol * price) if avg_vol and price else None
 
+    # DY e DPA: TTM — mesmo padrão de get_fundamentals (mais confiável que info.dividendYield)
+    dy  = None
+    dpa = None
+    try:
+        one_year_ago = datetime.date.today() - datetime.timedelta(days=365)
+        divs = stock.dividends
+        if divs is not None and not divs.empty:
+            ttm_total = 0.0
+            for date, amount in divs.items():
+                d = date.date() if hasattr(date, "date") else date
+                if d >= one_year_ago:
+                    ttm_total += float(amount)
+            if ttm_total > 0:
+                dpa = round(ttm_total, 4)
+                dy  = ttm_total / price if price > 0 else None
+    except Exception:
+        dy = _normalize_dy(info.get("dividendYield"))
+
     result = {
         "ticker":           ticker.upper().replace(".SA", ""),
         "name":             info.get("longName") or info.get("shortName") or ticker.upper(),
         "price":            price,
         "changePercent":    info.get("regularMarketChangePercent"),
-        "dy":               _normalize_dy(info.get("dividendYield")),
+        "dy":               dy,
         "pvp":              _r(info.get("priceToBook")),
-        "dpa":              _r(info.get("dividendRate"), 4),
+        "dpa":              _r(dpa, 4),
         "marketCap":        info.get("marketCap"),
         "liquidez":         liquidez,
         "fiftyTwoWeekHigh": info.get("fiftyTwoWeekHigh"),

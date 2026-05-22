@@ -40,18 +40,26 @@
     .sidebar-logo-title { display: none; font-size: 14px; font-weight: 700; background: linear-gradient(135deg,#06b6d4,#0891b2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .sidebar-logo-sub { display: none; font-size: 12px; color: var(--text-muted); margin-top: 3px; }
     .sidebar-logo-collapsed { font-size: 11px; font-weight: 700; color: var(--cyan); text-align: center; padding: 4px 0; font-family: var(--font-mono); }
+    .sidebar:hover .sidebar-logo-title { display: block; }
+    .sidebar:hover .sidebar-logo-sub   { display: block; }
     .sidebar:hover .sidebar-logo-collapsed { display: none; }
-    .sidebar:hover .sidebar-logo-title, .sidebar:hover .sidebar-logo-sub { display: block; }
-    .sidebar-nav { flex: 1; padding: 8px 0; }
-    .sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; text-decoration: none; color: var(--text-sec); white-space: nowrap; overflow: hidden; }
-    .sidebar-item:hover { background: var(--bg-3); color: var(--text); }
-    .sidebar-item.active { color: var(--cyan); background: rgba(6,182,212,.08); border-left: 2px solid var(--cyan); padding-left: 14px; }
-    .sidebar-icon { width: 26px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .sidebar-icon svg { width: 18px; height: 18px; }
-    .sidebar-label { font-size: 13px; font-weight: 500; opacity: 0; transition: opacity .15s ease; }
-    .sidebar:hover .sidebar-label { opacity: 1; }
-    .sidebar-section { padding: 16px 16px 4px; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; white-space: nowrap; overflow: hidden; opacity: 0; transition: opacity .15s ease; }
-    .sidebar:hover .sidebar-section { opacity: 1; }
+    .sidebar-nav { flex: 1; padding: 8px 0; overflow: hidden; }
+    .sidebar-section { display: none; font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: .12em; text-transform: uppercase; padding: 10px 14px 4px; white-space: nowrap; }
+    .sidebar:hover .sidebar-section { display: block; }
+    .sidebar-item { display: flex; align-items: center; gap: 9px; padding: 8px 0; justify-content: center; color: var(--text-sec); text-decoration: none; font-size: 14px; border-left: 2px solid transparent; white-space: nowrap; overflow: hidden; }
+    .sidebar-item:hover { background: rgba(6,182,212,.06); color: var(--text); }
+    .sidebar-item.active { color: var(--cyan); background: rgba(6,182,212,.08); border-left-color: var(--cyan); font-weight: 500; }
+    .sidebar:hover .sidebar-item { padding: 8px 14px; justify-content: flex-start; }
+    .sidebar-item-disabled { display: flex; align-items: center; gap: 9px; padding: 8px 0; justify-content: center; color: var(--text-muted); font-size: 14px; font-style: italic; border-left: 2px solid transparent; cursor: default; white-space: nowrap; overflow: hidden; }
+    .sidebar:hover .sidebar-item-disabled { padding: 8px 14px; justify-content: flex-start; }
+    .sidebar-label { flex: 1; display: none; }
+    .sidebar:hover .sidebar-label { display: inline; }
+    .sidebar-icon { display: flex; align-items: center; flex-shrink: 0; }
+    .sidebar-icon svg { width: 16px; height: 16px; stroke-width: 1.75; }
+    .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+    .sidebar-footer { display: none; padding: 14px; border-top: 1px solid var(--border); }
+    .sidebar-footer-title { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: .08em; text-transform: uppercase; }
+    .sidebar:hover .sidebar-footer { display: block; }
 
     /* ── Main layout ── */
     .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -156,36 +164,53 @@
 <body>
 
   <!-- ── Sidebar ── -->
-  <nav class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <a href="home.html" class="sidebar-logo">
-      <div class="sidebar-logo-collapsed">V</div>
-      <div class="sidebar-logo-title">Valuation B3</div>
-      <div class="sidebar-logo-sub">Dashboard</div>
+      <div class="sidebar-logo-title">Valuation DCF · B3</div>
+      <div class="sidebar-logo-sub">Análise fundamentalista</div>
+      <div class="sidebar-logo-collapsed">DCF·B3</div>
     </a>
-    <div class="sidebar-nav">
+    <nav class="sidebar-nav">
       <div class="sidebar-section">Ferramentas</div>
+      <a href="home.html" class="sidebar-item">
+        <span class="sidebar-icon"><i data-lucide="home"></i></span>
+        <span class="sidebar-label">Home</span>
+      </a>
       <a href="index.html" class="sidebar-item">
         <span class="sidebar-icon"><i data-lucide="calculator"></i></span>
-        <span class="sidebar-label">Calculadora DCF</span>
+        <span class="sidebar-label">Calculadora</span>
       </a>
       <a href="watchlist.html" class="sidebar-item">
         <span class="sidebar-icon"><i data-lucide="bookmark"></i></span>
-        <span class="sidebar-label">Watchlist</span>
+        <span class="sidebar-label">Meus Valuations</span>
       </a>
       <a href="ranking.html" class="sidebar-item">
-        <span class="sidebar-icon"><i data-lucide="bar-chart-2"></i></span>
-        <span class="sidebar-label">Ranking</span>
+        <span class="sidebar-icon"><i data-lucide="trophy"></i></span>
+        <span class="sidebar-label">Ranking de Ações</span>
       </a>
       <a href="fii.html" class="sidebar-item active">
         <span class="sidebar-icon"><i data-lucide="building-2"></i></span>
         <span class="sidebar-label">FIIs</span>
       </a>
       <a href="analise.html" class="sidebar-item">
-        <span class="sidebar-icon"><i data-lucide="search"></i></span>
+        <span class="sidebar-icon"><i data-lucide="activity"></i></span>
         <span class="sidebar-label">Análise</span>
       </a>
+      <hr class="sidebar-divider">
+      <div class="sidebar-section">Em Breve</div>
+      <div class="sidebar-item-disabled">
+        <span class="sidebar-icon"><i data-lucide="scale"></i></span>
+        <span class="sidebar-label">Comparativo</span>
+      </div>
+      <div class="sidebar-item-disabled">
+        <span class="sidebar-icon"><i data-lucide="clock"></i></span>
+        <span class="sidebar-label">Histórico</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-title">Valuation DCF · B3</div>
     </div>
-  </nav>
+  </aside>
 
   <!-- ── Main ── -->
   <div class="main">
