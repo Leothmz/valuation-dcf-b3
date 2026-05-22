@@ -385,9 +385,18 @@
           .filter(r => r.status === 'fulfilled' && !r.value.code)
           .map(r => r.value);
 
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: S.fiis }));
-        } catch {}
+        if (S.fiis.length > 0) {
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: S.fiis }));
+          } catch {}
+        }
+
+        if (S.fiis.length === 0) {
+          setCountLabel('0 FIIs');
+          document.getElementById('fii-tbody').innerHTML =
+            '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted)">Nenhum FII carregado — verifique se o servidor está rodando e clique em ↺ Atualizar.</td></tr>';
+          return;
+        }
 
         applyPipeline();
       } catch (err) {
@@ -402,7 +411,7 @@
     function applyPipeline() {
       const fc = S.filterConfig;
       let filtered = S.fiis.filter(f => {
-        if (fc.dyMin       != null && (f.dy       == null || f.dy       < fc.dyMin))       return false;
+        if (fc.dyMin       != null && f.dy       != null && f.dy       < fc.dyMin)         return false;
         if (fc.liquidezMin != null && (f.liquidez == null || f.liquidez < fc.liquidezMin)) return false;
         if (fc.vacanciMax  != null && f.vacancia  != null && f.vacancia > fc.vacanciMax)   return false;
         if (fc.pvpMax      != null && f.pvp       != null && f.pvp      > fc.pvpMax)       return false;
