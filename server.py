@@ -457,16 +457,39 @@ def _get_statusinvest_fii_data(ticker: str) -> dict:
         return {}
 
 
-def _normalize_fii_segmento(raw: str) -> str:
-    """Normaliza label de segmento do statusinvest para valor canônico."""
+# Segmentos canônicos para os tickers da lista padrão — fonte: investidor10/statusinvest
+_FII_SEGMENTO_MAP: dict[str, str] = {
+    # Logística
+    'HGLG11': 'Logística', 'BRCO11': 'Logística', 'XPLG11': 'Logística',
+    'VILG11': 'Logística', 'BTLG11': 'Logística', 'LVBI11': 'Logística', 'CXCE11': 'Logística',
+    # Shoppings
+    'XPML11': 'Shoppings', 'VISC11': 'Shoppings', 'HSML11': 'Shoppings',
+    'MALL11': 'Shoppings', 'FIGS11': 'Shoppings', 'ABCP11': 'Shoppings',
+    # Lajes Corporativas
+    'KNRI11': 'Lajes Corp.', 'BRCR11': 'Lajes Corp.', 'RBRP11': 'Lajes Corp.',
+    'PVBI11': 'Lajes Corp.', 'RCRB11': 'Lajes Corp.', 'JSRE11': 'Lajes Corp.',
+    # Papel / CRI
+    'MXRF11': 'Papel/CRI', 'KNCR11': 'Papel/CRI', 'IRDM11': 'Papel/CRI',
+    'BCRI11': 'Papel/CRI', 'HGCR11': 'Papel/CRI', 'VRTA11': 'Papel/CRI', 'RBRY11': 'Papel/CRI',
+    # Residencial
+    'RZAK11': 'Residencial', 'HOSI11': 'Residencial',
+    # Híbrido / FOF
+    'HGRU11': 'Híbrido', 'VGIR11': 'Híbrido', 'GGRC11': 'Híbrido',
+    'GTWR11': 'Híbrido', 'TRXF11': 'Híbrido', 'RBRF11': 'Híbrido',
+    'BCFF11': 'Híbrido', 'BPFF11': 'Híbrido', 'RFOF11': 'Híbrido',
+}
+
+
+def _normalize_fii_segmento(raw: str) -> str | None:
+    """Normaliza label de segmento do statusinvest/investidor10 para valor canônico."""
     s = raw.lower()
-    if 'log' in s:                              return 'Logística'
-    if 'shop' in s:                             return 'Shoppings'
-    if 'laje' in s:                             return 'Lajes Corp.'
-    if 'papel' in s or 'cri' in s or 'receb' in s: return 'Papel/CRI'
-    if 'resid' in s or 'habitac' in s:          return 'Residencial'
-    if 'híbrid' in s or 'hibrid' in s:          return 'Híbrido'
-    return raw.strip()
+    if 'logíst' in s or 'logist' in s:               return 'Logística'
+    if 'shop' in s or 'shopping' in s:               return 'Shoppings'
+    if 'laje' in s or 'corporativ' in s:             return 'Lajes Corp.'
+    if 'papel' in s or 'recebív' in s or 'recebi' in s or 'cri' in s: return 'Papel/CRI'
+    if 'resid' in s or 'habitac' in s:               return 'Residencial'
+    if 'híbrid' in s or 'hibrid' in s or 'fof' in s or 'fundo de fund' in s: return 'Híbrido'
+    return None  # desconhecido — não retornar lixo
 
 
 def get_fii_data(ticker: str) -> dict:
@@ -526,17 +549,19 @@ def get_fii_data(ticker: str) -> dict:
         "liquidez":         liquidez,
         "fiftyTwoWeekHigh": info.get("fiftyTwoWeekHigh"),
         "fiftyTwoWeekLow":  info.get("fiftyTwoWeekLow"),
-        # campos scraping — default None, sobrescritos abaixo se scraping OK
+        # campos scraping — segmento pré-populado pelo mapa canônico
         "ffoYield":   None,
         "vacancia":   None,
         "numImoveis": None,
-        "segmento":   None,
+        "segmento":   _FII_SEGMENTO_MAP.get(ticker.upper().replace(".SA", "")),
     }
 
-    # Enriquecer com statusinvest (falha silenciosa)
+    # Enriquecer com statusinvest (sobrescreve campos None; segmento só sobrescrito se scraping retornar valor válido)
     try:
         scraped = _get_statusinvest_fii_data(ticker)
-        result.update(scraped)
+        for k, v in scraped.items():
+            if v is not None:
+                result[k] = v
     except Exception:
         pass
 

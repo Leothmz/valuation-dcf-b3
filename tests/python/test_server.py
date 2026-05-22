@@ -296,9 +296,9 @@ def test_fii_merges_statusinvest_data(mock_si, mock_ticker_cls):
 def test_fii_survives_scraping_error(mock_si, mock_ticker_cls):
     mock_ticker_cls.return_value = _make_fii_mock_ticker()
     result = server.get_fii_data("HGLG11")
-    # deve retornar dados do yfinance mesmo com scraping falhando
+    # deve retornar dados do yfinance + mapa canônico mesmo com scraping falhando
     assert result['price'] == 162.40
-    assert result['segmento'] is None
+    assert result['segmento'] == 'Logística'  # vem do _FII_SEGMENTO_MAP
 
 @mock.patch.dict('sys.modules', {'yfinance': None})
 def test_fii_no_yfinance_error():
