@@ -142,6 +142,9 @@
     .seg-papel       { background: var(--purple-dim);    border: 1px solid rgba(139,92,246,.25); color: var(--purple); }
     .seg-residencial { background: var(--red-dim);       border: 1px solid rgba(239,68,68,.25);  color: var(--red); }
     .seg-hibrido     { background: var(--bg-4);          border: 1px solid var(--border);        color: var(--text-sec); }
+    .seg-agro        { background: rgba(34,197,94,.1);   border: 1px solid rgba(34,197,94,.25);  color: #22c55e; }
+    .seg-hotel       { background: rgba(251,191,36,.1);  border: 1px solid rgba(251,191,36,.25); color: #fbbf24; }
+    .seg-educacional { background: rgba(99,102,241,.1);  border: 1px solid rgba(99,102,241,.25); color: #6366f1; }
     .seg-default     { background: var(--bg-3);          border: 1px solid var(--border);        color: var(--text-muted); }
 
     /* ── Perfil badges ── */
@@ -254,6 +257,8 @@
         <div class="seg-tab" data-seg="Papel/CRI">📄 Papel/CRI</div>
         <div class="seg-tab" data-seg="Residencial">🏘 Residencial</div>
         <div class="seg-tab" data-seg="Híbrido">⚡ Híbrido</div>
+        <div class="seg-tab" data-seg="Agro">🌾 Agro</div>
+        <div class="seg-tab" data-seg="Hotel">🏨 Hotel</div>
       </div>
 
       <!-- Filter chips -->
@@ -500,12 +505,15 @@
       const posClass = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : 'pos-n';
 
       const segMap = {
-        'Logística':   'seg-logistica',
-        'Shoppings':   'seg-shoppings',
-        'Lajes Corp.': 'seg-lajes',
-        'Papel/CRI':   'seg-papel',
-        'Residencial': 'seg-residencial',
-        'Híbrido':     'seg-hibrido',
+        'Logística':    'seg-logistica',
+        'Shoppings':    'seg-shoppings',
+        'Lajes Corp.':  'seg-lajes',
+        'Papel/CRI':    'seg-papel',
+        'Residencial':  'seg-residencial',
+        'Híbrido':      'seg-hibrido',
+        'Agro':         'seg-agro',
+        'Hotel':        'seg-hotel',
+        'Educacional':  'seg-educacional',
       };
       const segClass = seg ? (segMap[seg] || 'seg-default') : 'seg-default';
       const segLabel = seg || '—';

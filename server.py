@@ -419,30 +419,51 @@ def _get_statusinvest_fii_data(ticker: str) -> dict:
 
         result = {}
 
-        # Segmento — ex: "Logístico", "Shopping", "Lajes Corporativas", "Papel"
-        m = re.search(r'Segmento[^<]*</[^>]+>\s*<[^>]+>\s*([^<]{3,60})</[^>]+>', html, re.IGNORECASE)
-        if m:
-            raw_seg = m.group(1).strip()
-            result['segmento'] = _normalize_fii_segmento(raw_seg)
+        # Segmento — tenta múltiplos padrões de HTML do statusinvest
+        _seg_patterns = [
+            r'[Ss]egmento[^<]{0,30}</[^>]+>\s*<[^>]+>\s*([A-Za-záéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ /\-]{3,60})</[^>]+>',
+            r'[Ss]egmento.*?<strong[^>]*>\s*([A-Za-záéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ /\-]{3,60}?)\s*</strong>',
+            r'[Ss]egmento.*?class="[^"]*value[^"]*"[^>]*>\s*([A-Za-záéíóúâêîôûãõç /\-]{3,60}?)\s*<',
+            r'"segmento"\s*[=:]\s*["\']([^"\']{3,60})["\']',
+        ]
+        for _pat in _seg_patterns:
+            _m = re.search(_pat, html, re.IGNORECASE | re.DOTALL)
+            if _m:
+                _v = _normalize_fii_segmento(_m.group(1).strip())
+                if _v:
+                    result['segmento'] = _v
+                    break
 
         # FFO Yield — ex: "9,12%"
-        m = re.search(r'FFO\s*Yield[^%]*?([\d,\.]+)\s*%', html, re.IGNORECASE)
-        if m:
-            try:
-                result['ffoYield'] = float(m.group(1).replace(',', '.')) / 100
-            except ValueError:
-                pass
+        _ffo_patterns = [
+            r'FFO\s*[Yy]ield[^%]{0,60}?([\d]+[,\.][\d]+)\s*%',
+            r'FFO\s*[Yy]ield[^%]{0,60}?>([\d]+[,\.][\d]+)\s*%',
+        ]
+        for _pat in _ffo_patterns:
+            m = re.search(_pat, html, re.IGNORECASE)
+            if m:
+                try:
+                    result['ffoYield'] = float(m.group(1).replace(',', '.')) / 100
+                    break
+                except ValueError:
+                    pass
 
         # Vacância — ex: "3,20%"
-        m = re.search(r'[Vv]ac[aâ]ncia[^%]*?([\d,\.]+)\s*%', html, re.IGNORECASE)
-        if m:
-            try:
-                result['vacancia'] = float(m.group(1).replace(',', '.')) / 100
-            except ValueError:
-                pass
+        _vac_patterns = [
+            r'[Vv]ac[aâ][ân]cia[^%]{0,60}?([\d]+[,\.][\d]+)\s*%',
+            r'[Vv]ac[aâ][ân]cia[^%]{0,60}?>([\d]+[,\.][\d]+)\s*%',
+        ]
+        for _pat in _vac_patterns:
+            m = re.search(_pat, html, re.IGNORECASE)
+            if m:
+                try:
+                    result['vacancia'] = float(m.group(1).replace(',', '.')) / 100
+                    break
+                except ValueError:
+                    pass
 
-        # Número de imóveis — ex: "22 imóveis"
-        m = re.search(r'Im[oó]veis[^0-9]*(\d+)', html, re.IGNORECASE)
+        # Número de imóveis
+        m = re.search(r'Im[oó]veis[^0-9]{0,30}(\d+)', html, re.IGNORECASE)
         if m:
             try:
                 result['numImoveis'] = int(m.group(1))
@@ -459,35 +480,90 @@ def _get_statusinvest_fii_data(ticker: str) -> dict:
 
 # Segmentos canônicos para os tickers da lista padrão — fonte: investidor10/statusinvest
 _FII_SEGMENTO_MAP: dict[str, str] = {
-    # Logística
+    # ── Logística ─────────────────────────────────────────────────────────
     'HGLG11': 'Logística', 'BRCO11': 'Logística', 'XPLG11': 'Logística',
-    'VILG11': 'Logística', 'BTLG11': 'Logística', 'LVBI11': 'Logística', 'CXCE11': 'Logística',
-    # Shoppings
+    'VILG11': 'Logística', 'BTLG11': 'Logística', 'LVBI11': 'Logística',
+    'CXCE11': 'Logística', 'ALZR11': 'Logística', 'GLOG11': 'Logística',
+    'TGAR11': 'Logística', 'RBLG11': 'Logística', 'HSLG11': 'Logística',
+    'PATL11': 'Logística', 'BLOG11': 'Logística', 'BMLC11': 'Logística',
+    'RBRL11': 'Logística', 'GLPF11': 'Logística', 'TRXB11': 'Logística',
+    'AIEC11': 'Logística', 'FIIP11': 'Logística', 'BCIA11': 'Logística',
+    'VHFA11': 'Logística', 'ARRI11': 'Logística', 'CPSH11': 'Logística',
+    'BLCA11': 'Logística', 'SNFZ11': 'Logística',
+    # ── Shoppings ─────────────────────────────────────────────────────────
     'XPML11': 'Shoppings', 'VISC11': 'Shoppings', 'HSML11': 'Shoppings',
     'MALL11': 'Shoppings', 'FIGS11': 'Shoppings', 'ABCP11': 'Shoppings',
-    # Lajes Corporativas
-    'KNRI11': 'Lajes Corp.', 'BRCR11': 'Lajes Corp.', 'RBRP11': 'Lajes Corp.',
-    'PVBI11': 'Lajes Corp.', 'RCRB11': 'Lajes Corp.', 'JSRE11': 'Lajes Corp.',
-    # Papel / CRI
+    'SHOP11': 'Shoppings', 'SHPP11': 'Shoppings', 'SHPH11': 'Shoppings',
+    'BPML11': 'Shoppings', 'MGHT11': 'Shoppings',
+    # ── Lajes Corp. ───────────────────────────────────────────────────────
+    'BRCR11': 'Lajes Corp.', 'RBRP11': 'Lajes Corp.', 'PVBI11': 'Lajes Corp.',
+    'RCRB11': 'Lajes Corp.', 'JSRE11': 'Lajes Corp.', 'BTWR11': 'Lajes Corp.',
+    'HGRE11': 'Lajes Corp.', 'VINO11': 'Lajes Corp.', 'SPTW11': 'Lajes Corp.',
+    'RECT11': 'Lajes Corp.', 'EDGA11': 'Lajes Corp.', 'PATC11': 'Lajes Corp.',
+    'BLMG11': 'Lajes Corp.', 'ALMI11': 'Lajes Corp.',
+    # ── Papel / CRI ───────────────────────────────────────────────────────
     'MXRF11': 'Papel/CRI', 'KNCR11': 'Papel/CRI', 'IRDM11': 'Papel/CRI',
-    'BCRI11': 'Papel/CRI', 'HGCR11': 'Papel/CRI', 'VRTA11': 'Papel/CRI', 'RBRY11': 'Papel/CRI',
-    # Residencial
+    'BCRI11': 'Papel/CRI', 'HGCR11': 'Papel/CRI', 'VRTA11': 'Papel/CRI',
+    'RBRY11': 'Papel/CRI', 'MCCI11': 'Papel/CRI', 'CPTS11': 'Papel/CRI',
+    'KNIP11': 'Papel/CRI', 'KNHF11': 'Papel/CRI', 'KNHY11': 'Papel/CRI',
+    'KNCA11': 'Papel/CRI', 'KNSC11': 'Papel/CRI', 'VCRR11': 'Papel/CRI',
+    'VCRI11': 'Papel/CRI', 'VCJR11': 'Papel/CRI', 'RECR11': 'Papel/CRI',
+    'RBHG11': 'Papel/CRI', 'RBHY11': 'Papel/CRI', 'RBRR11': 'Papel/CRI',
+    'CVBI11': 'Papel/CRI', 'DEVA11': 'Papel/CRI', 'PLRI11': 'Papel/CRI',
+    'BIME11': 'Papel/CRI', 'BTCI11': 'Papel/CRI', 'HCTR11': 'Papel/CRI',
+    'HCRI11': 'Papel/CRI', 'HBCR11': 'Papel/CRI', 'HABT11': 'Papel/CRI',
+    'BFCC11': 'Papel/CRI', 'BGRB11': 'Papel/CRI', 'GCRA11': 'Papel/CRI',
+    'GCRI11': 'Papel/CRI', 'GLCR11': 'Papel/CRI', 'ICRI11': 'Papel/CRI',
+    'KCRE11': 'Papel/CRI', 'KORE11': 'Papel/CRI', 'MCRE11': 'Papel/CRI',
+    'NCRI11': 'Papel/CRI', 'OCRE11': 'Papel/CRI', 'RCFF11': 'Papel/CRI',
+    'RCRI11': 'Papel/CRI', 'RDLI11': 'Papel/CRI', 'SNCI11': 'Papel/CRI',
+    'VVRI11': 'Papel/CRI', 'VVCR11': 'Papel/CRI', 'IBCR11': 'Papel/CRI',
+    'CRFF11': 'Papel/CRI', 'CRAA11': 'Papel/CRI', 'RBCO11': 'Papel/CRI',
+    'RBDS11': 'Papel/CRI', 'RBFM11': 'Papel/CRI', 'RBFY11': 'Papel/CRI',
+    'RBIR11': 'Papel/CRI', 'RBOP11': 'Papel/CRI', 'RBRD11': 'Papel/CRI',
+    'RBRI11': 'Papel/CRI', 'RBRS11': 'Papel/CRI', 'RBTS11': 'Papel/CRI',
+    'RBRX11': 'Papel/CRI', 'URPR11': 'Papel/CRI', 'RRCI11': 'Papel/CRI',
+    'DCRA11': 'Papel/CRI', 'FLCR11': 'Papel/CRI', 'NCRA11': 'Papel/CRI',
+    'VVMR11': 'Papel/CRI', 'DVFF11': 'Papel/CRI', 'CXRI11': 'Papel/CRI',
+    'BBRC11': 'Papel/CRI', 'JGPX11': 'Papel/CRI', 'FZDA11': 'Papel/CRI',
+    'FZDB11': 'Papel/CRI', 'RZLC11': 'Papel/CRI', 'RZZR11': 'Papel/CRI',
+    # ── Residencial ───────────────────────────────────────────────────────
     'RZAK11': 'Residencial', 'HOSI11': 'Residencial',
-    # Híbrido / FOF
+    'NAUI11': 'Residencial', 'PLCA11': 'Residencial',
+    'APTO11': 'Residencial', 'LIFE11': 'Residencial',
+    'JFLL11': 'Residencial',
+    # ── Híbrido / FOF ─────────────────────────────────────────────────────
     'HGRU11': 'Híbrido', 'VGIR11': 'Híbrido', 'GGRC11': 'Híbrido',
     'GTWR11': 'Híbrido', 'TRXF11': 'Híbrido', 'RBRF11': 'Híbrido',
     'BCFF11': 'Híbrido', 'BPFF11': 'Híbrido', 'RFOF11': 'Híbrido',
+    'KNRI11': 'Híbrido', 'HFOF11': 'Híbrido', 'KFOF11': 'Híbrido',
+    'CPOF11': 'Híbrido', 'BBFO11': 'Híbrido', 'SNFF11': 'Híbrido',
+    'JSAF11': 'Híbrido',  'RBVA11': 'Híbrido',
+    # ── Agronegócio ───────────────────────────────────────────────────────
+    'RZAG11': 'Agro', 'IAGR11': 'Agro', 'HAAA11': 'Agro',
+    'LMAI11': 'Agro', 'SNAG11': 'Agro', 'PLAG11': 'Agro',
+    'OIAG11': 'Agro', 'FGAA11': 'Agro', 'RMAI11': 'Agro',
+    'EGAF11': 'Agro', 'QAGR11': 'Agro', 'AGRX11': 'Agro',
+    'ZAGH11': 'Agro', 'ZAVC11': 'Agro', 'ZAVI11': 'Agro',
+    'ZIFI11': 'Agro', 'PQAG11': 'Agro', 'LSAG11': 'Agro',
+    'RZTR11': 'Agro', 'GCOI11': 'Agro',
+    # ── Hotel ─────────────────────────────────────────────────────────────
+    'HTMX11': 'Hotel', 'EURO11': 'Hotel',
+    # ── Educacional ───────────────────────────────────────────────────────
+    'FAED11': 'Educacional', 'FCFL11': 'Educacional',
 }
 
 
 def _normalize_fii_segmento(raw: str) -> str | None:
     """Normaliza label de segmento do statusinvest/investidor10 para valor canônico."""
     s = raw.lower()
-    if 'logíst' in s or 'logist' in s:               return 'Logística'
-    if 'shop' in s or 'shopping' in s:               return 'Shoppings'
-    if 'laje' in s or 'corporativ' in s:             return 'Lajes Corp.'
-    if 'papel' in s or 'recebív' in s or 'recebi' in s or 'cri' in s: return 'Papel/CRI'
-    if 'resid' in s or 'habitac' in s:               return 'Residencial'
+    if 'logíst' in s or 'logist' in s:                                    return 'Logística'
+    if 'shop' in s or 'shopping' in s:                                    return 'Shoppings'
+    if 'laje' in s or 'corporativ' in s or 'escritório' in s:            return 'Lajes Corp.'
+    if 'papel' in s or 'recebív' in s or 'recebi' in s or 'cri' in s:   return 'Papel/CRI'
+    if 'resid' in s or 'habitac' in s or 'living' in s:                  return 'Residencial'
+    if 'agro' in s or 'agríc' in s or 'rural' in s:                      return 'Agro'
+    if 'hotel' in s or 'hoteleiro' in s or 'hospedagem' in s:            return 'Hotel'
     if 'híbrid' in s or 'hibrid' in s or 'fof' in s or 'fundo de fund' in s: return 'Híbrido'
     return None  # desconhecido — não retornar lixo
 
