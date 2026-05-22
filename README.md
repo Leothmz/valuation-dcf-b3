@@ -23,8 +23,10 @@ Informe um ticker, ajuste as premissas e obtenha o **preço teto (valor intríns
 - **Botão restaurar** — reverte qualquer campo ao valor original da API com um clique
 - **Watchlist** — salva múltiplos valuations e exibe cotações ao vivo com upside calculado em tempo real
 - **Ranking fundamentalista** — screening de ~130 ações da B3 com 5 métodos: Thomaz/GD, Bazin, Graham, Peter Lynch e Joel Greenblatt (Magic Formula)
+- **Ranking de FIIs** — screening de ~40 FIIs pelo Método 2em1 (rank DY + rank P/VP), com filtros de segmento, vacância, liquidez e FFO Yield
+- **Análise individual de FII** — hero com KPIs, indicadores (rentabilidade, imóveis, mercado), histórico de proventos TTM e gráfico TradingView
 - **Filtros avançados** — filtre por P/L, DY mínimo, Dívida/EBITDA, Margem Líquida, ROE e liquidez; salve e reutilize conjuntos de filtros
-- **Favoritos** — marque ações com ★ para acompanhá-las separadamente no ranking
+- **Favoritos** — marque ações e FIIs com ★ para acompanhá-los separadamente no ranking
 - **Persistência local** — sessão, watchlist e cache do ranking salvos no `localStorage`; nada vai para nenhum servidor
 - **Zero dependências de frontend** — HTML + CSS + JS vanilla, sem npm, sem build
 
@@ -76,6 +78,8 @@ Acesse no browser: **http://localhost:8000**
 2. **Calculadora DCF** — digite o ticker (ex: `WEGE3`, `PETR4`, `ITUB4`) e pressione Enter; ajuste as premissas; salve o preço teto
 3. **Watchlist** — acompanhe todos os valuations salvos com preços atualizados a cada 3 minutos
 4. **Ranking de Ações** — carregue os dados fundamentalistas de ~130 tickers da B3, aplique filtros e escolha o método de ranking
+5. **Ranking de FIIs** — carregue ~40 FIIs rankeados pelo Método 2em1, filtre por segmento/DY/vacância; clique direito → análise individual
+6. **Análise Individual** — indicadores, valuations e gráfico TradingView para qualquer ação ou FII
 
 ---
 
@@ -117,20 +121,24 @@ Preço Teto = EV / Número de Ações
 
 ```
 valuation-dcf-b3/
-├── index.html      — Calculadora DCF
-├── watchlist.html  — Lista de valuations salvos com preços ao vivo
-├── ranking.html    — Ranking e screening fundamentalista (5 métodos)
-├── home.html       — Página inicial com navegação
-├── server.py       — Servidor HTTP local + API de dados via yfinance
-├── start.bat       — Atalho Windows para iniciar o servidor
-├── src/            — Módulos JS puros (importados pelos HTMLs via ES modules)
+├── index.html       — Calculadora DCF
+├── watchlist.html   — Lista de valuations salvos com preços ao vivo
+├── ranking.html     — Ranking e screening fundamentalista (5 métodos)
+├── analise.html     — Análise avançada individual de ações
+├── fii.html         — Ranking de FIIs (Método 2em1)
+├── analise-fii.html — Análise individual de FII
+├── home.html        — Página inicial com navegação
+├── server.py        — Servidor HTTP local + API de dados via yfinance
+├── start.bat        — Atalho Windows para iniciar o servidor
+├── src/             — Módulos JS puros (importados pelos HTMLs via ES modules)
 │   ├── formatters.js
 │   ├── parsers.js
 │   ├── dcf-engine.js
-│   └── ranking-scores.js
+│   ├── ranking-scores.js
+│   └── fii-scores.js
 ├── tests/
-│   ├── js/         — Testes Vitest (69 testes)
-│   └── python/     — Testes pytest (20 testes)
+│   ├── js/         — Testes Vitest (84 testes)
+│   └── python/     — Testes pytest (31 testes)
 └── README.md
 ```
 
@@ -144,6 +152,7 @@ O servidor expõe três endpoints:
 |----------|-----|
 | `GET /api/quote/<TICKER>` | Dados para a calculadora DCF (preço, ROE, Payout, histórico de LL) |
 | `GET /api/fundamentals/<TICKER>` | Dados estendidos para o ranking (P/L, P/VP, margens, DY, DPA, LPA, VPA…) |
+| `GET /api/fii/<TICKER>` | Dados de FIIs (DY, P/VP, vacância, segmento, FFO Yield, histórico de proventos) |
 | `GET /api/b3-tickers` | Lista de tickers da B3 usada pelo ranking |
 
 **Exemplo:**
@@ -172,9 +181,10 @@ python -m pytest tests/python/ -v
 |-------|-----------|--------|
 | `tests/js/formatters.test.js` | Vitest | 14 |
 | `tests/js/parsers.test.js` | Vitest | 13 |
-| `tests/js/dcf-engine.test.js` | Vitest | 20 |
+| `tests/js/dcf-engine.test.js` | Vitest | 23 |
 | `tests/js/ranking-scores.test.js` | Vitest | 22 |
-| `tests/python/test_server.py` | pytest | 13 |
+| `tests/js/fii-scores.test.js` | Vitest | 12 |
+| `tests/python/test_server.py` | pytest | 24 |
 | `tests/python/test_handler.py` | pytest | 7 |
 
 ---
