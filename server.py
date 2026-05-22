@@ -471,11 +471,13 @@ def _get_statusinvest_fii_data(ticker: str) -> dict:
                 pass
 
         # P/VP — ex: "0,97" ou "1.02"
+        # Nota: usar .{0,200}? com DOTALL para cruzar tags HTML (ex: </h3><strong>)
         _pvp_patterns = [
-            r'P\s*/\s*VP[^<]{0,80}?class="[^"]*value[^"]*"[^>]*>\s*([\d]+[,\.][\d]+)',
-            r'P\s*/\s*VP[^<]{0,80}?<strong[^>]*>\s*([\d]+[,\.][\d]+)',
-            r'P\s*/\s*VP[^<]{0,30}>\s*([\d]+[,\.][\d]+)\s*<',
+            r'P/VP[A]?.{0,200}?class="[^"]*value[^"]*"[^>]*>\s*([\d,\.]+)',
+            r'P/VP[A]?.{0,200}?<strong[^>]*>\s*([\d,\.]+)',
             r'"p_vp"\s*:\s*([\d]+\.[\d]+)',
+            r'p_vp["\s:=]{1,10}([\d]+[,\.][\d]+)',
+            r'>P/VP[A]?<.{0,30}>\s*([\d]+[,\.][\d]+)',
         ]
         for _pat in _pvp_patterns:
             _m = re.search(_pat, html, re.IGNORECASE | re.DOTALL)

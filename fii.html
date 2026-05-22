@@ -266,7 +266,7 @@
         <div class="filter-chip active" id="chip-dy" data-filter="dy">DY ≥ 6%</div>
         <div class="filter-chip active" id="chip-liq" data-filter="liq">Liq ≥ 500k</div>
         <div class="filter-chip active" id="chip-vac" data-filter="vac">Vac ≤ 25%</div>
-        <div class="filter-chip" id="chip-pvp" data-filter="pvp">P/VP máx</div>
+        <div class="filter-chip active" id="chip-pvp" data-filter="pvp">P/VP ≥ 0,70</div>
         <div class="filter-chip" id="chip-ffo" data-filter="ffo">FFO Yield mín</div>
         <div class="filter-chip" id="chip-add" data-filter="add">+ Ticker</div>
         <button class="btn-refresh" id="btn-refresh">↺ Atualizar</button>
@@ -372,7 +372,7 @@
         dyMin:       0.06,
         liquidezMin: 500_000,
         vacanciMax:  0.25,
-        pvpMax:      null,
+        pvpMin:      0.7,
         ffoYieldMin: null,
       },
       customTickers: [],
@@ -443,7 +443,7 @@
         if (fc.dyMin       != null && f.dy       != null && f.dy       < fc.dyMin)         return false;
         if (fc.liquidezMin != null && (f.liquidez == null || f.liquidez < fc.liquidezMin)) return false;
         if (fc.vacanciMax  != null && f.vacancia  != null && f.vacancia > fc.vacanciMax)   return false;
-        if (fc.pvpMax      != null && f.pvp       != null && f.pvp      > fc.pvpMax)       return false;
+        if (fc.pvpMin      != null && f.pvp       != null && f.pvp      < fc.pvpMin)       return false;
         if (fc.ffoYieldMin != null && (f.ffoYield == null || f.ffoYield < fc.ffoYieldMin)) return false;
         return true;
       });
@@ -600,7 +600,7 @@
       chip('chip-dy',  fc.dyMin,       v => `DY ≥ ${fPct(v)}`);
       chip('chip-liq', fc.liquidezMin, v => `Liq ≥ ${fLiq(v)}`);
       chip('chip-vac', fc.vacanciMax,  v => `Vac ≤ ${fPct(v)}`);
-      chip('chip-pvp', fc.pvpMax,      v => `P/VP ≤ ${fNum2(v)}`);
+      chip('chip-pvp', fc.pvpMin,      v => `P/VP ≥ ${fNum2(v)}`);
       chip('chip-ffo', fc.ffoYieldMin, v => `FFO ≥ ${fPct(v)}`);
 
       const addChip = document.getElementById('chip-add');
@@ -672,7 +672,7 @@
         dy:  { label: 'DY mínimo (%)',        key: 'dyMin',       toDisplay: v => v != null ? (v*100).toFixed(1) : '',  fromInput: v => v === '' ? null : parseFloat(v.replace(',','.'))/100 },
         liq: { label: 'Liquidez mínima (R$)',  key: 'liquidezMin', toDisplay: v => v != null ? String(v) : '',           fromInput: v => v === '' ? null : parseFloat(v.replace(/\./g,'').replace(',','.')) },
         vac: { label: 'Vacância máxima (%)',   key: 'vacanciMax',  toDisplay: v => v != null ? (v*100).toFixed(1) : '',  fromInput: v => v === '' ? null : parseFloat(v.replace(',','.'))/100 },
-        pvp: { label: 'P/VP máximo',           key: 'pvpMax',      toDisplay: v => v != null ? v.toFixed(2) : '',        fromInput: v => v === '' ? null : parseFloat(v.replace(',','.')) },
+        pvp: { label: 'P/VP mínimo',           key: 'pvpMin',      toDisplay: v => v != null ? v.toFixed(2) : '',        fromInput: v => v === '' ? null : parseFloat(v.replace(',','.')) },
         ffo: { label: 'FFO Yield mínimo (%)',  key: 'ffoYieldMin', toDisplay: v => v != null ? (v*100).toFixed(1) : '',  fromInput: v => v === '' ? null : parseFloat(v.replace(',','.'))/100 },
       };
 
