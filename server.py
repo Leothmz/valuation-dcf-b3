@@ -434,13 +434,15 @@ def _get_statusinvest_fii_data(ticker: str) -> dict:
                     result['segmento'] = _v
                     break
 
-        # FFO Yield — ex: "9,12%"
+        # FFO Yield — ex: "9,12%" (DOTALL para cruzar tags HTML)
         _ffo_patterns = [
-            r'FFO\s*[Yy]ield[^%]{0,60}?([\d]+[,\.][\d]+)\s*%',
-            r'FFO\s*[Yy]ield[^%]{0,60}?>([\d]+[,\.][\d]+)\s*%',
+            r'FFO\s*[Yy]ield.{0,200}?class="[^"]*value[^"]*"[^>]*>\s*([\d,\.]+)\s*%',
+            r'FFO\s*[Yy]ield.{0,200}?<strong[^>]*>\s*([\d,\.]+)\s*%',
+            r'FFO\s*[Yy]ield.{0,200}?>\s*([\d]+[,\.][\d]+)\s*%',
+            r'"ffo_yield"\s*:\s*([\d]+\.[\d]+)',
         ]
         for _pat in _ffo_patterns:
-            m = re.search(_pat, html, re.IGNORECASE)
+            m = re.search(_pat, html, re.IGNORECASE | re.DOTALL)
             if m:
                 try:
                     result['ffoYield'] = float(m.group(1).replace(',', '.')) / 100
@@ -448,13 +450,15 @@ def _get_statusinvest_fii_data(ticker: str) -> dict:
                 except ValueError:
                     pass
 
-        # Vacância — ex: "3,20%"
+        # Vacância — ex: "3,20%" (DOTALL para cruzar tags HTML)
         _vac_patterns = [
-            r'[Vv]ac[aâ][ân]cia[^%]{0,60}?([\d]+[,\.][\d]+)\s*%',
-            r'[Vv]ac[aâ][ân]cia[^%]{0,60}?>([\d]+[,\.][\d]+)\s*%',
+            r'[Vv]ac[aâ][ân]cia.{0,200}?class="[^"]*value[^"]*"[^>]*>\s*([\d,\.]+)\s*%',
+            r'[Vv]ac[aâ][ân]cia.{0,200}?<strong[^>]*>\s*([\d,\.]+)\s*%',
+            r'[Vv]ac[aâ][ân]cia.{0,200}?>\s*([\d]+[,\.][\d]+)\s*%',
+            r'"vacancia"\s*:\s*([\d]+\.[\d]+)',
         ]
         for _pat in _vac_patterns:
-            m = re.search(_pat, html, re.IGNORECASE)
+            m = re.search(_pat, html, re.IGNORECASE | re.DOTALL)
             if m:
                 try:
                     result['vacancia'] = float(m.group(1).replace(',', '.')) / 100
