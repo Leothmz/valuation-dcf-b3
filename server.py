@@ -369,9 +369,6 @@ def get_fundamentals(ticker: str) -> dict:
     setor    = info.get("sector")
     subsetor = info.get("industry")
 
-    def _r(v, d=2):
-        return round(v, d) if v is not None and v == v else None
-
     return {
         "ticker":              ticker.upper(),
         "name":                info.get("longName") or info.get("shortName") or ticker,
@@ -397,6 +394,134 @@ def get_fundamentals(ticker: str) -> dict:
         "fiftyTwoWeekHigh":    info.get("fiftyTwoWeekHigh"),
         "fiftyTwoWeekLow":     info.get("fiftyTwoWeekLow"),
     }
+
+
+def _r(v, d=2):
+    """Round a float value; returns None for None/NaN."""
+    return round(v, d) if v is not None and v == v else None
+
+
+def _get_statusinvest_fii_data(ticker: str) -> dict:
+    """
+    Scraping de dados extras de FIIs via statusinvest.com.br.
+    Retorna dict com campos extras ou {} em caso de falha.
+    Falha silenciosa — nunca lança exceção.
+    """
+    try:
+        raw = ticker.upper().replace(".SA", "")
+        url = f"https://statusinvest.com.br/fundos-imobiliarios/{raw.lower()}"
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept-Language": "pt-BR,pt;q=0.9",
+        })
+        with urllib.request.urlopen(req, timeout=10) as r:
+            html = r.read().decode("utf-8", errors="replace")
+
+        result = {}
+
+        # Segmento — ex: "Logístico", "Shopping", "Lajes Corporativas", "Papel"
+        m = re.search(r'Segmento[^<]*</[^>]+>\s*<[^>]+>\s*([^<]{3,60})</[^>]+>', html, re.IGNORECASE)
+        if m:
+            raw_seg = m.group(1).strip()
+            result['segmento'] = _normalize_fii_segmento(raw_seg)
+
+        # FFO Yield — ex: "9,12%"
+        m = re.search(r'FFO\s*Yield[^%]*?([\d,\.]+)\s*%', html, re.IGNORECASE)
+        if m:
+            try:
+                result['ffoYield'] = float(m.group(1).replace(',', '.')) / 100
+            except ValueError:
+                pass
+
+        # Vacância — ex: "3,20%"
+        m = re.search(r'[Vv]ac[aâ]ncia[^%]*?([\d,\.]+)\s*%', html, re.IGNORECASE)
+        if m:
+            try:
+                result['vacancia'] = float(m.group(1).replace(',', '.')) / 100
+            except ValueError:
+                pass
+
+        # Número de imóveis — ex: "22 imóveis"
+        m = re.search(r'Im[oó]veis[^0-9]*(\d+)', html, re.IGNORECASE)
+        if m:
+            try:
+                result['numImoveis'] = int(m.group(1))
+            except ValueError:
+                pass
+
+        print(f"[statusinvest] {ticker}: {list(result.keys())}")
+        return result
+
+    except Exception as e:
+        print(f"[statusinvest] erro para {ticker}: {e}")
+        return {}
+
+
+def _normalize_fii_segmento(raw: str) -> str:
+    """Normaliza label de segmento do statusinvest para valor canônico."""
+    s = raw.lower()
+    if 'log' in s:                              return 'Logística'
+    if 'shop' in s:                             return 'Shoppings'
+    if 'laje' in s:                             return 'Lajes Corp.'
+    if 'papel' in s or 'cri' in s or 'receb' in s: return 'Papel/CRI'
+    if 'resid' in s or 'habitac' in s:          return 'Residencial'
+    if 'híbrid' in s or 'hibrid' in s:          return 'Híbrido'
+    return raw.strip()
+
+
+def get_fii_data(ticker: str) -> dict:
+    """Fetch FII data from yfinance + statusinvest scraping."""
+    try:
+        import yfinance as yf
+    except ImportError:
+        return {"code": "NO_YFINANCE", "error": "yfinance não instalado"}
+
+    symbol = ticker.upper()
+    if not symbol.endswith(".SA"):
+        symbol += ".SA"
+
+    try:
+        info = yf.Ticker(symbol).info or {}
+    except Exception as e:
+        return {"code": "ERROR", "error": str(e)}
+
+    price = (info.get("regularMarketPrice")
+          or info.get("currentPrice")
+          or info.get("previousClose"))
+
+    if not price:
+        return {"code": "NOT_FOUND", "error": f"Ticker {ticker} não encontrado"}
+
+    avg_vol  = info.get("averageVolume") or 0
+    liquidez = _r(avg_vol * price) if avg_vol and price else None
+
+    result = {
+        "ticker":           ticker.upper().replace(".SA", ""),
+        "name":             info.get("longName") or info.get("shortName") or ticker.upper(),
+        "price":            price,
+        "changePercent":    info.get("regularMarketChangePercent"),
+        "dy":               _normalize_dy(info.get("dividendYield")),
+        "pvp":              _r(info.get("priceToBook")),
+        "dpa":              _r(info.get("dividendRate"), 4),
+        "marketCap":        info.get("marketCap"),
+        "liquidez":         liquidez,
+        "fiftyTwoWeekHigh": info.get("fiftyTwoWeekHigh"),
+        "fiftyTwoWeekLow":  info.get("fiftyTwoWeekLow"),
+        # campos scraping — default None, sobrescritos abaixo se scraping OK
+        "ffoYield":   None,
+        "vacancia":   None,
+        "numImoveis": None,
+        "segmento":   None,
+    }
+
+    # Enriquecer com statusinvest (falha silenciosa)
+    try:
+        scraped = _get_statusinvest_fii_data(ticker)
+        result.update(scraped)
+    except Exception:
+        pass
+
+    return result
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -425,6 +550,14 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             print(f"[API] fundamentals → {ticker}")
             data = get_fundamentals(ticker)
+            self._json(data)
+        elif path.startswith("/api/fii/"):
+            ticker = path[len("/api/fii/"):].strip("/")
+            if not ticker:
+                self.send_error(400, "Ticker required")
+                return
+            print(f"[API] fii → {ticker}")
+            data = get_fii_data(ticker)
             self._json(data)
         elif path == "/api/b3-tickers":
             tickers = get_b3_tickers()

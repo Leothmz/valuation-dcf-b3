@@ -220,3 +220,89 @@ def test_fundamentals_dy_from_ttm_dividends(mock_ticker_cls):
     # O DY calculado via TTM deve ser ~ 0.20/35.50, não 0.99
     assert result["dy"] is not None
     assert abs(result["dy"] - 0.20 / MOCK_PRICE) < 0.001
+
+
+# ── Dados de mock para FIIs ───────────────────────────────────────
+
+FII_MOCK_INFO = {
+    "longName": "CSHG Logística FII",
+    "regularMarketPrice": 162.40,
+    "regularMarketChangePercent": 0.005,
+    "dividendYield": 0.128,   # decimal — já normalizado
+    "priceToBook": 0.82,
+    "dividendRate": 20.79,    # DPA anual
+    "marketCap": 3_800_000_000,
+    "averageVolume": 50_500,
+    "fiftyTwoWeekHigh": 175.00,
+    "fiftyTwoWeekLow": 148.00,
+}
+
+def _make_fii_mock_ticker(info=None):
+    m = mock.MagicMock()
+    m.info = info if info is not None else FII_MOCK_INFO
+    return m
+
+
+# ── Testes: get_fii_data ──────────────────────────────────────────
+
+@mock.patch('yfinance.Ticker')
+@mock.patch('server._get_statusinvest_fii_data', return_value={})
+def test_fii_returns_expected_fields(mock_si, mock_ticker_cls):
+    mock_ticker_cls.return_value = _make_fii_mock_ticker()
+    result = server.get_fii_data("HGLG11")
+    assert result['ticker'] == 'HGLG11'
+    assert result['price'] == 162.40
+    assert result['pvp'] == 0.82
+    assert 'dy' in result
+    assert 'liquidez' in result
+    assert 'ffoYield' in result     # campo scraping, pode ser None
+    assert 'vacancia' in result
+    assert 'numImoveis' in result
+    assert 'segmento' in result
+
+@mock.patch('yfinance.Ticker')
+@mock.patch('server._get_statusinvest_fii_data', return_value={})
+def test_fii_adds_sa_suffix(mock_si, mock_ticker_cls):
+    mock_ticker_cls.return_value = _make_fii_mock_ticker()
+    server.get_fii_data("hglg11")
+    mock_ticker_cls.assert_called_once_with("HGLG11.SA")
+
+@mock.patch('yfinance.Ticker')
+@mock.patch('server._get_statusinvest_fii_data', return_value={})
+def test_fii_not_duplicates_sa_suffix(mock_si, mock_ticker_cls):
+    mock_ticker_cls.return_value = _make_fii_mock_ticker()
+    server.get_fii_data("HGLG11.SA")
+    mock_ticker_cls.assert_called_once_with("HGLG11.SA")
+
+@mock.patch('yfinance.Ticker')
+@mock.patch('server._get_statusinvest_fii_data', return_value={})
+def test_fii_not_found_when_no_price(mock_si, mock_ticker_cls):
+    mock_ticker_cls.return_value = _make_fii_mock_ticker(info={})
+    result = server.get_fii_data("XPTO11")
+    assert result.get('code') == 'NOT_FOUND'
+
+@mock.patch('yfinance.Ticker')
+@mock.patch('server._get_statusinvest_fii_data', return_value={'segmento': 'Logística', 'vacancia': 0.03, 'ffoYield': 0.091, 'numImoveis': 22})
+def test_fii_merges_statusinvest_data(mock_si, mock_ticker_cls):
+    mock_ticker_cls.return_value = _make_fii_mock_ticker()
+    result = server.get_fii_data("HGLG11")
+    assert result['segmento'] == 'Logística'
+    assert result['vacancia'] == 0.03
+    assert result['ffoYield'] == 0.091
+    assert result['numImoveis'] == 22
+
+@mock.patch('yfinance.Ticker')
+@mock.patch('server._get_statusinvest_fii_data', side_effect=Exception("timeout"))
+def test_fii_survives_scraping_error(mock_si, mock_ticker_cls):
+    mock_ticker_cls.return_value = _make_fii_mock_ticker()
+    result = server.get_fii_data("HGLG11")
+    # deve retornar dados do yfinance mesmo com scraping falhando
+    assert result['price'] == 162.40
+    assert result['segmento'] is None
+
+@mock.patch.dict('sys.modules', {'yfinance': None})
+def test_fii_no_yfinance_error():
+    import importlib
+    srv = importlib.reload(server)
+    result = srv.get_fii_data("HGLG11")
+    assert result.get('code') == 'NO_YFINANCE'
