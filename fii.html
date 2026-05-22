@@ -162,6 +162,11 @@
     .up { color: var(--green); }
     .dn { color: var(--red); }
     .muted { color: var(--text-muted); }
+
+    /* ── Context Menu ── */
+    .context-menu { position: fixed; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-md); padding: 4px 0; z-index: 9999; min-width: 200px; overflow: hidden; box-shadow: var(--shadow-md); }
+    .context-menu-item { display: flex; align-items: center; gap: 8px; padding: 10px 16px; font-size: 13px; color: var(--text-sec); cursor: pointer; }
+    .context-menu-item:hover { background: var(--bg-4); color: var(--text); }
   </style>
 </head>
 <body>
@@ -195,9 +200,13 @@
         <span class="sidebar-icon"><i data-lucide="building-2"></i></span>
         <span class="sidebar-label">FIIs</span>
       </a>
+      <a href="analise-fii.html" class="sidebar-item">
+        <span class="sidebar-icon"><i data-lucide="bar-chart-2"></i></span>
+        <span class="sidebar-label">Análise FII</span>
+      </a>
       <a href="analise.html" class="sidebar-item">
         <span class="sidebar-icon"><i data-lucide="activity"></i></span>
-        <span class="sidebar-label">Análise</span>
+        <span class="sidebar-label">Análise Ações</span>
       </a>
       <hr class="sidebar-divider">
       <div class="sidebar-section">Em Breve</div>
@@ -468,6 +477,12 @@
       }
       tbody.innerHTML = S.ranked.map((f, i) => renderRow(f, i)).join('');
       setCountLabel(`${S.ranked.length} FII${S.ranked.length !== 1 ? 's' : ''}`);
+      tbody.querySelectorAll('tr[data-ticker]').forEach(tr => {
+        tr.addEventListener('contextmenu', e => {
+          e.preventDefault();
+          showContextMenu(e, tr.dataset.ticker);
+        });
+      });
     }
 
     function renderRow(f, i) {
@@ -769,6 +784,36 @@
         if (e.key === 'Escape') closePopover();
       });
     }
+
+    // ── Context Menu ──────────────────────────────────────────────
+    let _ctxMenu = null;
+
+    function closeContextMenu() {
+      if (_ctxMenu) { _ctxMenu.remove(); _ctxMenu = null; }
+    }
+
+    function showContextMenu(e, ticker) {
+      closeContextMenu();
+      const menu = document.createElement('div');
+      menu.className = 'context-menu';
+
+      const item = document.createElement('div');
+      item.className = 'context-menu-item';
+      item.innerHTML = '📊 Ver Análise';
+      item.onclick = () => {
+        window.open(`analise-fii.html?ticker=${encodeURIComponent(ticker)}`, '_blank');
+        closeContextMenu();
+      };
+
+      menu.appendChild(item);
+      menu.style.left = `${Math.min(e.clientX, window.innerWidth - 215)}px`;
+      menu.style.top  = `${Math.min(e.clientY, window.innerHeight - 55)}px`;
+      document.body.appendChild(menu);
+      _ctxMenu = menu;
+    }
+
+    document.addEventListener('click', closeContextMenu);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContextMenu(); });
 
     // ── K: Init ────────────────────────────────────────────────────
 
