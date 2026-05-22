@@ -492,6 +492,34 @@ def _normalize_fii_segmento(raw: str) -> str | None:
     return None  # desconhecido — não retornar lixo
 
 
+def _get_fii_tickers_brapi(liquidez_min: float = 500_000) -> list:
+    """Fetch all B3 FIIs from brapi.dev and filter by minimum daily liquidity (close × volume)."""
+    url = "https://brapi.dev/api/quote/list?type=fund&limit=600&sortBy=volume&sortOrder=desc"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = json.loads(resp.read().decode("utf-8"))
+        stocks = raw.get("stocks", [])
+        tickers = []
+        for item in stocks:
+            ticker = (item.get("stock") or "").upper()
+            if not ticker.endswith("11"):
+                continue
+            close = item.get("close") or 0
+            volume = item.get("volume") or 0
+            try:
+                liquidity = float(close) * float(volume)
+            except (TypeError, ValueError):
+                continue
+            if liquidity >= liquidez_min:
+                tickers.append(ticker)
+        tickers.sort()
+        return tickers
+    except Exception as e:
+        print(f"[brapi] erro ao buscar lista de FIIs: {e}")
+        return []
+
+
 def get_fii_data(ticker: str) -> dict:
     """Fetch FII data from yfinance + statusinvest scraping."""
     try:
@@ -603,6 +631,15 @@ class Handler(SimpleHTTPRequestHandler):
             print(f"[API] fii → {ticker}")
             data = get_fii_data(ticker)
             self._json(data)
+        elif path.startswith("/api/fii-tickers"):
+            params = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            try:
+                liquidez_min = float(params.get("liquidezMin", ["500000"])[0])
+            except (ValueError, IndexError):
+                liquidez_min = 500_000
+            print(f"[API] fii-tickers liquidezMin={liquidez_min:,.0f}")
+            tickers = _get_fii_tickers_brapi(liquidez_min)
+            self._json({"tickers": tickers, "count": len(tickers)})
         elif path == "/api/b3-tickers":
             tickers = get_b3_tickers()
             self._json({"tickers": tickers, "count": len(tickers)})

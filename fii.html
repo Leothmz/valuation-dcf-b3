@@ -379,7 +379,18 @@
           } catch {}
         }
 
-        const allTickers = [...new Set([...FII_TICKERS, ...S.customTickers])];
+        let baseTickers = FII_TICKERS;
+        try {
+          const liqParam = Math.round(S.filterConfig.liquidezMin || 500_000);
+          const listResp = await fetch(`/api/fii-tickers?liquidezMin=${liqParam}`);
+          if (listResp.ok) {
+            const listData = await listResp.json();
+            if (Array.isArray(listData.tickers) && listData.tickers.length > 0) {
+              baseTickers = listData.tickers;
+            }
+          }
+        } catch {}
+        const allTickers = [...new Set([...baseTickers, ...S.customTickers])];
         const results = await Promise.allSettled(allTickers.map(fetchFii));
         S.fiis = results
           .filter(r => r.status === 'fulfilled' && !r.value.code)
@@ -711,7 +722,7 @@
 
       popover.querySelector('#pop-add-btn').addEventListener('click', async () => {
         const ticker = popover.querySelector('#pop-ticker-input').value.trim().toUpperCase();
-        if (!ticker || S.customTickers.includes(ticker) || FII_TICKERS.includes(ticker)) return;
+        if (!ticker || S.customTickers.includes(ticker)) return;
         S.customTickers.push(ticker);
         persistSettings();
         closePopover();
