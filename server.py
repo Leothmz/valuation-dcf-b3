@@ -467,6 +467,15 @@ def _parse_fundamentus_table(html: str) -> dict:
         nim = _int(cells, 'Qtd de imóveis')
         if nim is not None:
             entry['numImoveis'] = nim
+        pvp_idx = col.get('P/VP', -1)
+        if pvp_idx >= 0 and pvp_idx < len(cells):
+            v = cells[pvp_idx].replace(',', '.').strip()
+            try:
+                fv = float(v)
+                if 0.01 < fv < 50:
+                    entry['pvp'] = round(fv, 2)
+            except ValueError:
+                pass
         if entry:
             result[ticker] = entry
 
@@ -780,7 +789,7 @@ def get_fii_data(ticker: str) -> dict:
         pass
 
     # Fallback: fundamentus para campos que statusinvest não retornou
-    _fii_nullable = ('ffoYield', 'vacancia', 'numImoveis')
+    _fii_nullable = ('ffoYield', 'vacancia', 'numImoveis', 'pvp')
     if any(result.get(k) is None for k in _fii_nullable):
         try:
             fund = _get_fundamentus_fii_data(ticker)
