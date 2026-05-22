@@ -300,6 +300,8 @@
     const FAVORITES_KEY = 'fii_favorites';
     const CUSTOM_KEY    = 'fii_custom_tickers';
 
+    const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
     // ── B: Formatadores ────────────────────────────────────────────
 
     const fBRL  = v => v == null ? '—' : 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -340,29 +342,34 @@
 
     async function loadRanking(forceRefresh = false) {
       setCountLabel('Carregando...');
-
-      if (!forceRefresh) {
-        try {
-          const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-          if (cached && Date.now() - cached.ts < CACHE_TTL) {
-            S.fiis = cached.data;
-            applyPipeline();
-            return;
-          }
-        } catch {}
-      }
-
-      const allTickers = [...new Set([...FII_TICKERS, ...S.customTickers])];
-      const results = await Promise.allSettled(allTickers.map(fetchFii));
-      S.fiis = results
-        .filter(r => r.status === 'fulfilled' && !r.value.code)
-        .map(r => r.value);
-
       try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: S.fiis }));
-      } catch {}
+        if (!forceRefresh) {
+          try {
+            const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+            if (cached && Date.now() - cached.ts < CACHE_TTL && Array.isArray(cached.data)) {
+              S.fiis = cached.data;
+              applyPipeline();
+              return;
+            }
+          } catch {}
+        }
 
-      applyPipeline();
+        const allTickers = [...new Set([...FII_TICKERS, ...S.customTickers])];
+        const results = await Promise.allSettled(allTickers.map(fetchFii));
+        S.fiis = results
+          .filter(r => r.status === 'fulfilled' && !r.value.code)
+          .map(r => r.value);
+
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: S.fiis }));
+        } catch {}
+
+        applyPipeline();
+      } catch (err) {
+        setCountLabel('Erro ao carregar');
+        document.getElementById('fii-tbody').innerHTML =
+          '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--red)">Erro ao carregar FIIs. Verifique se o servidor está rodando.</td></tr>';
+      }
     }
 
     // ── F: Pipeline ────────────────────────────────────────────────
@@ -430,16 +437,16 @@
       const pvpColor = f.pvp != null ? (f.pvp < 1 ? 'up' : f.pvp > 1.1 ? 'dn' : '') : 'muted';
 
       return `
-        <tr data-ticker="${f.ticker}" class="fii-row">
+        <tr data-ticker="${esc(f.ticker)}" class="fii-row">
           <td><span class="pos-badge ${posClass}">${pos}</span></td>
           <td>
             <div class="ticker-cell">
-              <button class="star-btn ${isFav ? 'fav' : ''}" data-ticker="${f.ticker}">
+              <button class="star-btn ${isFav ? 'fav' : ''}" data-ticker="${esc(f.ticker)}">
                 ${isFav ? '★' : '☆'}
               </button>
               <div>
-                <div class="ticker-code">${f.ticker}</div>
-                <div class="ticker-name">${f.name || ''}</div>
+                <div class="ticker-code">${esc(f.ticker)}</div>
+                <div class="ticker-name">${esc(f.name)}</div>
               </div>
             </div>
           </td>
@@ -656,7 +663,7 @@
           <div style="margin-bottom:8px">
             ${S.customTickers.map(t => `
               <span style="display:inline-flex;align-items:center;gap:4px;margin:2px;padding:2px 8px;background:var(--bg-3);border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:var(--font-mono)">
-                ${t} <span data-remove="${t}" style="cursor:pointer;color:var(--red)">✕</span>
+                ${esc(t)} <span data-remove="${esc(t)}" style="cursor:pointer;color:var(--red)">✕</span>
               </span>`).join('')}
           </div>` : ''}
         <div class="popover-actions">
