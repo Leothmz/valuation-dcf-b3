@@ -825,7 +825,6 @@ def get_fii_data(ticker: str) -> dict:
 
 
 def get_cdi_data(date_from=None, date_to=None):
-    import datetime
     today = datetime.date.today()
     if date_to is None:
         dt_to = today
@@ -884,7 +883,6 @@ def get_portfolio_history(tickers, dates):
         return {}
     if yf is None:
         return {t: {d: None for d in dates} for t in tickers}
-    import datetime
     all_dates = sorted(set(dates))
     min_date = all_dates[0]
     max_dt = datetime.datetime.strptime(max(all_dates), "%Y-%m-%d") + datetime.timedelta(days=7)
