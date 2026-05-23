@@ -818,6 +818,45 @@ def get_fii_data(ticker: str) -> dict:
     return result
 
 
+def get_cdi_data(date_from=None, date_to=None):
+    import datetime
+    today = datetime.date.today()
+    if date_to is None:
+        dt_to = today
+    else:
+        dt_to = datetime.datetime.strptime(date_to, "%Y-%m-%d").date()
+    if date_from is None:
+        dt_from = today - datetime.timedelta(days=365)
+    else:
+        dt_from = datetime.datetime.strptime(date_from, "%Y-%m-%d").date()
+
+    fmt = lambda d: d.strftime("%d/%m/%Y")
+    url = (
+        "https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados"
+        f"?formato=json&dataInicial={fmt(dt_from)}&dataFinal={fmt(dt_to)}"
+    )
+    try:
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            data = json.loads(resp.read().decode())
+        accumulated = 1.0
+        for item in data:
+            accumulated *= 1 + float(item["valor"]) / 100
+        return {
+            "accumulated": round(accumulated - 1, 6),
+            "from": dt_from.isoformat(),
+            "to": dt_to.isoformat(),
+            "days": len(data),
+        }
+    except Exception:
+        return {
+            "accumulated": 0.105,
+            "from": dt_from.isoformat(),
+            "to": dt_to.isoformat(),
+            "days": 252,
+            "fallback": True,
+        }
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
@@ -853,6 +892,12 @@ class Handler(SimpleHTTPRequestHandler):
             print(f"[API] fii → {ticker}")
             data = get_fii_data(ticker)
             self._json(data)
+        elif path.startswith("/api/cdi"):
+            from urllib.parse import urlparse, parse_qs
+            qs = parse_qs(urlparse(self.path).query)
+            date_from = qs.get("from", [None])[0]
+            date_to   = qs.get("to",   [None])[0]
+            self._json(get_cdi_data(date_from, date_to))
         elif path == "/api/b3-tickers":
             tickers = get_b3_tickers()
             self._json({"tickers": tickers, "count": len(tickers)})
