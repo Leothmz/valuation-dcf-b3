@@ -9,6 +9,11 @@ from urllib.parse import urlparse, parse_qs
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
+try:
+    import yfinance as yf
+except ImportError:
+    yf = None
+
 PORT = 8000
 BASE_DIR = Path(__file__).parent
 
@@ -858,6 +863,20 @@ def get_cdi_data(date_from=None, date_to=None):
         }
 
 
+_EXCHANGE_TICKERS = {"USDBRL": "USDBRL=X", "EURBRL": "EURBRL=X"}
+
+def get_exchange_rate(pair):
+    try:
+        yf_ticker = _EXCHANGE_TICKERS.get(pair, pair)
+        info = yf.Ticker(yf_ticker).info
+        rate = info.get("regularMarketPrice") or info.get("bid") or info.get("previousClose")
+        if not rate:
+            raise ValueError("no price field")
+        return {"pair": pair, "rate": float(rate)}
+    except Exception as e:
+        return {"code": "ERROR", "message": str(e)}
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
@@ -899,6 +918,10 @@ class Handler(SimpleHTTPRequestHandler):
             date_to   = qs.get("to",   [None])[0]
             print(f"[API] cdi → from={date_from} to={date_to}")
             self._json(get_cdi_data(date_from, date_to))
+        elif path.startswith("/api/exchange/"):
+            pair = path.split("/api/exchange/")[1].strip("/").upper()
+            print(f"[API] exchange → {pair}")
+            self._json(get_exchange_rate(pair))
         elif path == "/api/b3-tickers":
             tickers = get_b3_tickers()
             self._json({"tickers": tickers, "count": len(tickers)})
