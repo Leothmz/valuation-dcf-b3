@@ -35,5 +35,10 @@ class TestGetExchangeRate(unittest.TestCase):
         result = server.get_exchange_rate('USDBRL')
         self.assertEqual(result.get('code'), 'ERROR')
 
+    @patch('server.yf', None)
+    def test_returns_no_yfinance_when_unavailable(self):
+        result = server.get_exchange_rate('USDBRL')
+        self.assertEqual(result.get('code'), 'NO_YFINANCE')
+
 if __name__ == '__main__':
     unittest.main()

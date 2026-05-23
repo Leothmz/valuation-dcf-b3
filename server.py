@@ -866,6 +866,8 @@ def get_cdi_data(date_from=None, date_to=None):
 _EXCHANGE_TICKERS = {"USDBRL": "USDBRL=X", "EURBRL": "EURBRL=X"}
 
 def get_exchange_rate(pair):
+    if yf is None:
+        return {"code": "NO_YFINANCE"}
     try:
         yf_ticker = _EXCHANGE_TICKERS.get(pair, pair)
         info = yf.Ticker(yf_ticker).info
