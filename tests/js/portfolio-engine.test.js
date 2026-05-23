@@ -79,7 +79,7 @@ describe('calcHoldings', () => {
   })
 })
 
-import { calcTWRR, buildTWRRSubPeriods } from '../../src/portfolio-engine.js'
+import { calcTWRR, buildTWRRSubPeriods, projectDeposit, aggregateTitle } from '../../src/portfolio-engine.js'
 
 describe('calcTWRR', () => {
   it('single period +10%', () => {
@@ -126,5 +126,53 @@ describe('buildTWRRSubPeriods', () => {
   })
   it('returns empty for no operations', () => {
     expect(buildTWRRSubPeriods([], {}, {})).toEqual([])
+  })
+})
+
+describe('projectDeposit', () => {
+  it('cdi_pct: 10k at 110% CDI with 10.5% accumulated → 11,155', () => {
+    const result = projectDeposit({
+      amount: 10000, rateType: 'cdi_pct', baseRate: 110, cdiAccumulated: 0.105, daysElapsed: 365
+    })
+    expect(result).toBeCloseTo(10000 * (1 + 1.10 * 0.105), 0)
+  })
+  it('prefixado: 10k at 12% for 365 days → 11,200', () => {
+    const result = projectDeposit({
+      amount: 10000, rateType: 'prefixado', baseRate: 12, cdiAccumulated: 0, daysElapsed: 365
+    })
+    expect(result).toBeCloseTo(11200, 0)
+  })
+  it('ipca_plus: 10k at IPCA+6% with 5% IPCA + 6% spread → greater than 10,500', () => {
+    const result = projectDeposit({
+      amount: 10000, rateType: 'ipca_plus', baseRate: 6, ipcaAccumulated: 0.05, daysElapsed: 365
+    })
+    expect(result).toBeGreaterThan(10500)
+  })
+  it('manual: returns manualCurrentValue directly', () => {
+    const result = projectDeposit({
+      amount: 10000, rateType: 'manual', baseRate: 0, manualCurrentValue: 10750, daysElapsed: 200
+    })
+    expect(result).toBe(10750)
+  })
+  it('returns amount when daysElapsed is 0', () => {
+    const result = projectDeposit({
+      amount: 5000, rateType: 'cdi_pct', baseRate: 100, cdiAccumulated: 0, daysElapsed: 0
+    })
+    expect(result).toBeCloseTo(5000)
+  })
+})
+
+describe('aggregateTitle', () => {
+  it('sums projected values across deposits', () => {
+    const title = {
+      rateType: 'cdi_pct', baseRate: 110,
+      deposits: [
+        { id: 'd1', amount: 10000, date: '2024-01-01', rateOverride: null },
+        { id: 'd2', amount: 5000,  date: '2024-01-01', rateOverride: null },
+      ]
+    }
+    const result = aggregateTitle(title, { cdiAccumulated: 0 }, '2024-01-01')
+    expect(result.totalInvested).toBeCloseTo(15000)
+    expect(result.totalProjected).toBeCloseTo(15000)
   })
 })

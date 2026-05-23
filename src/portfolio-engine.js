@@ -60,3 +60,45 @@ export function buildTWRRSubPeriods(operations, historicalPrices, currentPrices)
   }
   return subPeriods
 }
+
+export function projectDeposit(p) {
+  const { amount, rateType, baseRate, cdiAccumulated = 0, ipcaAccumulated = 0,
+          daysElapsed = 0, manualCurrentValue } = p
+  if (rateType === 'manual') return manualCurrentValue ?? amount
+  if (daysElapsed <= 0) return amount
+  const yearFraction = daysElapsed / 365
+  switch (rateType) {
+    case 'cdi_pct':
+      return amount * (1 + (baseRate / 100) * cdiAccumulated)
+    case 'prefixado':
+      return amount * Math.pow(1 + baseRate / 100, yearFraction)
+    case 'ipca_plus': {
+      const totalRate = (1 + ipcaAccumulated) * (1 + baseRate / 100 * yearFraction) - 1
+      return amount * (1 + totalRate)
+    }
+    default:
+      return amount
+  }
+}
+
+export function aggregateTitle(title, ratesForPeriod, today) {
+  let totalInvested  = 0
+  let totalProjected = 0
+  for (const dep of title.deposits) {
+    const daysElapsed  = Math.max(0, Math.floor((new Date(today) - new Date(dep.date)) / 86400000))
+    const baseRate     = dep.rateOverride ?? title.baseRate
+    totalInvested  += dep.amount
+    totalProjected += projectDeposit({
+      amount: dep.amount, rateType: title.rateType, baseRate,
+      cdiAccumulated:  ratesForPeriod.cdiAccumulated  ?? 0,
+      ipcaAccumulated: ratesForPeriod.ipcaAccumulated ?? 0,
+      daysElapsed,
+      manualCurrentValue: dep.manualCurrentValue,
+    })
+  }
+  return {
+    totalInvested,
+    totalProjected,
+    retorno: totalInvested > 0 ? (totalProjected - totalInvested) / totalInvested : null,
+  }
+}
