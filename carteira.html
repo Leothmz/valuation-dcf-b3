@@ -86,6 +86,50 @@
     ::-webkit-scrollbar { width:5px; }
     ::-webkit-scrollbar-track { background:transparent; }
     ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+    /* Toolbar */
+    .toolbar { display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+    .btn { padding:7px 14px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer;
+           border:none; display:inline-flex; align-items:center; gap:5px; }
+    .btn-primary { background:var(--cyan); color:#000; }
+    .btn-ghost { background:transparent; color:var(--text-sec); border:1px solid var(--border); }
+
+    /* Filter chips */
+    .filter-chips { display:flex; gap:6px; flex-wrap:wrap; }
+    .chip { padding:4px 12px; border-radius:6px; font-size:12px; cursor:pointer;
+            border:1px solid var(--border); color:var(--text-muted); background:transparent; }
+    .chip.active { background:var(--cyan-dim); color:var(--cyan); border-color:var(--cyan); }
+
+    /* Table */
+    table { width:100%; border-collapse:collapse; }
+    th { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px;
+         padding:9px 10px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+    th.right, td.right { text-align:right; }
+    td { padding:10px; border-bottom:1px solid var(--border-muted); font-size:13px; vertical-align:middle; }
+    tr:hover td { background:rgba(255,255,255,.02); }
+    .mono { font-family:var(--font-mono); }
+
+    /* Badges */
+    .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+    .badge-compra { background:rgba(16,185,129,.15); color:var(--green); }
+    .badge-venda  { background:rgba(239,68,68,.15);  color:var(--red); }
+    .badge-acao   { background:var(--cyan-dim); color:var(--cyan); }
+    .badge-fii    { background:rgba(99,102,241,.15); color:#818cf8; }
+    .badge-etf    { background:rgba(245,158,11,.15); color:var(--amber); }
+    .badge-intl   { background:rgba(139,92,246,.15); color:var(--purple); }
+
+    /* Modal */
+    .modal-box { background:var(--bg-2); border:1px solid var(--border); border-radius:12px;
+                 padding:24px; max-width:500px; width:100%; }
+    .modal-title { font-size:16px; font-weight:700; margin-bottom:18px; }
+    .modal-actions { display:flex; gap:8px; margin-top:16px; justify-content:flex-end; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+    .form-field { display:flex; flex-direction:column; gap:5px; }
+    .form-field.full { grid-column:1/-1; }
+    .form-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; }
+    .form-input, .form-select { background:var(--bg-3); border:1px solid var(--border); border-radius:7px;
+      padding:9px 12px; color:var(--text); font-family:var(--font-mono); font-size:13px; }
+    .form-select { font-family:var(--font-ui); }
   </style>
 </head>
 <body>
@@ -171,13 +215,93 @@
 
       <div id="tab-visao"     class="tab-panel active"><p style="color:var(--text-muted)">Em breve</p></div>
       <div id="tab-ativos"    class="tab-panel"><p style="color:var(--text-muted)">Em breve</p></div>
-      <div id="tab-operacoes" class="tab-panel"><p style="color:var(--text-muted)">Em breve</p></div>
+      <div id="tab-operacoes" class="tab-panel">
+        <div class="toolbar">
+          <button id="btn-nova-op" class="btn btn-primary">＋ Registrar Operação</button>
+          <div class="filter-chips" id="op-filters">
+            <div class="chip active" data-filter="all">Todas</div>
+            <div class="chip" data-filter="buy">Compras</div>
+            <div class="chip" data-filter="sell">Vendas</div>
+          </div>
+        </div>
+
+        <table id="op-table">
+          <thead><tr>
+            <th>Data</th><th>Ticker</th><th>Tipo</th><th>Classe</th>
+            <th class="right">Qtd</th><th class="right">Preço Unit.</th>
+            <th class="right">Total</th><th class="right">Corretagem</th><th></th>
+          </tr></thead>
+          <tbody id="op-tbody"></tbody>
+        </table>
+        <div id="op-empty" style="padding:24px;text-align:center;color:var(--text-muted);display:none">
+          Nenhuma operação registrada.
+        </div>
+
+        <!-- Modal -->
+        <div id="modal-op" style="display:none;position:fixed;inset:0;background:rgba(6,9,16,.7);
+             z-index:100;align-items:center;justify-content:center">
+          <div class="modal-box">
+            <div class="modal-title">Registrar Operação</div>
+            <div class="form-row">
+              <div class="form-field full">
+                <label class="form-label">Tipo</label>
+                <select id="op-type" class="form-select">
+                  <option value="buy">Compra</option>
+                  <option value="sell">Venda</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label class="form-label">Ticker</label>
+                <input id="op-ticker" class="form-input" placeholder="Ex: WEGE3, AAPL">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Classe</label>
+                <select id="op-class" class="form-select">
+                  <option value="acao_br">Ação BR</option>
+                  <option value="fii">FII</option>
+                  <option value="etf">ETF</option>
+                  <option value="stock_intl">Stock Internacional</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label class="form-label">Data</label>
+                <input id="op-date" class="form-input" type="date">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Quantidade</label>
+                <input id="op-qty" class="form-input" type="number" min="0" step="1">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label class="form-label">Preço Unitário</label>
+                <input id="op-price" class="form-input" type="number" min="0" step="0.01">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Corretagem (opcional)</label>
+                <input id="op-fees" class="form-input" type="number" min="0" step="0.01" value="0">
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button id="btn-cancel-op" class="btn btn-ghost">Cancelar</button>
+              <button id="btn-save-op" class="btn btn-primary">Salvar Operação</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div id="tab-rf"        class="tab-panel"><p style="color:var(--text-muted)">Em breve</p></div>
 
     </div><!-- /.content -->
   </div><!-- /.main -->
 
   <script type="module">
+    import { getOperations, saveOperation, deleteOperation, generateId }
+      from './src/portfolio-store.js'
+
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -186,6 +310,78 @@
         document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
       });
     });
+
+    const fBRL = v => v == null ? '—'
+      : 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+    const CLASS_LABELS = { acao_br:'Ação BR', fii:'FII', etf:'ETF', stock_intl:'Stock Intl' }
+    const CLASS_BADGE  = { acao_br:'badge-acao', fii:'badge-fii', etf:'badge-etf', stock_intl:'badge-intl' }
+
+    let _opFilter = 'all'
+
+    function renderOperacoes() {
+      const ops = getOperations()
+        .filter(o => _opFilter === 'all' || o.type === _opFilter)
+        .sort((a, b) => b.date.localeCompare(a.date))
+      const tbody = document.getElementById('op-tbody')
+      const empty = document.getElementById('op-empty')
+      if (!ops.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return }
+      empty.style.display = 'none'
+      tbody.innerHTML = ops.map(o => `
+        <tr>
+          <td class="mono">${o.date}</td>
+          <td><strong>${o.ticker}</strong></td>
+          <td><span class="badge ${o.type === 'buy' ? 'badge-compra' : 'badge-venda'}">
+            ${o.type === 'buy' ? 'COMPRA' : 'VENDA'}</span></td>
+          <td><span class="badge ${CLASS_BADGE[o.assetClass] ?? ''}">${CLASS_LABELS[o.assetClass] ?? o.assetClass}</span></td>
+          <td class="mono right">${o.qty}</td>
+          <td class="mono right">${fBRL(o.price)}</td>
+          <td class="mono right">${fBRL(o.qty * o.price)}</td>
+          <td class="mono right" style="color:var(--text-muted)">${fBRL(o.fees)}</td>
+          <td><span style="cursor:pointer;color:var(--text-muted)" data-del-op="${o.id}">✕</span></td>
+        </tr>`).join('')
+    }
+
+    document.getElementById('btn-nova-op').addEventListener('click', () => {
+      document.getElementById('op-date').value = new Date().toISOString().slice(0, 10)
+      document.getElementById('modal-op').style.display = 'flex'
+    })
+    document.getElementById('btn-cancel-op').addEventListener('click', () => {
+      document.getElementById('modal-op').style.display = 'none'
+    })
+    document.getElementById('btn-save-op').addEventListener('click', () => {
+      const op = {
+        id:         generateId(),
+        date:       document.getElementById('op-date').value,
+        ticker:     document.getElementById('op-ticker').value.toUpperCase().trim(),
+        assetClass: document.getElementById('op-class').value,
+        type:       document.getElementById('op-type').value,
+        qty:        parseFloat(document.getElementById('op-qty').value)   || 0,
+        price:      parseFloat(document.getElementById('op-price').value) || 0,
+        currency:   'BRL',
+        fees:       parseFloat(document.getElementById('op-fees').value)  || 0,
+      }
+      if (!op.ticker || !op.qty || !op.date) return
+      saveOperation(op)
+      document.getElementById('modal-op').style.display = 'none'
+      renderOperacoes()
+    })
+
+    document.getElementById('op-tbody').addEventListener('click', e => {
+      const id = e.target.dataset.delOp
+      if (id) { deleteOperation(id); renderOperacoes() }
+    })
+
+    document.querySelectorAll('#op-filters .chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('#op-filters .chip').forEach(c => c.classList.remove('active'))
+        chip.classList.add('active')
+        _opFilter = chip.dataset.filter
+        renderOperacoes()
+      })
+    })
+
+    renderOperacoes()
   </script>
   <script>lucide.createIcons();</script>
 </body>
