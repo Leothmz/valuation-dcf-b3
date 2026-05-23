@@ -86,7 +86,7 @@ export function aggregateTitle(title, ratesForPeriod, today) {
   let totalProjected = 0
   for (const dep of title.deposits) {
     const daysElapsed  = Math.max(0, Math.floor((new Date(today) - new Date(dep.date)) / 86400000))
-    const baseRate     = dep.rateOverride ?? title.baseRate
+    const baseRate     = dep.rateOverride ?? title.baseRate ?? 0
     totalInvested  += dep.amount
     totalProjected += projectDeposit({
       amount: dep.amount, rateType: title.rateType, baseRate,
