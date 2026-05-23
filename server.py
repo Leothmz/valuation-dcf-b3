@@ -5,6 +5,7 @@ Serve arquivos estáticos + API de dados via yfinance (gratuito, sem token)
 """
 
 import datetime, json, os, sys, time, urllib.parse, urllib.request, re
+from urllib.parse import urlparse, parse_qs
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
@@ -847,7 +848,7 @@ def get_cdi_data(date_from=None, date_to=None):
             "to": dt_to.isoformat(),
             "days": len(data),
         }
-    except Exception:
+    except Exception as e:
         return {
             "accumulated": 0.105,
             "from": dt_from.isoformat(),
@@ -893,10 +894,10 @@ class Handler(SimpleHTTPRequestHandler):
             data = get_fii_data(ticker)
             self._json(data)
         elif path.startswith("/api/cdi"):
-            from urllib.parse import urlparse, parse_qs
             qs = parse_qs(urlparse(self.path).query)
             date_from = qs.get("from", [None])[0]
             date_to   = qs.get("to",   [None])[0]
+            print(f"[API] cdi → from={date_from} to={date_to}")
             self._json(get_cdi_data(date_from, date_to))
         elif path == "/api/b3-tickers":
             tickers = get_b3_tickers()
