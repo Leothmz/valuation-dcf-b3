@@ -151,6 +151,10 @@
             border:1px solid var(--border);color:var(--text-muted);background:transparent;user-select:none; }
     .pill:hover { border-color:var(--indigo);color:var(--indigo); }
     .pill.active { background:rgba(129,140,248,.15);color:var(--indigo);border-color:var(--indigo); }
+
+    /* Cards (Visão Geral) */
+    .card { background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px 20px; }
+    .card-title { font-size:13px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px; }
   </style>
 </head>
 <body>
@@ -234,7 +238,44 @@
         <div class="tab" data-tab="rf">Renda Fixa</div>
       </div>
 
-      <div id="tab-visao"     class="tab-panel active"><p style="color:var(--text-muted)">Em breve</p></div>
+      <div id="tab-visao" class="tab-panel active">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="visao-grid">
+          <!-- Alocação por classe -->
+          <div class="card">
+            <div class="card-title">Alocação por Classe</div>
+            <div id="alloc-bars"></div>
+          </div>
+          <!-- Benchmarks -->
+          <div class="card">
+            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+              Rentabilidade vs Benchmarks
+              <div id="bench-periods" style="display:flex;gap:4px">
+                <div class="pill" data-period="1M">1M</div>
+                <div class="pill" data-period="3M">3M</div>
+                <div class="pill" data-period="6M">6M</div>
+                <div class="pill active" data-period="12M">12M</div>
+                <div class="pill" data-period="YTD">YTD</div>
+              </div>
+            </div>
+            <div id="bench-chart" style="display:flex;align-items:flex-end;justify-content:space-around;
+                 height:140px;padding:0 8px;margin-top:16px"></div>
+          </div>
+          <!-- Highlights -->
+          <div class="card" style="grid-column:1/-1">
+            <div class="card-title">Destaques</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+              <div>
+                <div style="font-size:11px;color:var(--green);font-weight:600;margin-bottom:10px">&#8593; MELHORES</div>
+                <div id="top-performers"></div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--red);font-weight:600;margin-bottom:10px">&#8595; PIORES</div>
+                <div id="worst-performers"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div id="tab-ativos" class="tab-panel">
         <div class="toolbar">
           <div class="filter-chips" id="asset-filters">
@@ -807,7 +848,155 @@
     }
 
     document.querySelector('[data-tab="rf"]').addEventListener('click', renderRF)
-    loadCDI().then(renderRF)
+
+    // ── Visão Geral Tab ──────────────────────────────────────────────────────────
+
+    const ALLOC_COLORS = {
+      acao_br:'var(--cyan)', fii:'var(--purple)', etf:'var(--amber)',
+      stock_intl:'var(--green)', rf:'#818cf8'
+    }
+    const ALLOC_LABELS = { acao_br:'Ações BR', fii:'FIIs', etf:'ETFs', stock_intl:'Stocks Intl', rf:'Renda Fixa' }
+
+    async function renderVisaoGeral() {
+      const ops      = getOperations()
+      const rfTitles = getFixedIncome()
+      const holdings = calcHoldings(ops)
+      const today    = new Date().toISOString().slice(0, 10)
+
+      // Current values per class
+      const classValues = { acao_br:0, fii:0, etf:0, stock_intl:0, rf:0 }
+      for (const [ticker, qty] of Object.entries(holdings)) {
+        const assetClass = ops.find(o => o.ticker === ticker)?.assetClass ?? 'acao_br'
+        const quote = await fetchQuote(ticker)
+        if (quote?.price) classValues[assetClass] += qty * quote.price
+      }
+      for (const title of rfTitles) {
+        const agg = aggregateTitle(title, { cdiAccumulated: _cdiAccumulated }, today)
+        classValues.rf += agg.totalProjected
+      }
+
+      const totalValue = Object.values(classValues).reduce((s, v) => s + v, 0)
+
+      // Allocation bars
+      const allocEl = document.getElementById('alloc-bars')
+      if (allocEl) {
+        const entries = Object.entries(classValues).filter(([,v]) => v > 0).sort(([,a],[,b]) => b-a)
+        if (!entries.length) {
+          allocEl.innerHTML = '<p style="color:var(--text-muted);font-size:12px">Sem posições.</p>'
+        } else {
+          allocEl.innerHTML = entries.map(([cls, val]) => {
+            const pct = totalValue > 0 ? (val / totalValue * 100).toFixed(0) : 0
+            return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+              <div style="width:90px;font-size:12px;color:var(--text-sec)">${ALLOC_LABELS[cls]}</div>
+              <div style="flex:1;height:6px;background:var(--bg-4);border-radius:3px;overflow:hidden">
+                <div style="width:${pct}%;height:100%;border-radius:3px;background:${ALLOC_COLORS[cls]}"></div></div>
+              <div style="width:38px;font-family:var(--font-mono);font-size:12px;text-align:right">${pct}%</div>
+            </div>`
+          }).join('')
+        }
+      }
+
+      // Benchmark chart
+      renderBenchChart('12M')
+
+      // Highlights
+      const performances = []
+      for (const [ticker, qty] of Object.entries(holdings)) {
+        if (qty <= 0) continue
+        const tickerOps  = ops.filter(o => o.ticker === ticker)
+        const precoMedio = calcPrecoMedio(tickerOps)
+        const quote      = await fetchQuote(ticker)
+        if (precoMedio && quote?.price) {
+          const assetClass = tickerOps[0]?.assetClass ?? 'acao_br'
+          performances.push({ ticker, retorno: (quote.price - precoMedio) / precoMedio, assetClass })
+        }
+      }
+      performances.sort((a, b) => b.retorno - a.retorno)
+
+      const perfRow = p => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;
+           border-bottom:1px solid var(--border-muted)">
+        <span style="flex:1;font-size:13px">${esc(p.ticker)}</span>
+        <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;
+              color:${p.retorno >= 0 ? 'var(--green)' : 'var(--red)'}">
+          ${p.retorno >= 0 ? '+' : ''}${(p.retorno * 100).toFixed(1)}%</span></div>`
+
+      const topEl   = document.getElementById('top-performers')
+      const worstEl = document.getElementById('worst-performers')
+      if (topEl)   topEl.innerHTML   = performances.length ? performances.slice(0,3).map(perfRow).join('') : '<p style="color:var(--text-muted);font-size:12px">&#8212;</p>'
+      if (worstEl) worstEl.innerHTML = performances.length ? performances.slice(-3).reverse().map(perfRow).join('') : '<p style="color:var(--text-muted);font-size:12px">&#8212;</p>'
+
+      // Hero KPIs
+      let totalInvested = 0
+      for (const [ticker, qty] of Object.entries(holdings)) {
+        if (qty <= 0) continue
+        const tickerOps  = ops.filter(o => o.ticker === ticker)
+        const precoMedio = calcPrecoMedio(tickerOps)
+        if (precoMedio) totalInvested += qty * precoMedio
+      }
+      for (const title of rfTitles) {
+        totalInvested += title.deposits.reduce((s, d) => s + d.amount, 0)
+      }
+
+      const kpiInvEl  = document.getElementById('kpi-investido')
+      const kpiAtEl   = document.getElementById('kpi-atual')
+      const kpiRetEl  = document.getElementById('kpi-retorno')
+      if (kpiInvEl) { kpiInvEl.textContent = fBRL(totalInvested); kpiInvEl.classList.remove('skel') }
+      if (kpiAtEl)  { kpiAtEl.textContent  = fBRL(totalValue);    kpiAtEl.classList.remove('skel') }
+      if (kpiRetEl && totalInvested > 0) {
+        const retTotal = (totalValue - totalInvested) / totalInvested
+        kpiRetEl.textContent = (retTotal >= 0 ? '+' : '') + (retTotal * 100).toFixed(1) + '%'
+        kpiRetEl.style.color = retTotal >= 0 ? 'var(--green)' : 'var(--red)'
+        kpiRetEl.classList.remove('skel')
+      }
+    }
+
+    async function renderBenchChart(period) {
+      const chart = document.getElementById('bench-chart')
+      if (!chart) return
+      chart.innerHTML = '<span style="color:var(--text-muted);font-size:12px">Carregando...</span>'
+
+      const cdiAnn = _cdiAccumulated
+
+      let ibovRet = null, ifixRet = null
+      try { const r = await fetch('/api/quote/%5EBVSP'); const d = await r.json(); ibovRet = d.changePercent != null ? d.changePercent / 100 : null } catch {}
+      try { const r = await fetch('/api/quote/IFIX');  const d = await r.json(); ifixRet = d.changePercent != null ? d.changePercent / 100 : null } catch {}
+
+      const bars = [
+        { label:'CDI',  value: cdiAnn,  color:'rgba(148,163,184,.3)' },
+        { label:'IBOV', value: ibovRet, color:'rgba(148,163,184,.2)' },
+        { label:'IFIX', value: ifixRet, color:'rgba(139,92,246,.3)'  },
+      ].filter(b => b.value != null)
+
+      if (!bars.length) { chart.innerHTML = '<span style="color:var(--text-muted);font-size:12px">Sem dados.</span>'; return }
+
+      const maxVal = Math.max(...bars.map(b => Math.abs(b.value)), 0.01)
+
+      chart.innerHTML = bars.map(b => {
+        const h    = Math.round(Math.abs(b.value) / maxVal * 100)
+        const sign = b.value >= 0 ? '+' : ''
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1">
+          <div style="display:flex;align-items:flex-end;height:116px;width:100%;justify-content:center">
+            <div style="width:32px;height:${h}%;border-radius:4px 4px 0 0;background:${b.color};
+                 position:relative;display:flex;justify-content:center">
+              <span style="position:absolute;top:-20px;font-family:var(--font-mono);font-size:11px;
+                    font-weight:600;white-space:nowrap;color:var(--text-sec)">
+                ${sign}${(b.value * 100).toFixed(1)}%</span>
+            </div></div>
+          <div style="font-size:11px;color:var(--text-sec)">${esc(b.label)}</div>
+        </div>`
+      }).join('')
+    }
+
+    document.querySelectorAll('#bench-periods .pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('#bench-periods .pill').forEach(p => p.classList.remove('active'))
+        pill.classList.add('active')
+        renderBenchChart(pill.dataset.period)
+      })
+    })
+
+    document.querySelector('[data-tab="visao"]').addEventListener('click', renderVisaoGeral)
+    loadCDI().then(() => { renderRF(); renderVisaoGeral(); })
   </script>
   <script>lucide.createIcons();</script>
 </body>
