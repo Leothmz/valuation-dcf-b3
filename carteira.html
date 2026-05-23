@@ -305,6 +305,39 @@
         </div>
       </div>
       <div id="tab-operacoes" class="tab-panel">
+        <div style="background:var(--bg-3);border:1px solid var(--border);border-radius:8px;
+             padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <div style="font-size:20px">📥</div>
+          <div style="flex:1">
+            <div style="font-weight:600;margin-bottom:2px">Importar extrato da B3</div>
+            <div style="font-size:12px;color:var(--text-sec)">
+              Baixe o CSV em <em>Portal do Investidor → Extrato → Movimentações</em> e importe aqui.
+            </div>
+          </div>
+          <button id="btn-import-csv" class="btn btn-ghost">Importar CSV</button>
+          <input id="csv-file-input" type="file" accept=".csv,.xlsx" style="display:none">
+        </div>
+
+        <!-- CSV Preview Modal -->
+        <div id="modal-csv" style="display:none;position:fixed;inset:0;background:rgba(6,9,16,.7);
+             z-index:100;align-items:center;justify-content:center">
+          <div class="modal-box" style="max-width:700px;max-height:80vh;overflow-y:auto">
+            <div class="modal-title">Confirmar importação</div>
+            <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px" id="csv-summary"></p>
+            <table style="width:100%;font-size:12px" id="csv-preview-table">
+              <thead><tr>
+                <th><input type="checkbox" id="csv-check-all" checked></th>
+                <th>Data</th><th>Ticker</th><th>Tipo</th><th class="right">Qtd</th><th class="right">Preço</th>
+              </tr></thead>
+              <tbody id="csv-preview-tbody"></tbody>
+            </table>
+            <div class="modal-actions">
+              <button id="btn-cancel-csv" class="btn btn-ghost">Cancelar</button>
+              <button id="btn-confirm-csv" class="btn btn-primary">Importar selecionadas</button>
+            </div>
+          </div>
+        </div>
+
         <div class="toolbar">
           <button id="btn-nova-op" class="btn btn-primary">＋ Registrar Operação</button>
           <div class="filter-chips" id="op-filters">
@@ -465,6 +498,7 @@
              getFixedIncome, saveFixedIncomeTitle, deleteFixedIncomeTitle,
              addDeposit, deleteDeposit } from './src/portfolio-store.js'
     import { calcPrecoMedio, calcHoldings, projectDeposit, aggregateTitle } from './src/portfolio-engine.js'
+    import { parseB3CSV } from './src/b3-csv-parser.js'
 
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -997,6 +1031,79 @@
 
     document.querySelector('[data-tab="visao"]').addEventListener('click', renderVisaoGeral)
     loadCDI().then(() => { renderRF(); renderVisaoGeral(); })
+
+    // ── CSV Import ──────────────────────────────────────────────────────────
+
+    let _csvParsedOps = []
+
+    function dedupKey(op) {
+      return `${op.date}|${op.ticker}|${op.type}|${op.qty}|${op.price}`
+    }
+
+    document.getElementById('btn-import-csv').onclick = () => {
+      document.getElementById('csv-file-input').click()
+    }
+
+    document.getElementById('csv-file-input').addEventListener('change', async e => {
+      const file = e.target.files[0]
+      if (!file) return
+      const text = await file.text()
+      try {
+        const parsed   = parseB3CSV(text)
+        const existing = new Set(getOperations().map(dedupKey))
+        const newOps   = parsed.filter(o => !existing.has(dedupKey(o)))
+
+        _csvParsedOps = parsed
+        const dup = parsed.length - newOps.length
+
+        document.getElementById('csv-summary').textContent =
+          `${parsed.length} operações encontradas — ${newOps.length} novas, ${dup} já existentes (pré-desmarcadas).`
+
+        const tbody = document.getElementById('csv-preview-tbody')
+        tbody.innerHTML = parsed.map((op, i) => {
+          const isDup = existing.has(dedupKey(op))
+          return `<tr>
+            <td><input type="checkbox" data-csv-idx="${i}" ${isDup ? '' : 'checked'}></td>
+            <td class="mono">${esc(op.date)}</td>
+            <td><strong>${esc(op.ticker)}</strong></td>
+            <td><span class="badge ${op.type === 'buy' ? 'badge-compra' : 'badge-venda'}">${op.type === 'buy' ? 'C' : 'V'}</span></td>
+            <td class="mono right">${op.qty}</td>
+            <td class="mono right">${fBRL(op.price)}</td>
+          </tr>`
+        }).join('')
+
+        document.getElementById('modal-csv').style.display = 'flex'
+      } catch (err) {
+        alert('Erro ao ler o arquivo: ' + err.message)
+      }
+      e.target.value = ''
+    })
+
+    document.getElementById('csv-check-all').addEventListener('change', e => {
+      document.querySelectorAll('[data-csv-idx]').forEach(cb => { cb.checked = e.target.checked })
+    })
+
+    document.getElementById('btn-cancel-csv').onclick = () => {
+      document.getElementById('modal-csv').style.display = 'none'
+    }
+
+    document.getElementById('btn-confirm-csv').onclick = () => {
+      const checked  = [...document.querySelectorAll('[data-csv-idx]:checked')]
+        .map(cb => parseInt(cb.dataset.csvIdx))
+      const existing = new Set(getOperations().map(dedupKey))
+      let imported = 0
+      for (const idx of checked) {
+        const op = { ..._csvParsedOps[idx], id: generateId() }
+        if (!existing.has(dedupKey(op))) {
+          saveOperation(op)
+          existing.add(dedupKey(op))
+          imported++
+        }
+      }
+      document.getElementById('modal-csv').style.display = 'none'
+      renderOperacoes()
+      alert(`${imported} operações importadas com sucesso.`)
+    }
   </script>
   <script>lucide.createIcons();</script>
 </body>
