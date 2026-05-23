@@ -105,6 +105,13 @@ describe('calcTWRR', () => {
     ]
     expect(calcTWRR(periods)).toBeCloseTo(0.10, 4)
   })
+  it('returns null when all periods have startValue <= 0', () => {
+    const periods = [
+      { startValue: 0,    endValue: 1000 },
+      { startValue: -100, endValue: 500 },
+    ]
+    expect(calcTWRR(periods)).toBeNull()
+  })
 })
 
 describe('buildTWRRSubPeriods', () => {

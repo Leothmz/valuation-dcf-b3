@@ -24,11 +24,13 @@ export function calcHoldings(operations) {
 export function calcTWRR(subPeriods) {
   if (!subPeriods || !subPeriods.length) return null
   let product = 1
+  let counted = 0
   for (const { startValue, endValue } of subPeriods) {
     if (startValue <= 0) continue
     product *= 1 + (endValue - startValue) / startValue
+    counted++
   }
-  return product - 1
+  return counted === 0 ? null : product - 1
 }
 
 export function buildTWRRSubPeriods(operations, historicalPrices, currentPrices) {
