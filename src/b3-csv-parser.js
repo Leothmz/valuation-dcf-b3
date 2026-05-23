@@ -21,7 +21,8 @@ function parseBRDate(s) {
 }
 
 export function parseB3CSV(csvText) {
-  const lines = csvText.trim().split(/\r?\n/)
+  const text = csvText.replace(/^﻿/, '').trim()
+  const lines = text.split(/\r?\n/)
   const headerIdx = lines.findIndex(
     l => l.includes('Data') && (l.includes('Quantidade') || l.includes('Negóci'))
   )

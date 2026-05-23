@@ -32,6 +32,11 @@ describe('parseB3CSV', () => {
   it('throws on unrecognised format', () => {
     expect(() => parseB3CSV('Col1,Col2\nval1,val2')).toThrow()
   })
+  it('handles BOM-prefixed files', () => {
+    const bomCsv = '﻿' + SAMPLE_CSV
+    const ops = parseB3CSV(bomCsv)
+    expect(ops).toHaveLength(3)
+  })
   it('sets currency to BRL', () => {
     const ops = parseB3CSV(SAMPLE_CSV)
     ops.forEach(o => expect(o.currency).toBe('BRL'))
