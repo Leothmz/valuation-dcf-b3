@@ -130,6 +130,12 @@
     .form-input, .form-select { background:var(--bg-3); border:1px solid var(--border); border-radius:7px;
       padding:9px 12px; color:var(--text); font-family:var(--font-mono); font-size:13px; }
     .form-select { font-family:var(--font-ui); }
+
+    /* Status badges for DCF */
+    .status { font-size:12px; font-weight:600; }
+    .status-caro   { color:var(--red); }
+    .status-barato { color:var(--green); }
+    .status-justo  { color:var(--amber); }
   </style>
 </head>
 <body>
@@ -214,7 +220,34 @@
       </div>
 
       <div id="tab-visao"     class="tab-panel active"><p style="color:var(--text-muted)">Em breve</p></div>
-      <div id="tab-ativos"    class="tab-panel"><p style="color:var(--text-muted)">Em breve</p></div>
+      <div id="tab-ativos" class="tab-panel">
+        <div class="toolbar">
+          <div class="filter-chips" id="asset-filters">
+            <div class="chip active" data-filter="all">Todos</div>
+            <div class="chip" data-filter="acao_br">Ações BR</div>
+            <div class="chip" data-filter="fii">FIIs</div>
+            <div class="chip" data-filter="etf">ETFs</div>
+            <div class="chip" data-filter="stock_intl">Stocks Intl</div>
+          </div>
+        </div>
+
+        <table id="asset-table">
+          <thead><tr>
+            <th>Ticker</th><th>Classe</th>
+            <th class="right">Qtd</th>
+            <th class="right">Preço Médio</th>
+            <th class="right">Cotação Atual</th>
+            <th class="right">Valor em Carteira</th>
+            <th class="right">Retorno</th>
+            <th class="right">Preço Teto (DCF)</th>
+            <th>Situação</th>
+          </tr></thead>
+          <tbody id="asset-tbody"></tbody>
+        </table>
+        <div id="asset-empty" style="display:none;padding:24px;text-align:center;color:var(--text-muted)">
+          Nenhum ativo. Adicione operações na aba Operações.
+        </div>
+      </div>
       <div id="tab-operacoes" class="tab-panel">
         <div class="toolbar">
           <button id="btn-nova-op" class="btn btn-primary">＋ Registrar Operação</button>
@@ -301,6 +334,7 @@
   <script type="module">
     import { getOperations, saveOperation, deleteOperation, generateId }
       from './src/portfolio-store.js'
+    import { calcPrecoMedio, calcHoldings } from './src/portfolio-engine.js'
 
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -384,6 +418,91 @@
     })
 
     renderOperacoes()
+
+    // ── Ativos tab ──
+    let _assetFilter = 'all'
+    const _quoteCache = {}
+
+    async function fetchQuote(ticker) {
+      if (_quoteCache[ticker]) return _quoteCache[ticker]
+      try {
+        const r = await fetch(`/api/quote/${encodeURIComponent(ticker)}`)
+        const d = await r.json()
+        if (d.price) { _quoteCache[ticker] = d; return d }
+      } catch {}
+      return null
+    }
+
+    function dcfStatus(cotacao, fairPrice) {
+      if (!fairPrice || !cotacao) return '<span style="color:var(--text-muted);font-size:11px">sem DCF</span>'
+      if (cotacao > fairPrice)        return '<span class="status status-caro">● Caro</span>'
+      if (cotacao < fairPrice * 0.9)  return '<span class="status status-barato">● Barato</span>'
+      return '<span class="status status-justo">● Justo</span>'
+    }
+
+    async function renderAtivos() {
+      const ops      = getOperations()
+      const holdings = calcHoldings(ops)
+      const watchlist = JSON.parse(localStorage.getItem('dcf_watchlist') || '{}')
+      const tbody = document.getElementById('asset-tbody')
+      const empty = document.getElementById('asset-empty')
+
+      const tickers = Object.keys(holdings).filter(t => {
+        if (_assetFilter === 'all') return true
+        return ops.find(o => o.ticker === t)?.assetClass === _assetFilter
+      })
+
+      if (!tickers.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return }
+      empty.style.display = 'none'
+
+      tbody.innerHTML = tickers.map(t => `<tr id="row-${esc(t)}">
+        <td><strong>${esc(t)}</strong></td>
+        <td colspan="8"><span class="skel" style="display:inline-block;width:80%;height:14px"></span></td>
+      </tr>`).join('')
+
+      for (const ticker of tickers) {
+        const tickerOps   = ops.filter(o => o.ticker === ticker)
+        const assetClass  = tickerOps[tickerOps.length - 1]?.assetClass ?? 'acao_br'
+        const qty         = holdings[ticker]
+        const precoMedio  = calcPrecoMedio(tickerOps)
+        const quote       = await fetchQuote(ticker)
+        const cotacao     = quote?.price ?? null
+        const valorCarteira = cotacao != null ? qty * cotacao : null
+        const retorno     = precoMedio && cotacao ? (cotacao - precoMedio) / precoMedio : null
+        const fairPrice   = watchlist[ticker]?.fairPrice ?? null
+
+        const retStr = retorno != null
+          ? `<span style="color:${retorno >= 0 ? 'var(--green)' : 'var(--red)'}">
+               ${retorno >= 0 ? '+' : ''}${(retorno * 100).toFixed(1)}%</span>`
+          : '—'
+        const fairStr = fairPrice
+          ? fBRL(fairPrice)
+          : `<a href="index.html?ticker=${encodeURIComponent(ticker)}" style="color:var(--text-muted);font-size:11px">→ calcular</a>`
+
+        const row = document.getElementById(`row-${ticker}`)
+        if (row) row.innerHTML = `
+          <td><strong>${esc(ticker)}</strong></td>
+          <td><span class="badge ${CLASS_BADGE[assetClass]}">${CLASS_LABELS[assetClass]}</span></td>
+          <td class="mono right">${qty}</td>
+          <td class="mono right">${precoMedio != null ? fBRL(precoMedio) : '—'}</td>
+          <td class="mono right">${cotacao != null ? fBRL(cotacao) : '<span class="skel" style="display:inline-block;width:60px;height:13px"></span>'}</td>
+          <td class="mono right">${valorCarteira != null ? fBRL(valorCarteira) : '—'}</td>
+          <td class="mono right">${retStr}</td>
+          <td class="mono right">${fairStr}</td>
+          <td>${dcfStatus(cotacao, fairPrice)}</td>`
+      }
+    }
+
+    document.querySelectorAll('#asset-filters .chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('#asset-filters .chip').forEach(c => c.classList.remove('active'))
+        chip.classList.add('active')
+        _assetFilter = chip.dataset.filter
+        renderAtivos()
+      })
+    })
+
+    document.querySelector('[data-tab="ativos"]').addEventListener('click', renderAtivos)
   </script>
   <script>lucide.createIcons();</script>
 </body>
