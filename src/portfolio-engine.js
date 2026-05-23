@@ -20,3 +20,41 @@ export function calcHoldings(operations) {
   }
   return Object.fromEntries(Object.entries(h).filter(([, q]) => q > 0))
 }
+
+export function calcTWRR(subPeriods) {
+  if (!subPeriods || !subPeriods.length) return null
+  let product = 1
+  for (const { startValue, endValue } of subPeriods) {
+    if (startValue <= 0) continue
+    product *= 1 + (endValue - startValue) / startValue
+  }
+  return product - 1
+}
+
+export function buildTWRRSubPeriods(operations, historicalPrices, currentPrices) {
+  if (!operations.length) return []
+  const sorted = [...operations].sort((a, b) => a.date.localeCompare(b.date))
+  const uniqueDates = [...new Set(sorted.map(o => o.date))]
+
+  const portfolioValue = (ops, date, useCurrentForFinalDate) => {
+    const holdings = calcHoldings(ops)
+    return Object.entries(holdings).reduce((sum, [ticker, qty]) => {
+      const price = useCurrentForFinalDate
+        ? (currentPrices[ticker] ?? 0)
+        : (historicalPrices[ticker]?.[date] ?? currentPrices[ticker] ?? 0)
+      return sum + qty * price
+    }, 0)
+  }
+
+  const subPeriods = []
+  for (let i = 0; i < uniqueDates.length; i++) {
+    const startDate = uniqueDates[i]
+    const isLast    = i === uniqueDates.length - 1
+    const opsUpToStart = sorted.filter(o => o.date <= startDate)
+    const opsUpToEnd   = isLast ? sorted : sorted.filter(o => o.date < uniqueDates[i + 1])
+    const startValue = portfolioValue(opsUpToStart, startDate, false)
+    const endValue   = portfolioValue(opsUpToEnd, uniqueDates[i + 1], isLast)
+    if (startValue > 0) subPeriods.push({ startValue, endValue })
+  }
+  return subPeriods
+}

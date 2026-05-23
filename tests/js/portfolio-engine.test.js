@@ -78,3 +78,46 @@ describe('calcHoldings', () => {
     expect(h.XPLG11).toBe(50)
   })
 })
+
+import { calcTWRR, buildTWRRSubPeriods } from '../../src/portfolio-engine.js'
+
+describe('calcTWRR', () => {
+  it('single period +10%', () => {
+    expect(calcTWRR([{ startValue: 1000, endValue: 1100 }])).toBeCloseTo(0.10, 4)
+  })
+  it('two periods compound', () => {
+    const periods = [
+      { startValue: 1000, endValue: 1100 },
+      { startValue: 1100, endValue: 1210 },
+    ]
+    expect(calcTWRR(periods)).toBeCloseTo(0.21, 4)
+  })
+  it('one period −10%', () => {
+    expect(calcTWRR([{ startValue: 1000, endValue: 900 }])).toBeCloseTo(-0.10, 4)
+  })
+  it('returns null for empty array', () => {
+    expect(calcTWRR([])).toBeNull()
+  })
+  it('skips periods where startValue is zero', () => {
+    const periods = [
+      { startValue: 0,    endValue: 1000 },
+      { startValue: 1000, endValue: 1100 },
+    ]
+    expect(calcTWRR(periods)).toBeCloseTo(0.10, 4)
+  })
+})
+
+describe('buildTWRRSubPeriods', () => {
+  it('single operation — one sub-period', () => {
+    const ops = [{ ticker: 'WEGE3', type: 'buy', qty: 100, date: '2024-01-15' }]
+    const hist = { WEGE3: { '2024-01-15': 34.20 } }
+    const curr = { WEGE3: 40.60 }
+    const periods = buildTWRRSubPeriods(ops, hist, curr)
+    expect(periods).toHaveLength(1)
+    expect(periods[0].startValue).toBeCloseTo(3420)
+    expect(periods[0].endValue).toBeCloseTo(4060)
+  })
+  it('returns empty for no operations', () => {
+    expect(buildTWRRSubPeriods([], {}, {})).toEqual([])
+  })
+})
