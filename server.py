@@ -879,6 +879,34 @@ def get_exchange_rate(pair):
         return {"code": "ERROR", "message": str(e)}
 
 
+def get_portfolio_history(tickers, dates):
+    if not tickers or not dates:
+        return {}
+    if yf is None:
+        return {t: {d: None for d in dates} for t in tickers}
+    import datetime
+    all_dates = sorted(set(dates))
+    min_date = all_dates[0]
+    max_dt = datetime.datetime.strptime(max(all_dates), "%Y-%m-%d") + datetime.timedelta(days=7)
+    max_date = max_dt.strftime("%Y-%m-%d")
+    result = {}
+    for ticker in tickers:
+        yf_ticker = ticker if ("." in ticker or "=" in ticker) else ticker + ".SA"
+        try:
+            hist = yf.download(yf_ticker, start=min_date, end=max_date, progress=False, auto_adjust=True)
+            if hist.empty:
+                hist = yf.download(ticker, start=min_date, end=max_date, progress=False, auto_adjust=True)
+            ticker_prices = {}
+            for date_str in all_dates:
+                date_dt = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+                subset = hist[hist.index >= date_dt]
+                ticker_prices[date_str] = float(subset["Close"].iloc[0]) if not subset.empty else None
+            result[ticker] = ticker_prices
+        except Exception:
+            result[ticker] = {d: None for d in all_dates}
+    return result
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
@@ -930,9 +958,26 @@ class Handler(SimpleHTTPRequestHandler):
         else:
             super().do_GET()
 
-    def _json(self, data):
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length)
+        try:
+            payload = json.loads(body)
+        except Exception:
+            self._json({"code": "BAD_REQUEST"}, 400)
+            return
+        path = self.path.split("?")[0].rstrip("/")
+        if path == "/api/portfolio/history":
+            tickers = payload.get("tickers", [])
+            dates   = payload.get("dates", [])
+            print(f"[API] portfolio/history → {len(tickers)} tickers, {len(dates)} dates")
+            self._json(get_portfolio_history(tickers, dates))
+        else:
+            self._json({"code": "NOT_FOUND"}, 404)
+
+    def _json(self, data, status=200):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
-        self.send_response(200)
+        self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")
