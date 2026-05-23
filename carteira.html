@@ -314,6 +314,8 @@
     const fBRL = v => v == null ? '—'
       : 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+    const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
     const CLASS_LABELS = { acao_br:'Ação BR', fii:'FII', etf:'ETF', stock_intl:'Stock Intl' }
     const CLASS_BADGE  = { acao_br:'badge-acao', fii:'badge-fii', etf:'badge-etf', stock_intl:'badge-intl' }
 
@@ -329,11 +331,11 @@
       empty.style.display = 'none'
       tbody.innerHTML = ops.map(o => `
         <tr>
-          <td class="mono">${o.date}</td>
-          <td><strong>${o.ticker}</strong></td>
+          <td class="mono">${esc(o.date)}</td>
+          <td><strong>${esc(o.ticker)}</strong></td>
           <td><span class="badge ${o.type === 'buy' ? 'badge-compra' : 'badge-venda'}">
             ${o.type === 'buy' ? 'COMPRA' : 'VENDA'}</span></td>
-          <td><span class="badge ${CLASS_BADGE[o.assetClass] ?? ''}">${CLASS_LABELS[o.assetClass] ?? o.assetClass}</span></td>
+          <td><span class="badge ${CLASS_BADGE[o.assetClass] ?? ''}">${CLASS_LABELS[o.assetClass] ?? esc(o.assetClass)}</span></td>
           <td class="mono right">${o.qty}</td>
           <td class="mono right">${fBRL(o.price)}</td>
           <td class="mono right">${fBRL(o.qty * o.price)}</td>
