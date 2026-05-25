@@ -1,4 +1,5 @@
-# Excel de referência (não distribuir)
+# Arquivos locais de referência (não distribuir)
+arquivosBase/
 *.xlsx
 *.xls
 

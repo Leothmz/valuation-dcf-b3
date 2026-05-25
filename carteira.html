@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     * { transition: border-color .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease; }
@@ -118,6 +119,8 @@
     .badge-fii    { background:rgba(99,102,241,.15); color:#818cf8; }
     .badge-etf    { background:rgba(245,158,11,.15); color:var(--amber); }
     .badge-intl   { background:rgba(139,92,246,.15); color:var(--purple); }
+    .badge-jcp    { background:rgba(245,158,11,.15); color:var(--amber); }
+    .badge-rend   { background:rgba(99,102,241,.15); color:#818cf8; }
 
     /* Modal */
     .modal-box { background:var(--bg-2); border:1px solid var(--border); border-radius:12px;
@@ -145,6 +148,15 @@
     /* Mini button */
     .btn-mini { background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:5px;padding:3px 9px;font-size:11px;cursor:pointer; }
     .btn-mini:hover { border-color:var(--cyan);color:var(--cyan); }
+
+    /* Selection mode */
+    .btn-danger { background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25); }
+    .btn-danger:not(:disabled):hover { background:rgba(239,68,68,.22); }
+    .btn-danger:disabled { opacity:.4;cursor:default; }
+    #op-table .col-sel { display:none;width:32px; }
+    #op-table .col-del { }
+    #op-table.select-mode .col-sel { display:table-cell; }
+    #op-table.select-mode .col-del { display:none; }
 
     /* Pills (rate type selector) */
     .pill { padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;
@@ -235,6 +247,7 @@
         <div class="tab active" data-tab="visao">Visão Geral</div>
         <div class="tab" data-tab="ativos">Ativos</div>
         <div class="tab" data-tab="operacoes">Operações</div>
+        <div class="tab" data-tab="proventos">Proventos</div>
         <div class="tab" data-tab="rf">Renda Fixa</div>
       </div>
 
@@ -311,11 +324,11 @@
           <div style="flex:1">
             <div style="font-weight:600;margin-bottom:2px">Importar extrato da B3</div>
             <div style="font-size:12px;color:var(--text-sec)">
-              Baixe o CSV em <em>Portal do Investidor → Extrato → Movimentações</em> e importe aqui.
+              Baixe o CSV ou XLS em <em>Portal do Investidor → Extrato → Movimentações</em> e importe aqui.
             </div>
           </div>
-          <button id="btn-import-csv" class="btn btn-ghost">Importar CSV</button>
-          <input id="csv-file-input" type="file" accept=".csv,.xlsx" style="display:none">
+          <button id="btn-import-csv" class="btn btn-ghost">Importar Extrato</button>
+          <input id="csv-file-input" type="file" accept=".csv,.xls,.xlsx" style="display:none">
         </div>
 
         <!-- CSV Preview Modal -->
@@ -338,20 +351,30 @@
           </div>
         </div>
 
-        <div class="toolbar">
+        <div class="toolbar" id="op-toolbar-normal">
           <button id="btn-nova-op" class="btn btn-primary">＋ Registrar Operação</button>
           <div class="filter-chips" id="op-filters">
             <div class="chip active" data-filter="all">Todas</div>
             <div class="chip" data-filter="buy">Compras</div>
             <div class="chip" data-filter="sell">Vendas</div>
           </div>
+          <button id="btn-select-mode" class="btn btn-ghost" style="margin-left:auto">Selecionar</button>
+        </div>
+        <div class="toolbar" id="op-toolbar-select" style="display:none">
+          <button id="btn-cancel-select" class="btn btn-ghost">✕ Cancelar</button>
+          <span id="op-select-count" style="font-size:12px;color:var(--text-sec);margin-left:4px">0 selecionadas</span>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button id="btn-select-all-ops" class="btn btn-ghost">Selecionar todas</button>
+            <button id="btn-delete-selected" class="btn btn-danger" disabled>🗑 Deletar selecionadas</button>
+          </div>
         </div>
 
         <table id="op-table">
           <thead><tr>
+            <th class="col-sel"><input type="checkbox" id="op-check-all"></th>
             <th>Data</th><th>Ticker</th><th>Tipo</th><th>Classe</th>
             <th class="right">Qtd</th><th class="right">Preço Unit.</th>
-            <th class="right">Total</th><th class="right">Corretagem</th><th></th>
+            <th class="right">Total</th><th class="right">Corretagem</th><th class="col-del"></th>
           </tr></thead>
           <tbody id="op-tbody"></tbody>
         </table>
@@ -415,6 +438,88 @@
           </div>
         </div>
       </div>
+
+      <div id="tab-proventos" class="tab-panel">
+
+        <!-- Import banner -->
+        <div style="background:var(--bg-3);border:1px solid var(--border);border-radius:8px;
+             padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <div style="font-size:20px">📥</div>
+          <div style="flex:1">
+            <div style="font-weight:600;margin-bottom:2px">Importar proventos da B3</div>
+            <div style="font-size:12px;color:var(--text-sec)">
+              Baixe o XLS em <em>Portal do Investidor → Extrato → Movimentações</em> e importe aqui.
+              Dividendos, rendimentos e JCP são importados automaticamente.
+            </div>
+          </div>
+          <button id="btn-import-prov" class="btn btn-ghost">Importar XLS</button>
+          <input id="prov-file-input" type="file" accept=".xls,.xlsx,.csv" style="display:none">
+        </div>
+
+        <!-- Preview Modal -->
+        <div id="modal-prov" style="display:none;position:fixed;inset:0;background:rgba(6,9,16,.7);
+             z-index:100;align-items:center;justify-content:center">
+          <div class="modal-box" style="max-width:740px;max-height:80vh;overflow-y:auto">
+            <div class="modal-title">Confirmar importação de proventos</div>
+            <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px" id="prov-import-summary"></p>
+            <table style="width:100%;font-size:12px">
+              <thead><tr>
+                <th><input type="checkbox" id="prov-check-all" checked></th>
+                <th>Data</th><th>Ticker</th><th>Tipo</th>
+                <th class="right">Qtd</th><th class="right">Valor/cota</th><th class="right">Total</th>
+              </tr></thead>
+              <tbody id="prov-preview-tbody"></tbody>
+            </table>
+            <div class="modal-actions">
+              <button id="btn-cancel-prov" class="btn btn-ghost">Cancelar</button>
+              <button id="btn-confirm-prov" class="btn btn-primary">Importar selecionados</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary cards -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+          <div class="card" style="padding:16px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">TOTAL RECEBIDO</div>
+            <div id="prov-total" style="font-family:var(--font-mono);font-size:20px;font-weight:700">R$ 0,00</div>
+          </div>
+          <div class="card" style="padding:16px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">ANO ATUAL</div>
+            <div id="prov-ano" style="font-family:var(--font-mono);font-size:20px;font-weight:700">R$ 0,00</div>
+          </div>
+          <div class="card" style="padding:16px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">MÊS ATUAL</div>
+            <div id="prov-mes" style="font-family:var(--font-mono);font-size:20px;font-weight:700">R$ 0,00</div>
+          </div>
+          <div class="card" style="padding:16px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">MÉDIA MENSAL</div>
+            <div id="prov-media" style="font-family:var(--font-mono);font-size:20px;font-weight:700">R$ 0,00</div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="toolbar" style="margin-bottom:12px">
+          <select id="prov-year-filter" class="form-select" style="width:140px">
+            <option value="">Todos os anos</option>
+          </select>
+          <input id="prov-ticker-filter" class="form-input" placeholder="Filtrar ticker…" style="width:160px">
+        </div>
+
+        <!-- Table -->
+        <table id="prov-table">
+          <thead><tr>
+            <th>Data</th><th>Ticker</th><th>Tipo</th>
+            <th class="right">Quantidade</th><th class="right">Valor/cota</th>
+            <th class="right">Total</th><th></th>
+          </tr></thead>
+          <tbody id="prov-tbody"></tbody>
+        </table>
+        <div id="prov-empty" style="padding:24px;text-align:center;color:var(--text-muted);display:none">
+          Nenhum provento registrado. Importe o extrato de movimentações da B3.
+        </div>
+
+      </div>
+
       <div id="tab-rf" class="tab-panel">
         <div class="toolbar">
           <button id="btn-novo-rf" class="btn btn-primary">＋ Adicionar Título</button>
@@ -496,9 +601,10 @@
   <script type="module">
     import { getOperations, saveOperation, deleteOperation, generateId,
              getFixedIncome, saveFixedIncomeTitle, deleteFixedIncomeTitle,
-             addDeposit, deleteDeposit } from './src/portfolio-store.js'
+             addDeposit, deleteDeposit,
+             getProventos, saveProvento, deleteProvento } from './src/portfolio-store.js'
     import { calcPrecoMedio, calcHoldings, projectDeposit, aggregateTitle } from './src/portfolio-engine.js'
-    import { parseB3CSV } from './src/b3-csv-parser.js'
+    import { parseB3Auto, parseB3Proventos } from './src/b3-csv-parser.js'
 
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -518,6 +624,18 @@
     const CLASS_BADGE  = { acao_br:'badge-acao', fii:'badge-fii', etf:'badge-etf', stock_intl:'badge-intl' }
 
     let _opFilter = 'all'
+    let _selectMode = false
+
+    function _updateSelectCount() {
+      const checked = document.querySelectorAll('.op-check:checked').length
+      const total   = document.querySelectorAll('.op-check').length
+      document.getElementById('op-select-count').textContent =
+        checked === 0 ? '0 selecionadas' : `${checked} de ${total} selecionadas`
+      document.getElementById('btn-delete-selected').disabled = checked === 0
+      const allBox = document.getElementById('op-check-all')
+      allBox.indeterminate = checked > 0 && checked < total
+      allBox.checked = total > 0 && checked === total
+    }
 
     function renderOperacoes() {
       const ops = getOperations()
@@ -525,10 +643,12 @@
         .sort((a, b) => b.date.localeCompare(a.date))
       const tbody = document.getElementById('op-tbody')
       const empty = document.getElementById('op-empty')
+      document.getElementById('op-table').classList.toggle('select-mode', _selectMode)
       if (!ops.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return }
       empty.style.display = 'none'
       tbody.innerHTML = ops.map(o => `
         <tr>
+          <td class="col-sel"><input type="checkbox" class="op-check" value="${o.id}"></td>
           <td class="mono">${esc(o.date)}</td>
           <td><strong>${esc(o.ticker)}</strong></td>
           <td><span class="badge ${o.type === 'buy' ? 'badge-compra' : 'badge-venda'}">
@@ -538,8 +658,25 @@
           <td class="mono right">${fBRL(o.price)}</td>
           <td class="mono right">${fBRL(o.qty * o.price)}</td>
           <td class="mono right" style="color:var(--text-muted)">${fBRL(o.fees)}</td>
-          <td><span style="cursor:pointer;color:var(--text-muted)" data-del-op="${o.id}">✕</span></td>
+          <td class="col-del"><span style="cursor:pointer;color:var(--text-muted)" data-del-op="${o.id}">✕</span></td>
         </tr>`).join('')
+      if (_selectMode) _updateSelectCount()
+    }
+
+    function _enterSelectMode() {
+      _selectMode = true
+      document.getElementById('op-toolbar-normal').style.display = 'none'
+      document.getElementById('op-toolbar-select').style.display = 'flex'
+      renderOperacoes()
+    }
+
+    function _exitSelectMode() {
+      _selectMode = false
+      document.getElementById('op-toolbar-normal').style.display = 'flex'
+      document.getElementById('op-toolbar-select').style.display = 'none'
+      document.getElementById('op-check-all').checked = false
+      document.getElementById('op-check-all').indeterminate = false
+      renderOperacoes()
     }
 
     document.getElementById('btn-nova-op').addEventListener('click', () => {
@@ -570,6 +707,33 @@
     document.getElementById('op-tbody').addEventListener('click', e => {
       const id = e.target.dataset.delOp
       if (id) { deleteOperation(id); renderOperacoes() }
+    })
+
+    document.getElementById('op-tbody').addEventListener('change', e => {
+      if (e.target.classList.contains('op-check')) _updateSelectCount()
+    })
+
+    document.getElementById('op-check-all').addEventListener('change', e => {
+      document.querySelectorAll('.op-check').forEach(cb => { cb.checked = e.target.checked })
+      _updateSelectCount()
+    })
+
+    document.getElementById('btn-select-mode').addEventListener('click', _enterSelectMode)
+    document.getElementById('btn-cancel-select').addEventListener('click', _exitSelectMode)
+
+    document.getElementById('btn-select-all-ops').addEventListener('click', () => {
+      const all = document.querySelectorAll('.op-check')
+      const allChecked = [...all].every(cb => cb.checked)
+      all.forEach(cb => { cb.checked = !allChecked })
+      _updateSelectCount()
+    })
+
+    document.getElementById('btn-delete-selected').addEventListener('click', () => {
+      const ids = [...document.querySelectorAll('.op-check:checked')].map(cb => cb.value)
+      if (!ids.length) return
+      if (!confirm(`Deletar ${ids.length} operação${ids.length > 1 ? 'ões' : ''}? Esta ação não pode ser desfeita.`)) return
+      ids.forEach(id => deleteOperation(id))
+      _exitSelectMode()
     })
 
     document.querySelectorAll('#op-filters .chip').forEach(chip => {
@@ -1044,12 +1208,22 @@
       document.getElementById('csv-file-input').click()
     }
 
+    async function readFileAsCSVText(file) {
+      const ext = file.name.split('.').pop().toLowerCase()
+      if (ext === 'csv') return file.text()
+      // XLS / XLSX — convert via SheetJS
+      const buf  = await file.arrayBuffer()
+      const wb   = XLSX.read(buf, { type: 'array' })
+      const ws   = wb.Sheets[wb.SheetNames[0]]
+      return XLSX.utils.sheet_to_csv(ws, { FS: ';' })
+    }
+
     document.getElementById('csv-file-input').addEventListener('change', async e => {
       const file = e.target.files[0]
       if (!file) return
-      const text = await file.text()
+      const text = await readFileAsCSVText(file)
       try {
-        const parsed   = parseB3CSV(text)
+        const parsed   = parseB3Auto(text)
         const existing = new Set(getOperations().map(dedupKey))
         const newOps   = parsed.filter(o => !existing.has(dedupKey(o)))
 
@@ -1104,6 +1278,154 @@
       renderOperacoes()
       alert(`${imported} operações importadas com sucesso.`)
     }
+
+    // ── Proventos ────────────────────────────────────────────────────────────
+
+    const PROV_LABELS = {
+      dividendo: 'Dividendo', rendimento: 'Rendimento', jcp: 'JCP',
+      reembolso: 'Reembolso', fracao: 'Fração', bonificacao: 'Bonificação', outro: 'Outro',
+    }
+    const PROV_BADGE = {
+      dividendo: 'badge-acao', rendimento: 'badge-rend', jcp: 'badge-jcp',
+      reembolso: '', fracao: '', bonificacao: 'badge-intl', outro: '',
+    }
+
+    function dedupProvKey(p) {
+      return `${p.date}|${p.ticker}|${p.type}|${p.qty}|${Math.round(p.total * 100)}`
+    }
+
+    let _provParsed = []
+
+    document.getElementById('btn-import-prov').onclick = () => {
+      document.getElementById('prov-file-input').click()
+    }
+
+    document.getElementById('prov-file-input').addEventListener('change', async e => {
+      const file = e.target.files[0]
+      if (!file) return
+      const text = await readFileAsCSVText(file)
+      try {
+        const parsed   = parseB3Proventos(text)
+        const existing = new Set(getProventos().map(dedupProvKey))
+        const newItems = parsed.filter(p => !existing.has(dedupProvKey(p)))
+
+        _provParsed = parsed
+        const dup = parsed.length - newItems.length
+
+        document.getElementById('prov-import-summary').textContent =
+          `${parsed.length} proventos encontrados — ${newItems.length} novos, ${dup} já existentes (pré-desmarcados).`
+
+        document.getElementById('prov-preview-tbody').innerHTML = parsed.map((p, i) => {
+          const isDup = existing.has(dedupProvKey(p))
+          return `<tr>
+            <td><input type="checkbox" data-prov-idx="${i}" ${isDup ? '' : 'checked'}></td>
+            <td class="mono">${esc(p.date)}</td>
+            <td><strong>${esc(p.ticker)}</strong></td>
+            <td><span class="badge ${PROV_BADGE[p.type] || ''}">${PROV_LABELS[p.type] || p.type}</span></td>
+            <td class="mono right">${p.qty}</td>
+            <td class="mono right">${fBRL(p.valuePerShare)}</td>
+            <td class="mono right">${fBRL(p.total)}</td>
+          </tr>`
+        }).join('')
+
+        document.getElementById('modal-prov').style.display = 'flex'
+      } catch (err) {
+        alert('Erro ao ler o arquivo: ' + err.message)
+      }
+      e.target.value = ''
+    })
+
+    document.getElementById('prov-check-all').addEventListener('change', e => {
+      document.querySelectorAll('[data-prov-idx]').forEach(cb => { cb.checked = e.target.checked })
+    })
+
+    document.getElementById('btn-cancel-prov').onclick = () => {
+      document.getElementById('modal-prov').style.display = 'none'
+    }
+
+    document.getElementById('btn-confirm-prov').onclick = () => {
+      const checked  = [...document.querySelectorAll('[data-prov-idx]:checked')]
+        .map(cb => parseInt(cb.dataset.provIdx))
+      const existing = new Set(getProventos().map(dedupProvKey))
+      let imported = 0
+      for (const idx of checked) {
+        const p = { ..._provParsed[idx], id: generateId() }
+        if (!existing.has(dedupProvKey(p))) {
+          saveProvento(p)
+          existing.add(dedupProvKey(p))
+          imported++
+        }
+      }
+      document.getElementById('modal-prov').style.display = 'none'
+      renderProventos()
+      alert(`${imported} proventos importados com sucesso.`)
+    }
+
+    function renderProventos() {
+      const all = getProventos()
+      const now = new Date()
+      const curYear  = now.getFullYear().toString()
+      const curMonth = `${curYear}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+      const total    = all.reduce((s, p) => s + p.total, 0)
+      const anoAtual = all.filter(p => p.date.startsWith(curYear)).reduce((s, p) => s + p.total, 0)
+      const mesAtual = all.filter(p => p.date.startsWith(curMonth)).reduce((s, p) => s + p.total, 0)
+      const months   = new Set(all.map(p => p.date.slice(0, 7)))
+      const media    = months.size > 0 ? total / months.size : 0
+
+      document.getElementById('prov-total').textContent = fBRL(total)
+      document.getElementById('prov-ano').textContent   = fBRL(anoAtual)
+      document.getElementById('prov-mes').textContent   = fBRL(mesAtual)
+      document.getElementById('prov-media').textContent = fBRL(media)
+
+      // Popula filtro de ano
+      const years   = [...new Set(all.map(p => p.date.slice(0, 4)))].sort((a, b) => b - a)
+      const yearSel = document.getElementById('prov-year-filter')
+      const prev    = yearSel.value
+      yearSel.innerHTML = '<option value="">Todos os anos</option>' +
+        years.map(y => `<option value="${y}" ${y === prev ? 'selected' : ''}>${y}</option>`).join('')
+
+      const selYear  = yearSel.value
+      const tickerQ  = (document.getElementById('prov-ticker-filter').value || '').toUpperCase().trim()
+
+      let filtered = all
+      if (selYear)  filtered = filtered.filter(p => p.date.startsWith(selYear))
+      if (tickerQ)  filtered = filtered.filter(p => p.ticker.includes(tickerQ))
+      filtered = filtered.sort((a, b) => b.date.localeCompare(a.date))
+
+      const tbody = document.getElementById('prov-tbody')
+      const empty = document.getElementById('prov-empty')
+
+      if (!filtered.length) {
+        tbody.innerHTML = ''
+        empty.style.display = 'block'
+        return
+      }
+      empty.style.display = 'none'
+      tbody.innerHTML = filtered.map(p => `
+        <tr>
+          <td class="mono">${esc(p.date)}</td>
+          <td><strong>${esc(p.ticker)}</strong></td>
+          <td><span class="badge ${PROV_BADGE[p.type] || ''}">${PROV_LABELS[p.type] || p.type}</span></td>
+          <td class="mono right">${p.qty}</td>
+          <td class="mono right">${fBRL(p.valuePerShare)}</td>
+          <td class="mono right" style="color:var(--green)">${fBRL(p.total)}</td>
+          <td><span style="cursor:pointer;color:var(--text-muted)" data-del-prov="${p.id}">✕</span></td>
+        </tr>
+      `).join('')
+    }
+
+    document.getElementById('prov-tbody').addEventListener('click', e => {
+      const id = e.target.dataset.delProv
+      if (!id) return
+      if (!confirm('Excluir este provento?')) return
+      deleteProvento(id)
+      renderProventos()
+    })
+
+    document.getElementById('prov-year-filter').addEventListener('change', renderProventos)
+    document.getElementById('prov-ticker-filter').addEventListener('input',  renderProventos)
+    document.querySelector('[data-tab="proventos"]').addEventListener('click', renderProventos)
   </script>
   <script>lucide.createIcons();</script>
 </body>

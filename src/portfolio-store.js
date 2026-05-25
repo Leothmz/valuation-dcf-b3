@@ -1,5 +1,6 @@
-const OPS_KEY = 'portfolio_operations'
-const RF_KEY = 'portfolio_fixed_income'
+const OPS_KEY  = 'portfolio_operations'
+const RF_KEY   = 'portfolio_fixed_income'
+const PROV_KEY = 'portfolio_proventos'
 
 function _read(key) {
   try {
@@ -63,4 +64,20 @@ export function deleteDeposit(titleId, depositId) {
   if (!title) return
   title.deposits = title.deposits.filter(d => d.id !== depositId)
   _write(RF_KEY, titles)
+}
+
+export function getProventos() {
+  return _read(PROV_KEY)
+}
+
+export function saveProvento(p) {
+  const list = _read(PROV_KEY)
+  const idx = list.findIndex(x => x.id === p.id)
+  if (idx >= 0) list[idx] = p
+  else list.push(p)
+  _write(PROV_KEY, list)
+}
+
+export function deleteProvento(id) {
+  _write(PROV_KEY, _read(PROV_KEY).filter(p => p.id !== id))
 }

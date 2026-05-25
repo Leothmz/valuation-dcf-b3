@@ -1,6 +1,6 @@
 // tests/js/b3-csv-parser.test.js
 import { describe, it, expect } from 'vitest'
-import { parseB3CSV, inferAssetClass } from '../../src/b3-csv-parser.js'
+import { parseB3CSV, parseB3Movimentacoes, inferAssetClass } from '../../src/b3-csv-parser.js'
 
 const SAMPLE_CSV = `Produto;Data do Negócio;Tipo de Movimentação;Código de Negociação;Quantidade;Preço unitário;Valor da Operação
 Ações;15/01/2024;Compra;WEGE3;100;"34,20";"3.420,00"
@@ -40,6 +40,43 @@ describe('parseB3CSV', () => {
   it('sets currency to BRL', () => {
     const ops = parseB3CSV(SAMPLE_CSV)
     ops.forEach(o => expect(o.currency).toBe('BRL'))
+  })
+})
+
+// XLSX prices arrive with US decimal format ("21.59") — parseBRNumber must not strip the dot
+const SAMPLE_CSV_XLSX_PRICES = `Produto;Data do Negócio;Tipo de Movimentação;Código de Negociação;Quantidade;Preço unitário;Valor da Operação
+Ações;15/01/2024;Compra;WEGE3;100;34.20;3420.00
+FII;10/03/2024;Compra;XPLG11;30;98.40;2952.00`
+
+describe('parseB3CSV — US-decimal prices (XLSX via SheetJS)', () => {
+  it('parses price 34.20 correctly (not 3420)', () => {
+    const ops = parseB3CSV(SAMPLE_CSV_XLSX_PRICES)
+    expect(ops.find(o => o.ticker === 'WEGE3').price).toBeCloseTo(34.20)
+  })
+  it('parses price 98.40 correctly (not 9840)', () => {
+    const ops = parseB3CSV(SAMPLE_CSV_XLSX_PRICES)
+    expect(ops.find(o => o.ticker === 'XPLG11').price).toBeCloseTo(98.40)
+  })
+})
+
+// B3 exports "Debito"/"Credito" without accent in the Entrada/Saída column
+const SAMPLE_MOV_CSV = `Entrada/Saída;Data;Movimentação;Produto;Instituição;Quantidade;Preço unitário;Valor da Operação
+Debito;15/01/2024;Transferência - Liquidação;WEGE3 - WEG SA;XP;100;34,20;3.420,00
+Debito;10/03/2024;Transferência - Liquidação;XPLG11 - XP LOG;XP;30;98,40;2.952,00`
+
+describe('parseB3Movimentacoes', () => {
+  it('parses buy correctly', () => {
+    const ops = parseB3Movimentacoes(SAMPLE_MOV_CSV)
+    const wege = ops.find(o => o.ticker === 'WEGE3')
+    expect(wege.type).toBe('buy')
+    expect(wege.qty).toBe(100)
+    expect(wege.price).toBeCloseTo(34.20)
+  })
+  it('handles BR price with thousands separator "2.159,00"', () => {
+    const csv = `Entrada/Saída;Data;Movimentação;Produto;Instituição;Quantidade;Preço unitário;Valor da Operação
+Debito;11/05/2026;Transferência - Liquidação;BBAS3F - BB SA;XP;3;2.159,00;6.477,00`
+    const ops = parseB3Movimentacoes(csv)
+    expect(ops[0].price).toBeCloseTo(2159)
   })
 })
 
