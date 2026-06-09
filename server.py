@@ -43,7 +43,7 @@ BASE_DIR = Path(__file__).parent
 
 # ── Rate limiter ────────────────────────────────────────────────────
 _rate_limit_lock = threading.Lock()
-_rate_windows: dict = collections.defaultdict(list)
+_rate_windows: dict = collections.defaultdict(collections.deque)
 RATE_LIMIT_REQUESTS = 60
 RATE_LIMIT_WINDOW = 60.0
 
@@ -53,10 +53,13 @@ def _check_rate_limit(ip: str) -> bool:
         window = _rate_windows[ip]
         cutoff = now - RATE_LIMIT_WINDOW
         while window and window[0] < cutoff:
-            window.pop(0)
+            window.popleft()
         if len(window) >= RATE_LIMIT_REQUESTS:
             return False
-        window.append(now)
+        if not window:
+            # clean up empty buckets to prevent memory leak
+            del _rate_windows[ip]
+        _rate_windows[ip].append(now)
         return True
 
 # ── B3 tickers ─────────────────────────────────────────────────────
@@ -969,18 +972,20 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
 
     def do_GET(self):
-        ip = self.client_address[0]
-        if not _check_rate_limit(ip):
-            body = json.dumps({"error": "Too Many Requests"}).encode()
-            self.send_response(429)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.end_headers()
-            self.wfile.write(body)
-            return
-
         path = urllib.parse.urlparse(self.path).path
+
+        if path.startswith("/api/"):
+            ip = self.client_address[0]
+            if not _check_rate_limit(ip):
+                body = json.dumps({"code": "RATE_LIMITED", "error": "Too Many Requests"}).encode()
+                self.send_response(429)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Retry-After", str(int(RATE_LIMIT_WINDOW)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
 
         if path == "/" or path == "":
             self.send_response(302)

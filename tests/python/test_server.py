@@ -372,3 +372,16 @@ class TestRateLimiter(unittest.TestCase):
         for _ in range(server.RATE_LIMIT_REQUESTS):
             server._check_rate_limit("1.2.3.4")
         self.assertTrue(server._check_rate_limit("5.6.7.8"))
+
+    def test_window_expiry_allows_new_requests(self):
+        import unittest.mock
+        with unittest.mock.patch('server.time') as mock_time:
+            mock_time.time.return_value = 0.0
+            for _ in range(server.RATE_LIMIT_REQUESTS):
+                server._check_rate_limit("1.2.3.4")
+            # limit hit at t=0
+            self.assertFalse(server._check_rate_limit("1.2.3.4"))
+            # advance time beyond window
+            mock_time.time.return_value = server.RATE_LIMIT_WINDOW + 1.0
+            # old requests have expired — should be allowed again
+            self.assertTrue(server._check_rate_limit("1.2.3.4"))
