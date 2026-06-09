@@ -1058,25 +1058,28 @@ async function loadRanking() {
   showProgress(true);
   renderTable();
 
-  for (let i = 0; i < S.tickers.length; i += BATCH_SIZE) {
-    if (S.abortLoad) break;
+  try {
+    const res = await fetch(`/api/batch-fundamentals?tickers=${S.tickers.join(',')}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const batch = await res.json();
 
-    const batch   = S.tickers.slice(i, i + BATCH_SIZE);
-    const results = await Promise.allSettled(batch.map(t => fetchFundamentals(t)));
-
-    results.forEach((r, idx) => {
+    for (const ticker of S.tickers) {
       S.loadDone++;
-      if (r.status === 'fulfilled') {
-        S.stocks.push(r.value);
+      const data = batch[ticker];
+      if (data && !data.code) {
+        S.cache[ticker] = { data, ts: Date.now() };
+        S.stocks.push(data);
       } else {
-        console.warn(`[ranking] falha ${batch[idx]}:`, r.reason?.message);
+        console.warn(`[ranking] falha ${ticker}:`, data?.code);
       }
-    });
+    }
 
     updateProgressUI();
     applyPipeline();
     renderTable();
     saveCache();
+  } catch (err) {
+    console.error('[ranking] batch fetch error:', err);
   }
 
   S.loading = false;

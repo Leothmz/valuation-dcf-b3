@@ -5,6 +5,7 @@ Serve arquivos estáticos + API de dados via yfinance (gratuito, sem token)
 """
 
 import datetime, json, os, sys, time, urllib.parse, urllib.request, re
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse, parse_qs
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
@@ -15,6 +16,18 @@ except ImportError:
     yf = None
 
 PORT = int(os.environ.get('PORT', 8000))
+
+_api_cache: dict = {}
+_API_CACHE_TTL = 1800  # 30 min
+
+def _cache_get(key: str):
+    entry = _api_cache.get(key)
+    if entry and time.time() - entry[0] < _API_CACHE_TTL:
+        return entry[1]
+    return None
+
+def _cache_set(key: str, data: dict):
+    _api_cache[key] = (time.time(), data)
 BASE_DIR = Path(__file__).parent
 
 # ── B3 tickers ─────────────────────────────────────────────────────
@@ -290,6 +303,10 @@ def get_stock_data(ticker: str) -> dict:
 
 def get_fundamentals(ticker: str) -> dict:
     """Returns extended fundamental data for screening and ranking."""
+    cached = _cache_get(f"fund:{ticker.upper()}")
+    if cached is not None:
+        return cached
+
     try:
         import yfinance as yf
     except ImportError:
@@ -375,7 +392,7 @@ def get_fundamentals(ticker: str) -> dict:
     setor    = info.get("sector")
     subsetor = info.get("industry")
 
-    return {
+    result = {
         "ticker":              ticker.upper(),
         "name":                info.get("longName") or info.get("shortName") or ticker,
         "price":               _r(price),
@@ -400,6 +417,8 @@ def get_fundamentals(ticker: str) -> dict:
         "fiftyTwoWeekHigh":    info.get("fiftyTwoWeekHigh"),
         "fiftyTwoWeekLow":     info.get("fiftyTwoWeekLow"),
     }
+    _cache_set(f"fund:{ticker.upper()}", result)
+    return result
 
 
 def _r(v, d=2):
@@ -723,6 +742,10 @@ def _normalize_fii_segmento(raw: str) -> str | None:
 
 def get_fii_data(ticker: str) -> dict:
     """Fetch FII data from yfinance + statusinvest scraping."""
+    cached = _cache_get(f"fii:{ticker.upper()}")
+    if cached is not None:
+        return cached
+
     try:
         import yfinance as yf
     except ImportError:
@@ -820,7 +843,7 @@ def get_fii_data(ticker: str) -> dict:
     except Exception:
         pass
     result["dividends"] = dividends_list
-
+    _cache_set(f"fii:{ticker.upper()}", result)
     return result
 
 
@@ -953,6 +976,28 @@ class Handler(SimpleHTTPRequestHandler):
         elif path == "/api/b3-tickers":
             tickers = get_b3_tickers()
             self._json({"tickers": tickers, "count": len(tickers)})
+        elif path.startswith("/api/batch-fundamentals"):
+            qs = parse_qs(urlparse(self.path).query)
+            raw = qs.get("tickers", [""])[0]
+            tickers = [t.strip() for t in raw.split(",") if t.strip()]
+            if not tickers:
+                self.send_error(400, "tickers param required")
+                return
+            print(f"[API] batch-fundamentals → {len(tickers)} tickers")
+            with ThreadPoolExecutor(max_workers=min(len(tickers), 20)) as ex:
+                results = dict(zip(tickers, ex.map(get_fundamentals, tickers)))
+            self._json(results)
+        elif path.startswith("/api/batch-fii"):
+            qs = parse_qs(urlparse(self.path).query)
+            raw = qs.get("tickers", [""])[0]
+            tickers = [t.strip() for t in raw.split(",") if t.strip()]
+            if not tickers:
+                self.send_error(400, "tickers param required")
+                return
+            print(f"[API] batch-fii → {len(tickers)} tickers")
+            with ThreadPoolExecutor(max_workers=min(len(tickers), 20)) as ex:
+                results = dict(zip(tickers, ex.map(get_fii_data, tickers)))
+            self._json(results)
         else:
             super().do_GET()
 

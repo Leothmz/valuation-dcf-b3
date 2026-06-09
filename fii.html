@@ -420,17 +420,13 @@
         }
 
         const allTickers = [...new Set([...FII_TICKERS, ...S.customTickers])];
-        const BATCH = 10;
-        const results = [];
-        for (let i = 0; i < allTickers.length; i += BATCH) {
-          const batch = allTickers.slice(i, i + BATCH);
-          const batchResults = await Promise.allSettled(batch.map(fetchFii));
-          results.push(...batchResults);
-          setCountLabel(`Carregando... ${Math.min(i + BATCH, allTickers.length)}/${allTickers.length}`);
-        }
-        S.fiis = results
-          .filter(r => r.status === 'fulfilled' && !r.value.code)
-          .map(r => r.value);
+        setCountLabel(`Carregando...`);
+        const res = await fetch(`/api/batch-fii?tickers=${allTickers.join(',')}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const batchData = await res.json();
+        S.fiis = allTickers
+          .map(t => batchData[t])
+          .filter(d => d && !d.code);
 
         if (S.fiis.length > 0) {
           try {
