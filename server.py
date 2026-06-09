@@ -14,7 +14,7 @@ try:
 except ImportError:
     yf = None
 
-PORT = 8000
+PORT = int(os.environ.get('PORT', 8000))
 BASE_DIR = Path(__file__).parent
 
 # ── B3 tickers ─────────────────────────────────────────────────────
