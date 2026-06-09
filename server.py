@@ -4,7 +4,7 @@ Servidor local - Valuation DCF B3
 Serve arquivos estáticos + API de dados via yfinance (gratuito, sem token)
 """
 
-import datetime, json, os, sys, time, urllib.parse, urllib.request, re
+import collections, datetime, json, os, sys, time, threading, urllib.parse, urllib.request, re
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse, parse_qs
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
@@ -40,6 +40,24 @@ def _cache_set(key: str, data: dict):
             del _api_cache[k]
     _api_cache[key] = (now, data)
 BASE_DIR = Path(__file__).parent
+
+# ── Rate limiter ────────────────────────────────────────────────────
+_rate_limit_lock = threading.Lock()
+_rate_windows: dict = collections.defaultdict(list)
+RATE_LIMIT_REQUESTS = 60
+RATE_LIMIT_WINDOW = 60.0
+
+def _check_rate_limit(ip: str) -> bool:
+    now = time.time()
+    with _rate_limit_lock:
+        window = _rate_windows[ip]
+        cutoff = now - RATE_LIMIT_WINDOW
+        while window and window[0] < cutoff:
+            window.pop(0)
+        if len(window) >= RATE_LIMIT_REQUESTS:
+            return False
+        window.append(now)
+        return True
 
 # ── B3 tickers ─────────────────────────────────────────────────────
 _B3_FALLBACK = [
@@ -951,6 +969,17 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
 
     def do_GET(self):
+        ip = self.client_address[0]
+        if not _check_rate_limit(ip):
+            body = json.dumps({"error": "Too Many Requests"}).encode()
+            self.send_response(429)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
         path = urllib.parse.urlparse(self.path).path
 
         if path == "/" or path == "":

@@ -2,6 +2,7 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 import pytest
+import unittest
 import unittest.mock as mock
 import pandas as pd
 
@@ -350,3 +351,24 @@ def test_fii_dividends_limited_to_24(mock_si, mock_ticker_cls, mock_fund):
     mock_ticker_cls.return_value = _make_fii_mock_ticker_with_divs(big_divs)
     result = server.get_fii_data("HGLG11")
     assert len(result["dividends"]) <= 24
+
+
+# ── Rate limiter ──────────────────────────────────────────────────────
+
+class TestRateLimiter(unittest.TestCase):
+    def setUp(self):
+        server._rate_windows.clear()
+
+    def test_allows_requests_within_limit(self):
+        for _ in range(server.RATE_LIMIT_REQUESTS):
+            self.assertTrue(server._check_rate_limit("1.2.3.4"))
+
+    def test_blocks_request_over_limit(self):
+        for _ in range(server.RATE_LIMIT_REQUESTS):
+            server._check_rate_limit("1.2.3.4")
+        self.assertFalse(server._check_rate_limit("1.2.3.4"))
+
+    def test_different_ips_are_independent(self):
+        for _ in range(server.RATE_LIMIT_REQUESTS):
+            server._check_rate_limit("1.2.3.4")
+        self.assertTrue(server._check_rate_limit("5.6.7.8"))
