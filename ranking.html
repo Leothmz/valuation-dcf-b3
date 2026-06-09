@@ -1058,30 +1058,39 @@ async function loadRanking() {
   showProgress(true);
   renderTable();
 
-  try {
-    const res = await fetch(`/api/batch-fundamentals?tickers=${S.tickers.join(',')}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const batch = await res.json();
+  const CHUNK = 40;
+  const tickers = S.tickers;
 
-    for (const ticker of S.tickers) {
-      S.loadDone++;
-      const data = batch[ticker];
-      if (data && !data.code) {
-        S.cache[ticker] = { data, ts: Date.now() };
-        S.stocks.push(data);
-      } else {
-        console.warn(`[ranking] falha ${ticker}:`, data?.code);
+  for (let i = 0; i < tickers.length; i += CHUNK) {
+    if (S.abortLoad) break;
+    const chunk = tickers.slice(i, i + CHUNK);
+    try {
+      const res = await fetch(`/api/batch-fundamentals?tickers=${chunk.join(',')}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const batch = await res.json();
+
+      for (const ticker of chunk) {
+        S.loadDone++;
+        const data = batch[ticker];
+        if (data && !data.code) {
+          S.cache[ticker] = { data, ts: Date.now() };
+          S.stocks.push(data);
+        } else {
+          console.warn(`[ranking] falha ${ticker}:`, data?.code);
+        }
       }
-    }
 
-    updateProgressUI();
-    applyPipeline();
-    renderTable();
-    saveCache();
-  } catch (err) {
-    console.error('[ranking] batch fetch error:', err);
+      updateProgressUI();
+      applyPipeline();
+      renderTable();
+    } catch (err) {
+      console.error(`[ranking] chunk ${Math.floor(i / CHUNK) + 1} error:`, err);
+      S.loadDone += chunk.length;
+      updateProgressUI();
+    }
   }
 
+  saveCache();
   S.loading = false;
   setLoadBtn(false);
   showProgress(false);

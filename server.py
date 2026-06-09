@@ -18,7 +18,8 @@ except ImportError:
 PORT = int(os.environ.get('PORT', 8000))
 
 _api_cache: dict = {}
-_API_CACHE_TTL = 1800  # 30 min
+_API_CACHE_TTL = 1800   # 30 min
+_CACHE_MAX_ENTRIES = 300
 
 def _cache_get(key: str):
     entry = _api_cache.get(key)
@@ -27,7 +28,17 @@ def _cache_get(key: str):
     return None
 
 def _cache_set(key: str, data: dict):
-    _api_cache[key] = (time.time(), data)
+    now = time.time()
+    # Evict expired entries
+    expired = [k for k, (ts, _) in _api_cache.items() if now - ts >= _API_CACHE_TTL]
+    for k in expired:
+        del _api_cache[k]
+    # If still over limit, drop oldest 50
+    if len(_api_cache) >= _CACHE_MAX_ENTRIES:
+        oldest = sorted(_api_cache.items(), key=lambda x: x[1][0])[:50]
+        for k, _ in oldest:
+            del _api_cache[k]
+    _api_cache[key] = (now, data)
 BASE_DIR = Path(__file__).parent
 
 # ── B3 tickers ─────────────────────────────────────────────────────
@@ -422,8 +433,14 @@ def get_fundamentals(ticker: str) -> dict:
 
 
 def _r(v, d=2):
-    """Round a float value; returns None for None/NaN."""
-    return round(v, d) if v is not None and v == v else None
+    """Round a float value; returns None for None/NaN/non-numeric."""
+    if v is None:
+        return None
+    try:
+        fv = float(v)
+        return round(fv, d) if fv == fv else None
+    except (TypeError, ValueError):
+        return None
 
 
 # ── Fundamentus FII cache ───────────────────────────────────────────
@@ -928,6 +945,7 @@ def get_portfolio_history(tickers, dates):
     return result
 
 
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
@@ -984,7 +1002,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_error(400, "tickers param required")
                 return
             print(f"[API] batch-fundamentals → {len(tickers)} tickers")
-            with ThreadPoolExecutor(max_workers=min(len(tickers), 20)) as ex:
+            with ThreadPoolExecutor(max_workers=min(len(tickers), 4)) as ex:
                 results = dict(zip(tickers, ex.map(get_fundamentals, tickers)))
             self._json(results)
         elif path.startswith("/api/batch-fii"):
@@ -995,7 +1013,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_error(400, "tickers param required")
                 return
             print(f"[API] batch-fii → {len(tickers)} tickers")
-            with ThreadPoolExecutor(max_workers=min(len(tickers), 20)) as ex:
+            with ThreadPoolExecutor(max_workers=min(len(tickers), 4)) as ex:
                 results = dict(zip(tickers, ex.map(get_fii_data, tickers)))
             self._json(results)
         else:
