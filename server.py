@@ -4,7 +4,7 @@ Servidor local - Valuation DCF B3
 Serve arquivos estáticos + API de dados via yfinance (gratuito, sem token)
 """
 
-import datetime, json, os, sys, time, urllib.parse, urllib.request, re
+import collections, datetime, json, os, sys, time, threading, urllib.parse, urllib.request, re
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse, parse_qs
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
@@ -40,6 +40,27 @@ def _cache_set(key: str, data: dict):
             del _api_cache[k]
     _api_cache[key] = (now, data)
 BASE_DIR = Path(__file__).parent
+
+# ── Rate limiter ────────────────────────────────────────────────────
+_rate_limit_lock = threading.Lock()
+_rate_windows: dict = collections.defaultdict(collections.deque)
+RATE_LIMIT_REQUESTS = 60
+RATE_LIMIT_WINDOW = 60.0
+
+def _check_rate_limit(ip: str) -> bool:
+    now = time.time()
+    with _rate_limit_lock:
+        window = _rate_windows[ip]
+        cutoff = now - RATE_LIMIT_WINDOW
+        while window and window[0] < cutoff:
+            window.popleft()
+        if len(window) >= RATE_LIMIT_REQUESTS:
+            return False
+        if not window:
+            # clean up empty buckets to prevent memory leak
+            del _rate_windows[ip]
+        _rate_windows[ip].append(now)
+        return True
 
 # ── B3 tickers ─────────────────────────────────────────────────────
 _B3_FALLBACK = [
@@ -952,6 +973,19 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = urllib.parse.urlparse(self.path).path
+
+        if path.startswith("/api/"):
+            ip = self.client_address[0]
+            if not _check_rate_limit(ip):
+                body = json.dumps({"code": "RATE_LIMITED", "error": "Too Many Requests"}).encode()
+                self.send_response(429)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Retry-After", str(int(RATE_LIMIT_WINDOW)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
 
         if path == "/" or path == "":
             self.send_response(302)

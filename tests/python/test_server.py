@@ -2,10 +2,19 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 import pytest
+import unittest
 import unittest.mock as mock
 import pandas as pd
 
 import server
+
+
+# ── Fixtures ───────────────────────────────────────────────────────
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    """Clear server cache before each test to avoid state pollution."""
+    server._api_cache.clear()
 
 
 # ── Dados de mock ──────────────────────────────────────────────────
@@ -350,3 +359,37 @@ def test_fii_dividends_limited_to_24(mock_si, mock_ticker_cls, mock_fund):
     mock_ticker_cls.return_value = _make_fii_mock_ticker_with_divs(big_divs)
     result = server.get_fii_data("HGLG11")
     assert len(result["dividends"]) <= 24
+
+
+# ── Rate limiter ──────────────────────────────────────────────────────
+
+class TestRateLimiter(unittest.TestCase):
+    def setUp(self):
+        server._rate_windows.clear()
+
+    def test_allows_requests_within_limit(self):
+        for _ in range(server.RATE_LIMIT_REQUESTS):
+            self.assertTrue(server._check_rate_limit("1.2.3.4"))
+
+    def test_blocks_request_over_limit(self):
+        for _ in range(server.RATE_LIMIT_REQUESTS):
+            server._check_rate_limit("1.2.3.4")
+        self.assertFalse(server._check_rate_limit("1.2.3.4"))
+
+    def test_different_ips_are_independent(self):
+        for _ in range(server.RATE_LIMIT_REQUESTS):
+            server._check_rate_limit("1.2.3.4")
+        self.assertTrue(server._check_rate_limit("5.6.7.8"))
+
+    def test_window_expiry_allows_new_requests(self):
+        import unittest.mock
+        with unittest.mock.patch('server.time') as mock_time:
+            mock_time.time.return_value = 0.0
+            for _ in range(server.RATE_LIMIT_REQUESTS):
+                server._check_rate_limit("1.2.3.4")
+            # limit hit at t=0
+            self.assertFalse(server._check_rate_limit("1.2.3.4"))
+            # advance time beyond window
+            mock_time.time.return_value = server.RATE_LIMIT_WINDOW + 1.0
+            # old requests have expired — should be allowed again
+            self.assertTrue(server._check_rate_limit("1.2.3.4"))

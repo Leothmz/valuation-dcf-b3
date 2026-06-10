@@ -4,3 +4,9 @@ __pycache__/
 *.pyc
 .git/
 tests/
+.claude/
+CLAUDE.md
+docs/
+start.bat
+package.json
+package-lock.json
