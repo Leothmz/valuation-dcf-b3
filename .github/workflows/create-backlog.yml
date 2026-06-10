@@ -1,0 +1,159 @@
+name: Create Backlog Issues
+on:
+  workflow_dispatch:
+
+jobs:
+  create-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Create issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = [
+              {
+                title: "feat: migrate frontend to React 19 + TypeScript + Vite",
+                body: `## User Story\nAs a developer, I want a modern frontend stack so that the codebase is maintainable, typed, and scalable.\n\n## Acceptance Criteria\n- [ ] React 19 + TypeScript configured with Vite\n- [ ] React Router v7 (SPA mode) replacing 8 separate HTML files\n- [ ] TanStack Query v5 replacing manual cache/loading/refresh logic\n- [ ] TanStack Table v8 for ranking, watchlist and carteira tables\n- [ ] Zustand v5 replacing global \`S\` objects per page\n- [ ] Tailwind CSS v4 replacing duplicated \`<style>\` blocks\n- [ ] All existing features ported (DCF, watchlist, ranking, analise, FII, carteira)\n- [ ] Vitest + React Testing Library configured\n- [ ] All existing src/ engines migrated as typed TS modules\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Scaffold Vite + React 19 + TypeScript project\n- [ ] Configure React Router v7 with routes for all 8 pages\n- [ ] Migrate design system tokens to Tailwind config\n- [ ] Set up TanStack Query client and migrate all API calls\n- [ ] Create Zustand stores for DCF, ranking, FII and carteira state\n- [ ] Migrate src/ engines to TypeScript\n- [ ] Port all pages as React components\n- [ ] Configure Vitest + RTL\n\n> **Note:** Ships together with backend migration (FastAPI). Deploy as single release.`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat: migrate backend to FastAPI + Pydantic + adapters + diskcache",
+                body: `## User Story\nAs a developer, I want a typed, modular backend so that API contracts are enforced, data sources are swappable, and cache survives restarts.\n\n## Acceptance Criteria\n- [ ] FastAPI replacing ThreadingHTTPServer\n- [ ] Pydantic models for all API responses (StockQuote, FIIData, Fundamentals, etc.)\n- [ ] Adapter layer: brapi (primary), yfinance (fallback), fundamentus, statusinvest\n- [ ] diskcache SQLite for persistent cache (TTL: quotes 5min, fundamentals 6h, CDI/FX 1h)\n- [ ] All existing endpoints ported: /api/quote, /api/fii, /api/fundamentals, /api/batch/*, /api/cdi, /api/exchange, /api/portfolio/history\n- [ ] Per-IP rate limiting preserved\n- [ ] Fly.io deployment unchanged (only entrypoint changes)\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Scaffold FastAPI app with lifespan and CORS\n- [ ] Create Pydantic response models for all endpoints\n- [ ] Implement adapter layer (brapi, yfinance, fundamentus, statusinvest)\n- [ ] Implement diskcache wrapper with TTL helpers\n- [ ] Create routers: stocks, fiis, market, portfolio\n- [ ] Create services: stock_service, fii_service\n- [ ] Migrate all business logic from server.py\n- [ ] Update Fly.io Dockerfile entrypoint\n- [ ] Update pytest tests to use FastAPI TestClient\n\n> **Note:** Ships together with frontend migration (React). Deploy as single release.`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat: mobile responsive layouts + PWA installable",
+                body: `## User Story\nAs a user, I want to use the app on my phone so that I can check valuations and my portfolio on the go.\n\n## Acceptance Criteria\n- [ ] All pages usable on 375px viewport (iPhone SE)\n- [ ] Sidebar replaced by bottom nav or hamburger on mobile\n- [ ] Ranking page: card list layout on mobile instead of dense table\n- [ ] DCF calculator: inputs stacked vertically on mobile\n- [ ] Carteira: tabs scrollable, KPI chips wrap correctly\n- [ ] Touch targets minimum 44px\n- [ ] PWA manifest with app name, icons, theme color\n- [ ] Service worker shell (installable, no offline data caching)\n- [ ] "Add to home screen" prompt works on iOS and Android\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Audit all pages at 375px, document breakpoints needed\n- [ ] Implement mobile nav (bottom bar or hamburger)\n- [ ] Responsive layouts per page using Tailwind breakpoints\n- [ ] Create PWA manifest (manifest.json)\n- [ ] Register service worker shell\n- [ ] Test install flow on iOS Safari and Android Chrome\n\n> **Note:** All pages ship together as a single release — do not deploy partial mobile support.`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(carteira): add Proventos tab — history + projection",
+                body: `## User Story\nAs an investor, I want to track dividends received and estimate future income so that I can evaluate the passive income from my portfolio.\n\n## Acceptance Criteria\n- [ ] New "Proventos" tab in Carteira\n- [ ] Historical view: payments fetched from API (brapi/yfinance) for each held ticker\n- [ ] CSV import: extend B3 CSV parser to support "Proventos Recebidos" format; API data as base, CSV as complement/correction\n- [ ] Projection: estimated future income based on current holdings x DPA\n- [ ] Total received per ticker, per year, and grand total\n- [ ] Yield on cost per asset\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Extend B3 CSV parser for proventos format\n- [ ] Add /api/dividends/<ticker> endpoint or reuse existing data\n- [ ] Build Proventos tab React component\n- [ ] Implement projection calculation (holdings x DPA)\n- [ ] Add unit tests for parser extension`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(carteira): IR/DARF calculator — capital gains + monthly dashboard + IRPF summary",
+                body: `## User Story\nAs an investor, I want to calculate capital gains tax automatically so that I know how much DARF to pay each month and have a summary for my annual IRPF declaration.\n\n## Acceptance Criteria\n- [ ] Capital gain calculated per sell operation: (sell price - avg cost) x qty\n- [ ] Correct tax rates applied: 15% swing trade, 20% day trade\n- [ ] R$20k/month exemption for stocks (nao se aplica a FIIs)\n- [ ] Accumulated loss compensation across months\n- [ ] Monthly dashboard: gross gain, exemption, taxable amount, DARF to pay\n- [ ] IRPF annual summary: positions on 31/12, exempt income, taxable gains by month\n- [ ] Split/inplit events accounted for in avg cost\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Implement IR calculation engine in src/ir-engine.ts\n- [ ] Handle exemption logic, day trade detection, loss carryforward\n- [ ] Build monthly dashboard UI component\n- [ ] Build IRPF summary view\n- [ ] Unit tests for all edge cases (exemption boundary, loss compensation, FII rate)`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(carteira): allocation targets by category + rebalancing suggestions",
+                body: `## User Story\nAs an investor, I want to set target allocations by asset category so that I can see how far my portfolio deviates and get rebalancing suggestions.\n\n## Acceptance Criteria\n- [ ] Categories: Acoes BR, FIIs, Renda Fixa, Internacional, Criptoativos, Caixa\n- [ ] User can set % target per category\n- [ ] Visual deviation: actual vs target (bar or gauge chart)\n- [ ] Rebalancing suggestion: how much to buy/sell per category to reach target\n- [ ] Targets persisted in localStorage\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Define category classification logic per asset type\n- [ ] Build allocation target input UI\n- [ ] Implement deviation calculation\n- [ ] Build rebalancing suggestion engine\n- [ ] Persist targets in Zustand store + localStorage`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(carteira): crypto assets — new category with live quotes and IR",
+                body: `## User Story\nAs an investor, I want to track my crypto holdings alongside stocks and FIIs so that I have a complete portfolio view.\n\n## Acceptance Criteria\n- [ ] New crypto category in Carteira\n- [ ] Live quotes via CoinGecko API (BTC, ETH, and top 50 by market cap)\n- [ ] Buy/sell operations tracked with BRL cost basis\n- [ ] IR calculation: no R$20k exemption, 15% on all gains above R$35k/month\n- [ ] Integrated into Visao Geral allocation chart\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Add CoinGecko adapter to FastAPI backend\n- [ ] Extend portfolio store for crypto operations\n- [ ] Build crypto section UI in Carteira\n- [ ] Implement crypto-specific IR rules\n- [ ] Unit tests for crypto IR edge cases`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(carteira): individual asset performance — simple return + TWRR side-by-side",
+                body: `## User Story\nAs an investor, I want to see the performance of each asset individually so that I can identify which positions are contributing most to my portfolio returns.\n\n## Acceptance Criteria\n- [ ] Per-asset return visible in Ativos tab\n- [ ] Simple return: (current price - avg cost) / avg cost\n- [ ] TWRR per asset: same time-weighted calculation applied individually\n- [ ] Both metrics shown side-by-side, with TWRR expandable\n- [ ] Sortable by return (both metrics)\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Extend calcTWRR to operate per-ticker\n- [ ] Update Ativos tab to display both return metrics\n- [ ] Add sort by return to Ativos table\n- [ ] Unit tests for per-asset TWRR`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(dcf): bull/base/bear scenario analysis",
+                body: `## User Story\nAs an investor, I want to model optimistic and pessimistic scenarios alongside my base case so that I can understand the range of intrinsic values for a stock.\n\n## Acceptance Criteria\n- [ ] Three columns in DCF results: pessimista / base / otimista\n- [ ] Bull and bear scenarios derived from base premises automatically\n- [ ] Each field individually editable per scenario\n- [ ] Three fair prices displayed side-by-side\n- [ ] Scenarios saved to watchlist alongside base case\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Extend DCF Zustand store for 3 scenario states\n- [ ] Auto-derive bull/bear from base (g x 1.3 / g x 0.7 as defaults)\n- [ ] Build scenario columns UI\n- [ ] Update watchlist save/restore to include scenarios\n- [ ] Unit tests for scenario derivation logic`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(dcf): fair price history — log of saves with evolution chart",
+                body: `## User Story\nAs an investor, I want to see how the fair price of a stock has evolved over time so that I can track how my assumptions have changed.\n\n## Acceptance Criteria\n- [ ] Every save appends to a history log: date, premises snapshot, fair price\n- [ ] History visible in watchlist row (expandable) and analise page\n- [ ] Line chart showing fair price evolution over time\n- [ ] History persisted in localStorage per ticker\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Extend watchlist data structure with history array\n- [ ] Append on every save (not overwrite)\n- [ ] Build history chart component (TanStack Charts or Recharts)\n- [ ] Migrate existing localStorage entries gracefully`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(dcf): printable analysis export — HTML print view",
+                body: `## User Story\nAs an investor, I want to export a clean printable summary of my DCF analysis so that I can save or share it.\n\n## Acceptance Criteria\n- [ ] Print view accessible via button on DCF calculator\n- [ ] Includes: company name, date, premises used, DCF table, fair price, scenarios if present\n- [ ] CSS @media print optimized (no sidebar, no nav, clean layout)\n- [ ] Works via browser Ctrl+P / Print to PDF\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Create PrintView React component\n- [ ] Add print CSS (hide nav, expand tables, page breaks)\n- [ ] Add "Exportar" button to DCF calculator\n- [ ] Test print output on Chrome and Edge`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(dcf): export watchlist to CSV/Excel",
+                body: `## User Story\nAs an investor, I want to export all my saved valuations to a spreadsheet so that I always have a backup and can analyse the data in Excel.\n\n## Acceptance Criteria\n- [ ] "Exportar" button on watchlist page\n- [ ] CSV download with columns: ticker, name, fair price, current price, upside, premises (g, disc, payout, ROE), saved date\n- [ ] UTF-8 BOM encoded (Excel-compatible)\n- [ ] Filename: valuations-YYYY-MM-DD.csv\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Implement CSV serializer for watchlist entries\n- [ ] Add download trigger (Blob + URL.createObjectURL)\n- [ ] Add "Exportar CSV" button to watchlist header\n- [ ] Unit test CSV output format`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(dcf): investment thesis notes per ticker — pre-filled with premises",
+                body: `## User Story\nAs an investor, I want to write notes about my investment thesis for each stock so that I remember why I valued it when I revisit months later.\n\n## Acceptance Criteria\n- [ ] Free-text notes field per ticker in watchlist\n- [ ] Field pre-filled on first save with a premises summary (g, disc, payout, ROE, fair price)\n- [ ] Editable, saved alongside watchlist entry\n- [ ] Notes visible in watchlist row (collapsed) and analise page (expanded)\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Extend watchlist store with notes field\n- [ ] Auto-generate premises summary string on save\n- [ ] Build notes editor UI (textarea, inline in watchlist row)\n- [ ] Display notes in analise DCF card`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(ranking): side-by-side stock comparison",
+                body: `## User Story\nAs an investor, I want to compare 2-3 stocks side-by-side so that I can make better decisions between companies in the same sector.\n\n## Acceptance Criteria\n- [ ] Select 2-3 tickers from ranking or search\n- [ ] Comparison view: each ticker in a column\n- [ ] Rows: all fundamental indicators + fair prices by all 4 methods\n- [ ] Highlight best value per metric (green) and worst (red)\n- [ ] Shareable URL with tickers as query params\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Build /compare route in React Router\n- [ ] Implement ticker selector (from ranking table checkboxes)\n- [ ] Build comparison table component\n- [ ] Implement best/worst highlight logic\n- [ ] Shareable URL encoding`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(ranking): price alerts — in-app + push notification when price hits fair price",
+                body: `## User Story\nAs an investor, I want to be notified when a stock price enters the fair value range so that I don't miss buying opportunities.\n\n## Acceptance Criteria\n- [ ] Alert triggered when current price <= saved fair price in watchlist\n- [ ] In-app: badge/banner visible on next visit\n- [ ] Push notification: browser push opt-in, fires even with site closed\n- [ ] Push requires service worker (already planned in PWA card)\n- [ ] User can enable/disable alerts per ticker\n- [ ] Alert history viewable in watchlist\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Implement alert check logic on price refresh\n- [ ] Build in-app notification banner component\n- [ ] Implement Web Push subscription flow\n- [ ] Store push subscription server-side (FastAPI)\n- [ ] Implement server-side push trigger on price check\n- [ ] Per-ticker alert toggle UI`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(ranking): custom tickers — add/remove stocks from ranking list via UI",
+                body: `## User Story\nAs an investor, I want to add stocks not in the default ranking list so that I can analyse micro-caps and other tickers I follow.\n\n## Acceptance Criteria\n- [ ] "Adicionar ticker" input in ranking page\n- [ ] Added tickers loaded alongside default list\n- [ ] Tickers persisted in localStorage\n- [ ] Remove button per custom ticker\n- [ ] Custom tickers marked with a badge to distinguish from defaults\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Build add/remove ticker UI in ranking header\n- [ ] Extend loadRanking to include custom tickers\n- [ ] Persist custom tickers in Zustand store + localStorage\n- [ ] Visual badge for custom entries`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(ux): global search — Cmd+K spotlight from any page",
+                body: `## User Story\nAs a user, I want to search for any stock from any page so that I don't need to navigate to home first.\n\n## Acceptance Criteria\n- [ ] Cmd+K (Mac) / Ctrl+K (Windows) opens spotlight from any page\n- [ ] Type ticker -> see suggestions -> Enter navigates to analise page\n- [ ] Recent searches shown when spotlight opens (empty query)\n- [ ] Escape closes spotlight\n- [ ] Works on mobile (tap search icon in nav)\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Build GlobalSearch React component (modal overlay)\n- [ ] Register Cmd+K / Ctrl+K keybinding globally\n- [ ] Implement ticker autocomplete (debounced API call or local list)\n- [ ] Store recent searches in localStorage\n- [ ] Integrate into shared layout`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(ux): onboarding — welcome modal on first visit",
+                body: `## User Story\nAs a new user, I want an overview of what the app does when I first visit so that I understand where to start.\n\n## Acceptance Criteria\n- [ ] Modal shown on first visit (never shown again after dismissed)\n- [ ] Visual overview of main features: DCF calculator, watchlist, ranking, carteira\n- [ ] "Comecar" CTA navigates to index (DCF calculator)\n- [ ] "Pular" dismisses without navigating\n- [ ] Mobile-friendly layout\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Build WelcomeModal React component\n- [ ] Persist dismissal in localStorage (onboarding_done)\n- [ ] Design feature overview layout (icons + short descriptions)\n- [ ] Add to app root (shown once, not on every page)`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(ux): keyboard shortcuts — navigation and actions",
+                body: `## User Story\nAs a power user, I want keyboard shortcuts for common actions so that I can use the app without reaching for the mouse.\n\n## Acceptance Criteria\n- [ ] Cmd+K / Ctrl+K — global search\n- [ ] Esc — close any open modal\n- [ ] S — save to watchlist (when on DCF calculator with results)\n- [ ] Arrow keys — navigate between tabs on analise/carteira pages\n- [ ] ? — open keyboard shortcuts reference panel\n- [ ] Shortcuts do not fire when focus is inside an input\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Implement global keybinding hook (useKeyBinding)\n- [ ] Register all shortcuts with context guards (no-op inside inputs)\n- [ ] Build ShortcutsPanel component (triggered by ?)\n- [ ] Document all shortcuts in ShortcutsPanel`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(ux): support page — free project, Pix + Ko-fi + GitHub Sponsors",
+                body: `## User Story\nAs a user who finds value in the tool, I want an easy way to support the project financially so that I can help cover maintenance costs.\n\n## Acceptance Criteria\n- [ ] Dedicated /apoiar page\n- [ ] Clear message: project is free, no ads, no paywalls, always will be\n- [ ] Three donation methods: Pix (BR), Ko-fi (card/international), GitHub Sponsors (recurring)\n- [ ] Pix QR code or copyable key\n- [ ] Ko-fi and GitHub Sponsors links open in new tab\n- [ ] Link to support page in sidebar and home page\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Build /apoiar React route and page component\n- [ ] Add Pix key/QR code\n- [ ] Set up Ko-fi page and add link\n- [ ] Set up GitHub Sponsors and add link\n- [ ] Add sidebar nav item and home page CTA`,
+                labels: ["feature"]
+              },
+              {
+                title: "feat(infra): health endpoint + UptimeRobot monitoring",
+                body: `## User Story\nAs a developer, I want a health endpoint and uptime monitoring so that the Fly.io instance stays warm and I am alerted when it goes down.\n\n## Acceptance Criteria\n- [ ] GET /health returns {"status": "ok", "version": "..."} with 200\n- [ ] UptimeRobot (free tier) pings /health every 5 minutes\n- [ ] Cold start avoided — instance stays warm from monitoring pings\n- [ ] Alert sent (email) if /health returns non-200 or times out\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Add GET /health endpoint to FastAPI\n- [ ] Add test for /health endpoint\n- [ ] Configure UptimeRobot monitor (document setup in CLAUDE.md)\n- [ ] Verify Fly.io instance stays warm after 24h`,
+                labels: ["feature"]
+              },
+              {
+                title: "test: scraper fixtures — HTML snapshot tests for investidor10 and statusinvest adapters",
+                body: `## User Story\nAs a developer, I want scraper tests with saved HTML fixtures so that I am alerted immediately when a source site changes its structure.\n\n## Acceptance Criteria\n- [ ] HTML fixtures saved for investidor10 and statusinvest responses\n- [ ] Adapter tests run against fixtures (no live HTTP calls)\n- [ ] Tests fail loudly when parsing returns None/empty for expected fields\n- [ ] Fixture update script documented\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Save HTML fixtures for investidor10 net income page\n- [ ] Save HTML fixtures for statusinvest FII page\n- [ ] Write pytest tests for each adapter using fixtures\n- [ ] Assert all expected fields are non-None\n- [ ] Document fixture refresh process`,
+                labels: ["feature"]
+              },
+              {
+                title: "test: E2E with Playwright — critical user flows",
+                body: `## User Story\nAs a developer, I want end-to-end browser tests for critical flows so that regressions are caught before they reach production.\n\n## Acceptance Criteria\n- [ ] Flow 1: search ticker -> DCF calculator loads with data\n- [ ] Flow 2: adjust premises -> fair price recalculates -> save to watchlist\n- [ ] Flow 3: import B3 CSV -> operations appear in Carteira\n- [ ] Flow 4: open ranking -> table loads with scores\n- [ ] Tests run in CI on every PR\n- [ ] Tests run against local dev server (not production)\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Install and configure Playwright\n- [ ] Write test for each of the 4 flows\n- [ ] Add Playwright step to CI workflow\n- [ ] Mock API calls in tests to avoid yfinance/brapi dependency`,
+                labels: ["feature"]
+              },
+              {
+                title: "test: React component tests with React Testing Library",
+                body: `## User Story\nAs a developer, I want component-level tests for React UI so that I can refactor with confidence and catch rendering bugs early.\n\n## Acceptance Criteria\n- [ ] RTL configured with Vitest\n- [ ] Core components tested: DCF results display, watchlist table row, ranking row, carteira KPI chips\n- [ ] Tests cover: correct data rendering, loading state, error state\n- [ ] Coverage report generated on CI\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Install @testing-library/react and @testing-library/user-event\n- [ ] Configure jsdom environment in vitest.config.ts\n- [ ] Write tests for DCF result card\n- [ ] Write tests for watchlist row (loading, error, data states)\n- [ ] Write tests for ranking table row\n- [ ] Add coverage report to CI`,
+                labels: ["feature"]
+              },
+              {
+                title: "chore(infra): configure Netlify preview deployments per PR",
+                body: `## User Story\nAs a developer, I want each pull request to get a preview URL so that I can review visual changes before merging.\n\n## Acceptance Criteria\n- [ ] Netlify automatically deploys a preview for every PR\n- [ ] Preview URL posted as a PR comment\n- [ ] Preview uses the production backend (Fly.io)\n- [ ] Preview is destroyed when PR is closed/merged\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Enable "Deploy Previews" in Netlify site settings\n- [ ] Configure netlify.toml if not present\n- [ ] Verify proxy rewrites work in preview context\n- [ ] Test preview URL on a sample PR`,
+                labels: ["feature"]
+              },
+              {
+                title: "chore(infra): Dependabot — automated dependency updates for Python + Node",
+                body: `## User Story\nAs a developer, I want dependency updates proposed automatically so that the project stays secure without manual monitoring.\n\n## Acceptance Criteria\n- [ ] Dependabot configured for npm (Node.js dependencies)\n- [ ] Dependabot configured for pip (Python dependencies)\n- [ ] PRs opened weekly for patch and minor updates\n- [ ] CI runs on Dependabot PRs\n- [ ] Major version updates grouped into a single PR\n\n## Definition of Done\n- [ ] npm test passing\n- [ ] pytest passing\n- [ ] GitHub Actions CI green on PR\n- [ ] No console.log / debug prints\n- [ ] CLAUDE.md updated if relevant new functionality\n\n## Technical Tasks\n- [ ] Create .github/dependabot.yml\n- [ ] Configure npm ecosystem (weekly, grouped majors)\n- [ ] Configure pip ecosystem (weekly, grouped majors)\n- [ ] Verify first Dependabot PRs are created within 7 days`,
+                labels: ["feature"]
+              }
+            ];
+
+            for (const issue of issues) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issue.title,
+                body: issue.body,
+                labels: issue.labels
+              });
+              console.log(`Created: ${issue.title}`);
+            }
+
+            console.log(`\nDone! Created ${issues.length} issues.`);
