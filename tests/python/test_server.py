@@ -9,6 +9,14 @@ import pandas as pd
 import server
 
 
+# ── Fixtures ───────────────────────────────────────────────────────
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    """Clear server cache before each test to avoid state pollution."""
+    server._api_cache.clear()
+
+
 # ── Dados de mock ──────────────────────────────────────────────────
 
 MOCK_PRICE = 35.50
