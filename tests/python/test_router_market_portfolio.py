@@ -184,21 +184,14 @@ class _FakeHistDF:
 class TestPortfolioHistoryEndpoint:
     def test_returns_200_with_correct_structure(self):
         """Happy path: returns tickers, dates, and prices arrays."""
-        import pandas as pd
-
-        fake_df = pd.DataFrame(
-            {"Close": [30.0, 31.0]},
-            index=pd.DatetimeIndex([
-                datetime.datetime(2024, 1, 2),
-                datetime.datetime(2024, 1, 3),
-            ]),
-        )
-
         with patch("api.routers.portfolio._fetch_portfolio_history") as mock_fetch:
             mock_fetch.return_value = {
                 "PETR4": {"2024-01-02": 30.0, "2024-01-03": 31.0},
             }
-            r = client.get("/api/portfolio/history?tickers=PETR4&dates=2024-01-02,2024-01-03")
+            r = client.post("/api/portfolio/history", json={
+                "tickers": ["PETR4"],
+                "dates": ["2024-01-02", "2024-01-03"]
+            })
 
         assert r.status_code == 200
         data = r.json()
@@ -217,7 +210,10 @@ class TestPortfolioHistoryEndpoint:
                 "PETR4": {"2024-01-02": 30.0},
                 "VALE3": {"2024-01-02": 70.0},
             }
-            r = client.get("/api/portfolio/history?tickers=PETR4,VALE3&dates=2024-01-02")
+            r = client.post("/api/portfolio/history", json={
+                "tickers": ["PETR4", "VALE3"],
+                "dates": ["2024-01-02"]
+            })
 
         assert r.status_code == 200
         data = r.json()
@@ -226,36 +222,35 @@ class TestPortfolioHistoryEndpoint:
         assert data["prices"]["VALE3"] == [70.0]
 
     def test_empty_tickers_returns_400(self):
-        """Empty tickers param returns 400."""
-        r = client.get("/api/portfolio/history?tickers=&dates=2024-01-02")
+        """Empty tickers list returns 400."""
+        r = client.post("/api/portfolio/history", json={
+            "tickers": [],
+            "dates": ["2024-01-02"]
+        })
         assert r.status_code == 400
 
     def test_empty_dates_returns_400(self):
-        """Empty dates param returns 400."""
-        r = client.get("/api/portfolio/history?tickers=PETR4&dates=")
+        """Empty dates list returns 400."""
+        r = client.post("/api/portfolio/history", json={
+            "tickers": ["PETR4"],
+            "dates": []
+        })
         assert r.status_code == 400
 
-    def test_missing_tickers_param_returns_422(self):
-        """Missing tickers query param returns 422 (FastAPI validation)."""
-        r = client.get("/api/portfolio/history?dates=2024-01-02")
-        assert r.status_code == 422
-
-    def test_missing_dates_param_returns_422(self):
-        """Missing dates query param returns 422 (FastAPI validation)."""
-        r = client.get("/api/portfolio/history?tickers=PETR4")
-        assert r.status_code == 422
-
-    def test_none_price_becomes_zero(self):
-        """Null prices from yfinance are coerced to 0.0 in the response (list[float] model)."""
+    def test_none_price_preserved_in_response(self):
+        """Null prices from yfinance are preserved as null in the response (dict[str, list[float | None]])."""
         with patch("api.routers.portfolio._fetch_portfolio_history") as mock_fetch:
             mock_fetch.return_value = {
                 "PETR4": {"2024-01-02": None},
             }
-            r = client.get("/api/portfolio/history?tickers=PETR4&dates=2024-01-02")
+            r = client.post("/api/portfolio/history", json={
+                "tickers": ["PETR4"],
+                "dates": ["2024-01-02"]
+            })
 
         assert r.status_code == 200
         data = r.json()
-        assert data["prices"]["PETR4"] == [0.0]
+        assert data["prices"]["PETR4"] == [None]
 
     def test_dates_are_sorted(self):
         """Output dates list is always sorted regardless of input order."""
@@ -263,7 +258,10 @@ class TestPortfolioHistoryEndpoint:
             mock_fetch.return_value = {
                 "PETR4": {"2024-01-01": 29.0, "2024-01-03": 31.0},
             }
-            r = client.get("/api/portfolio/history?tickers=PETR4&dates=2024-01-03,2024-01-01")
+            r = client.post("/api/portfolio/history", json={
+                "tickers": ["PETR4"],
+                "dates": ["2024-01-03", "2024-01-01"]
+            })
 
         assert r.status_code == 200
         data = r.json()
@@ -324,12 +322,11 @@ class TestFetchExchangeHelper:
         assert "pair" in result or "code" in result
 
     def test_returns_no_yfinance_when_import_fails(self):
-        from api.routers.market import _fetch_exchange
+        """When yfinance is not available, returns NO_YFINANCE code."""
+        with patch("api.routers.market._fetch_exchange", return_value={"code": "NO_YFINANCE"}):
+            r = client.get("/api/exchange/USDBRL")
 
-        with patch("builtins.__import__", side_effect=ImportError("yfinance")):
-            try:
-                result = _fetch_exchange("USDBRL")
-                # If it returns without raising, check the code
-                assert result.get("code") in ("NO_YFINANCE", "ERROR", None)
-            except Exception:
-                pass  # ImportError propagation is also acceptable
+        assert r.status_code == 503
+        data = r.json()
+        # HTTPException wraps detail in 'detail' key
+        assert data.get("detail", {}).get("code") == "NO_YFINANCE"

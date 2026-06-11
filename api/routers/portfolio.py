@@ -2,13 +2,8 @@
 Portfolio router — /api/portfolio/history endpoint.
 
 Ports the server.py get_portfolio_history() function to FastAPI.
-Accepts tickers as a comma-separated query param (GET) instead of POST body,
-matching the FastAPI style of previous routers while remaining compatible
-with the vanilla server.py behaviour.
-
-The original server.py endpoint was POST /api/portfolio/history with body
-{"tickers": [...], "dates": [...]}. This router exposes it as GET with
-query params for consistency with the rest of the FastAPI migration.
+Accepts POST requests with JSON body {"tickers": [...], "dates": [...]},
+matching the original server.py interface exactly.
 """
 from __future__ import annotations
 
@@ -16,10 +11,17 @@ import asyncio
 import datetime
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from api.models import PortfolioHistoryResponse
 
 router = APIRouter(prefix="/api", tags=["portfolio"])
+
+
+class PortfolioHistoryRequest(BaseModel):
+    """POST request body for /api/portfolio/history."""
+    tickers: list[str]
+    dates: list[str]
 
 
 def _fetch_portfolio_history(tickers: list[str], dates: list[str]) -> dict[str, dict[str, float | None]]:
@@ -63,42 +65,41 @@ def _fetch_portfolio_history(tickers: list[str], dates: list[str]) -> dict[str, 
     return result
 
 
-@router.get("/portfolio/history", response_model=PortfolioHistoryResponse)
-async def portfolio_history(
-    tickers: str,
-    dates: str,
-) -> PortfolioHistoryResponse:
+@router.post("/portfolio/history", response_model=PortfolioHistoryResponse)
+async def portfolio_history(body: PortfolioHistoryRequest) -> PortfolioHistoryResponse:
     """
     Fetch historical close prices for a portfolio of tickers on specific dates.
 
-    Query params:
-      - tickers: comma-separated list of B3 tickers (e.g. PETR4,VALE3)
-      - dates:   comma-separated list of dates in YYYY-MM-DD format
+    POST body:
+      {
+        "tickers": ["PETR4", "VALE3"],
+        "dates": ["2024-01-02", "2024-01-03"]
+      }
 
     Returns a PortfolioHistoryResponse with:
       - tickers: list of tickers (in request order)
       - dates:   sorted unique list of dates
       - prices:  {ticker: [price_per_date]} where price is null if unavailable
     """
-    ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()]
-    date_list = [d.strip() for d in dates.split(",") if d.strip()]
+    ticker_list = [t.strip().upper() for t in body.tickers if t.strip()]
+    date_list = [d.strip() for d in body.dates if d.strip()]
 
     if not ticker_list:
-        raise HTTPException(status_code=400, detail={"code": "MISSING_TICKERS", "error": "tickers param required"})
+        raise HTTPException(status_code=400, detail={"code": "MISSING_TICKERS", "error": "tickers required"})
     if not date_list:
-        raise HTTPException(status_code=400, detail={"code": "MISSING_DATES", "error": "dates param required"})
+        raise HTTPException(status_code=400, detail={"code": "MISSING_DATES", "error": "dates required"})
 
     raw = await asyncio.to_thread(_fetch_portfolio_history, ticker_list, date_list)
 
     sorted_dates = sorted(set(date_list))
 
     # Build prices dict: {ticker: [price_for_date1, price_for_date2, ...]}
-    # Align prices to sorted_dates order; None → 0.0 to satisfy list[float] model
-    prices: dict[str, list[float]] = {}
+    # Align prices to sorted_dates order; None prices pass through as null
+    prices: dict[str, list[float | None]] = {}
     for ticker in ticker_list:
         ticker_data = raw.get(ticker, {})
         prices[ticker] = [
-            ticker_data.get(d) or 0.0
+            ticker_data.get(d)
             for d in sorted_dates
         ]
 
