@@ -8,6 +8,7 @@ Fails silently, always returning {} on any error.
 from __future__ import annotations
 
 import re
+import threading
 import time
 import urllib.request
 
@@ -15,6 +16,7 @@ import urllib.request
 _cache: dict | None = None
 _cache_ts: float = 0.0
 _CACHE_TTL = 1800  # 30 minutes
+_cache_lock = threading.Lock()
 
 
 def _parse_table(html: str) -> dict:
@@ -112,20 +114,21 @@ def fetch_fii_extras(ticker: str) -> dict:
     """
     global _cache, _cache_ts
     try:
-        now = time.time()
-        if _cache is None or (now - _cache_ts) > _CACHE_TTL:
-            url = "https://www.fundamentus.com.br/fii_resultado.php"
-            req = urllib.request.Request(url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Accept": "text/html,application/xhtml+xml",
-            })
-            with urllib.request.urlopen(req, timeout=8) as r:
-                html = r.read().decode("latin-1", errors="replace")
-            _cache = _parse_table(html)
-            _cache_ts = now
-            print(f"[fundamentus] table loaded: {len(_cache)} FIIs")
-        raw = ticker.upper().replace(".SA", "")
-        return _cache.get(raw, {})
+        with _cache_lock:
+            now = time.time()
+            if _cache is None or (now - _cache_ts) > _CACHE_TTL:
+                url = "https://www.fundamentus.com.br/fii_resultado.php"
+                req = urllib.request.Request(url, headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "Accept": "text/html,application/xhtml+xml",
+                })
+                with urllib.request.urlopen(req, timeout=8) as r:
+                    html = r.read().decode("latin-1", errors="replace")
+                _cache = _parse_table(html)
+                _cache_ts = now
+                print(f"[fundamentus] table loaded: {len(_cache)} FIIs")
+            raw = ticker.upper().replace(".SA", "")
+            return _cache.get(raw, {})
     except Exception as e:
         print(f"[fundamentus] error: {e}")
         return {}

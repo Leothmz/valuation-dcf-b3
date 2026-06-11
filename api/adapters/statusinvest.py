@@ -102,10 +102,12 @@ def fetch_fii_extras(ticker: str) -> dict:
                     pass
 
         # Número de imóveis
-        m = re.search(r'Im[oó]veis[^0-9]{0,30}(\d+)', html, re.IGNORECASE)
+        m = re.search(r'Im[oó]veis[^0-9]{0,30}(\d{1,4})', html, re.IGNORECASE)
         if m:
             try:
-                result['numImoveis'] = int(m.group(1))
+                v = int(m.group(1))
+                if v < 5000:
+                    result['numImoveis'] = v
             except ValueError:
                 pass
 
