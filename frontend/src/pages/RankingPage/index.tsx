@@ -1,0 +1,238 @@
+import { useState, useMemo } from 'react'
+import { useRankingStore } from '../../stores'
+import { useBatchFundamentals } from '../../api/stocks'
+import type { FundamentalsData } from '../../api/stocks'
+import { B3_TICKERS } from '../../data/b3Tickers'
+import {
+  calcThomazScore,
+  calcBazinScore,
+  calcGrahamScore,
+  calcLynchScore,
+  calcJoelScore,
+} from '../../engines/ranking-scores'
+import type { StockData } from '../../engines/ranking-scores'
+import { MethodPills } from './MethodPills'
+import { SectorTabs } from './SectorTabs'
+import type { SectorTab } from './SectorTabs'
+import { FilterChips } from './FilterChips'
+import { RankingTable } from './RankingTable'
+
+// Enriched ranked row — includes valuation columns from all 4 methods
+export interface RankedRow extends StockData {
+  rank: number
+  score: number | null
+  fairPrice?: number | null
+  bazinFairPrice: number | null
+  grahamFairPrice: number | null
+  lynchVal: number | null
+  joelVal: number | null
+  setor?: string
+  subsetor?: string
+}
+
+// Deduplicate tickers from the same company — keep the one with highest liquidity
+function deduplicateByCompany(stocks: StockData[]): StockData[] {
+  const map = new Map<string, StockData>()
+  for (const s of stocks) {
+    const key = s.ticker.slice(0, 4)
+    const prev = map.get(key)
+    if (!prev || ((s.liquidezMedia ?? 0) > (prev.liquidezMedia ?? 0))) {
+      map.set(key, s)
+    }
+  }
+  return [...map.values()]
+}
+
+export function RankingPage() {
+  const {
+    method,
+    filterConfig,
+    weights,
+    favorites,
+    sortCol,
+    sortDir,
+    setMethod,
+    setFilterConfig,
+    resetFilterConfig,
+    toggleFavorite,
+    setSortCol,
+    setSortDir,
+  } = useRankingStore()
+
+  const [sectorTab, setSectorTab] = useState<SectorTab>('')
+  const [search, setSearch] = useState('')
+
+  const { data: rawStocks, isLoading } = useBatchFundamentals(B3_TICKERS)
+
+  // Apply full pipeline: filter → deduplicate → score all 4 methods → rank active method
+  const rankedRows = useMemo((): RankedRow[] => {
+    if (!rawStocks || rawStocks.length === 0) return []
+
+    const fc = filterConfig
+
+    // Cast FundamentalsData → StockData (they are structurally compatible)
+    let stocks = (rawStocks as StockData[])
+
+    // 1. Liquidity pre-filter
+    stocks = stocks.filter((s) => (s.liquidezMedia ?? 0) >= (fc.liquidezMin ?? 0))
+
+    // 2. Deduplication (same company, multiple tickers)
+    stocks = deduplicateByCompany(stocks)
+
+    // 3. Pre-filters
+    stocks = stocks.filter((s) => {
+      if (fc.plMin != null && (s.pl == null || s.pl < fc.plMin)) return false
+      if (fc.plMax != null && (s.pl == null || s.pl > fc.plMax)) return false
+      if (fc.deMin != null && (s.dividaLiquidaEbit == null || s.dividaLiquidaEbit < fc.deMin)) return false
+      if (fc.deMax != null && (s.dividaLiquidaEbit == null || s.dividaLiquidaEbit > fc.deMax)) return false
+      if (fc.dyMin != null && fc.dyMin > 0 && (s.dy == null || s.dy < fc.dyMin)) return false
+      if (fc.margemMin != null && fc.margemMin > 0 && (s.margemLiquida == null || s.margemLiquida < fc.margemMin)) return false
+      if (fc.roeMin != null && fc.roeMin > 0 && (s.roe == null || s.roe < fc.roeMin)) return false
+      return true
+    })
+
+    // 4. Calculate valuation fields for ALL methods (for table columns)
+    const bazinScored  = calcBazinScore(stocks, fc.taxaBazin)
+    const grahamScored = calcGrahamScore(stocks, fc.taxaGraham)
+    const lynchScored  = calcLynchScore(stocks)
+    const joelScored   = calcJoelScore(stocks)
+
+    const stocksWithVals = stocks.map((s, i) => ({
+      ...s,
+      bazinFairPrice:  bazinScored[i]?.fairPrice ?? null,
+      grahamFairPrice: grahamScored[i]?.fairPrice ?? null,
+      lynchVal:        (lynchScored[i] as { _peg?: number | null })?._peg ?? null,
+      joelVal:         (joelScored[i] as { _earningsYield?: number | null })?._earningsYield ?? null,
+    }))
+
+    // 5. Score with active method
+    let ranked
+    switch (method) {
+      case 'thomaz': ranked = calcThomazScore(stocksWithVals, weights); break
+      case 'bazin':  ranked = calcBazinScore(stocksWithVals, fc.taxaBazin); break
+      case 'graham': ranked = calcGrahamScore(stocksWithVals, fc.taxaGraham); break
+      case 'lynch':  ranked = calcLynchScore(stocksWithVals); break
+      case 'joel':   ranked = calcJoelScore(stocksWithVals); break
+      default:       ranked = stocksWithVals.map((s) => ({ ...s, score: null }))
+    }
+
+    // Preserve valuation columns (scoring may overwrite them)
+    const rankedWithVals = ranked.map((s, i) => ({
+      bazinFairPrice:  stocksWithVals[i]?.bazinFairPrice  ?? null,
+      grahamFairPrice: stocksWithVals[i]?.grahamFairPrice ?? null,
+      lynchVal:        stocksWithVals[i]?.lynchVal        ?? null,
+      joelVal:         stocksWithVals[i]?.joelVal         ?? null,
+      ...s,
+    })) as (typeof stocksWithVals[0] & { score: number | null; fairPrice?: number | null })[]
+
+    // 6. Sort
+    const dir = sortDir === 'asc' ? 1 : -1
+    const sorted = [...rankedWithVals].sort((a, b) => {
+      const col = sortCol as keyof typeof a
+      const va = a[col] as number | string | null
+      const vb = b[col] as number | string | null
+      if (va == null && vb == null) return 0
+      if (va == null) return 1
+      if (vb == null) return -1
+      if (typeof va === 'string' && typeof vb === 'string') return dir * va.localeCompare(vb, 'pt-BR')
+      return dir * ((va as number) - (vb as number))
+    })
+
+    // 7. Assign rank
+    const withRank = sorted.map((s, i) => ({ ...s, rank: i + 1 })) as RankedRow[]
+
+    // 8. Display filters (sector, favorites, search)
+    let result = withRank
+    if (sectorTab === 'insurance') {
+      result = result.filter((s) => (s.subsetor ?? '').toLowerCase().includes('insurance'))
+    } else if (sectorTab === 'banks') {
+      result = result.filter((s) => (s.subsetor ?? '').toLowerCase().includes('bank'))
+    }
+    if (fc.show === 'favoritos') {
+      result = result.filter((s) => favorites.includes(s.ticker))
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      result = result.filter((s) =>
+        s.ticker.toLowerCase().includes(q) ||
+        ((s as FundamentalsData).name ?? '').toLowerCase().includes(q)
+      )
+    }
+
+    return result
+  }, [rawStocks, method, filterConfig, weights, sortCol, sortDir, sectorTab, favorites, search])
+
+  function handleSort(col: string) {
+    if (sortCol === col) {
+      setSortDir(sortDir === 'desc' ? 'asc' : 'desc')
+    } else {
+      setSortCol(col)
+      setSortDir('desc')
+    }
+  }
+
+  const totalLoaded = rawStocks?.length ?? 0
+  const showing = rankedRows.length
+
+  return (
+    <div className="max-w-[1440px] mx-auto px-6 py-7 pb-16 flex flex-col gap-5">
+      {/* Hero header */}
+      <div
+        className="rounded-[16px] border border-border p-6"
+        style={{ background: 'linear-gradient(180deg, #0d1829 0%, #0b0f17 100%)' }}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
+          <div>
+            <h1 className="text-[24px] font-bold text-text-base leading-tight">
+              Ranking de Ações · B3
+            </h1>
+            <p className="text-[13px] text-text-muted mt-1">
+              {isLoading
+                ? `Carregando ${B3_TICKERS.length} tickers…`
+                : `${totalLoaded} tickers carregados · exibindo ${showing}`}
+            </p>
+          </div>
+          {/* Search */}
+          <input
+            type="text"
+            className="rounded-[10px] border border-border bg-bg-3 text-text-base text-[13px] px-[14px] py-[7px] outline-none w-56 placeholder-text-muted focus:border-cyan"
+            placeholder="Buscar ticker ou empresa…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        {/* Method pills */}
+        <MethodPills active={method} onSelect={setMethod} />
+      </div>
+
+      {/* Filter chips */}
+      <div
+        className="rounded-[12px] border border-border px-4 py-3"
+        style={{ background: 'var(--color-bg-2)' }}
+      >
+        <FilterChips
+          config={filterConfig}
+          onChange={setFilterConfig}
+          onReset={resetFilterConfig}
+        />
+      </div>
+
+      {/* Sector tabs + table */}
+      <div>
+        <SectorTabs active={sectorTab} onSelect={setSectorTab} />
+        <div className="mt-4">
+          <RankingTable
+            rows={rankedRows}
+            isLoading={isLoading}
+            favorites={favorites}
+            onToggleFav={toggleFavorite}
+            sortCol={sortCol}
+            sortDir={sortDir}
+            onSort={handleSort}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
