@@ -1,0 +1,242 @@
+import { useNavigate } from 'react-router-dom'
+import { fBRL, fPct } from '../../engines/formatters'
+import { SECTOR_PT } from '../../data/b3Tickers'
+import { PositionBadge } from './PositionBadge'
+import type { RankedRow } from './index'
+
+interface RankingTableProps {
+  rows: RankedRow[]
+  isLoading: boolean
+  favorites: string[]
+  onToggleFav: (ticker: string) => void
+  sortCol: string
+  sortDir: 'asc' | 'desc'
+  onSort: (col: string) => void
+}
+
+function fNum(v: number | null | undefined, dec = 1): string {
+  if (v == null) return '—'
+  return v.toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec })
+}
+
+const TH = ({
+  col,
+  sortCol,
+  sortDir,
+  onSort,
+  children,
+  align = 'right',
+}: {
+  col: string
+  sortCol: string
+  sortDir: 'asc' | 'desc'
+  onSort: (c: string) => void
+  children: React.ReactNode
+  align?: 'left' | 'right' | 'center'
+}) => {
+  const isActive = sortCol === col
+  const arrow = isActive ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''
+  return (
+    <th
+      className={`bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.08em] uppercase py-3 px-3 whitespace-nowrap cursor-pointer select-none text-${align}`}
+      onClick={() => onSort(col)}
+      style={{ color: isActive ? 'var(--color-cyan)' : undefined }}
+    >
+      {children}{arrow}
+    </th>
+  )
+}
+
+export function RankingTable({
+  rows,
+  isLoading,
+  favorites,
+  onToggleFav,
+  sortCol,
+  sortDir,
+  onSort,
+}: RankingTableProps) {
+  const navigate = useNavigate()
+
+  if (isLoading && rows.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-20 text-text-muted text-[14px]">
+        Carregando dados…
+      </div>
+    )
+  }
+
+  if (!isLoading && rows.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-20 text-text-muted text-[14px]">
+        Nenhuma ação encontrada com os filtros atuais
+      </div>
+    )
+  }
+
+  return (
+    <div className="border border-border rounded-[14px] overflow-hidden" style={{ boxShadow: '0 4px 16px rgba(0,0,0,.5)' }}>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse" style={{ minWidth: 900 }}>
+          <thead>
+            <tr>
+              <TH col="rank"    sortCol={sortCol} sortDir={sortDir} onSort={onSort} align="center">#</TH>
+              <TH col="ticker"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} align="left">Ticker</TH>
+              <TH col="price"   sortCol={sortCol} sortDir={sortDir} onSort={onSort}>Cotação</TH>
+              <TH col="dy"      sortCol={sortCol} sortDir={sortDir} onSort={onSort}>DY</TH>
+              <TH col="pl"      sortCol={sortCol} sortDir={sortDir} onSort={onSort}>P/L</TH>
+              <TH col="margemLiquida" sortCol={sortCol} sortDir={sortDir} onSort={onSort}>Margem Líq.</TH>
+              <TH col="roe"     sortCol={sortCol} sortDir={sortDir} onSort={onSort}>ROE</TH>
+              <TH col="dividaLiquidaEbit" sortCol={sortCol} sortDir={sortDir} onSort={onSort}>DL/EBITDA</TH>
+              <th
+                className="bg-bg-2 border-b border-border text-[11px] font-semibold tracking-[.08em] uppercase py-3 px-3 text-right whitespace-nowrap"
+                style={{ color: 'var(--color-cyan)' }}
+              >
+                Bazin
+              </th>
+              <th
+                className="bg-bg-2 border-b border-border text-[11px] font-semibold tracking-[.08em] uppercase py-3 px-3 text-right whitespace-nowrap"
+                style={{ color: 'var(--color-purple)' }}
+              >
+                Graham
+              </th>
+              <th
+                className="bg-bg-2 border-b border-border text-[11px] font-semibold tracking-[.08em] uppercase py-3 px-3 text-right whitespace-nowrap"
+                style={{ color: 'var(--color-green)' }}
+              >
+                P. Lynch
+              </th>
+              <th
+                className="bg-bg-2 border-b border-border text-[11px] font-semibold tracking-[.08em] uppercase py-3 px-3 text-right whitespace-nowrap"
+                style={{ color: 'var(--color-amber)' }}
+              >
+                Joel EY
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((s) => {
+              const isFav = favorites.includes(s.ticker)
+              const sectorLabel = s.setor ? (SECTOR_PT[s.setor] ?? s.setor) : null
+              const deVal = s.dividaLiquidaEbit
+              const deColor =
+                deVal == null ? 'var(--color-text-sec)'
+                : deVal > 3   ? 'var(--color-red)'
+                : deVal < 0   ? 'var(--color-green)'
+                : 'var(--color-text-sec)'
+
+              return (
+                <tr
+                  key={s.ticker}
+                  className="border-b border-border-muted last:border-b-0 cursor-pointer"
+                  style={{ transition: 'background .12s ease' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(6,182,212,.025)' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '' }}
+                  onClick={() => navigate(`/dcf?ticker=${encodeURIComponent(s.ticker)}`)}
+                >
+                  {/* Rank badge */}
+                  <td className="py-[10px] px-3 text-center align-middle whitespace-nowrap">
+                    <PositionBadge rank={s.rank} />
+                  </td>
+
+                  {/* Ticker + fav button */}
+                  <td
+                    className="py-[10px] px-3 align-middle"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onToggleFav(s.ticker) }}
+                        className="text-[14px] leading-none cursor-pointer"
+                        title={isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                        style={{ color: isFav ? '#f59e0b' : 'var(--color-text-muted)', background: 'none', border: 'none', padding: 0 }}
+                      >
+                        ★
+                      </button>
+                      <button
+                        onClick={() => navigate(`/dcf?ticker=${encodeURIComponent(s.ticker)}`)}
+                        className="font-mono font-semibold text-[13px] cursor-pointer"
+                        style={{ color: 'var(--color-cyan)', background: 'none', border: 'none', padding: 0 }}
+                      >
+                        {s.ticker}
+                      </button>
+                      {sectorLabel && (
+                        <span
+                          className="text-[10px] font-medium px-[6px] py-[2px] rounded-[5px] hidden md:inline"
+                          style={{
+                            background: 'var(--color-bg-4)',
+                            color: 'var(--color-text-muted)',
+                            border: '1px solid var(--color-border)',
+                          }}
+                        >
+                          {sectorLabel}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Cotação */}
+                  <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px] text-text-base">
+                    {s.price != null ? fBRL.format(s.price) : '—'}
+                  </td>
+
+                  {/* DY */}
+                  <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
+                    style={{ color: s.dy != null && s.dy > 0.06 ? 'var(--color-green)' : 'var(--color-text-sec)' }}>
+                    {s.dy != null ? fPct(s.dy) : '—'}
+                  </td>
+
+                  {/* P/L */}
+                  <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
+                    style={{ color: s.pl != null && s.pl < 0 ? 'var(--color-red)' : 'var(--color-text-sec)' }}>
+                    {fNum(s.pl, 1)}
+                  </td>
+
+                  {/* Margem Líq. */}
+                  <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px] text-text-sec">
+                    {s.margemLiquida != null ? fPct(s.margemLiquida) : '—'}
+                  </td>
+
+                  {/* ROE */}
+                  <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
+                    style={{ color: s.roe != null && s.roe > 0.2 ? 'var(--color-green)' : 'var(--color-text-sec)' }}>
+                    {s.roe != null ? fPct(s.roe) : '—'}
+                  </td>
+
+                  {/* DL/EBITDA */}
+                  <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]" style={{ color: deColor }}>
+                    {fNum(deVal, 2)}
+                  </td>
+
+                  {/* Bazin fair price */}
+                  <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
+                    style={{ color: 'var(--color-cyan)' }}>
+                    {s.bazinFairPrice != null ? fBRL.format(s.bazinFairPrice) : '—'}
+                  </td>
+
+                  {/* Graham fair price */}
+                  <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
+                    style={{ color: 'var(--color-purple)' }}>
+                    {s.grahamFairPrice != null ? fBRL.format(s.grahamFairPrice) : '—'}
+                  </td>
+
+                  {/* Lynch PEG */}
+                  <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
+                    style={{ color: 'var(--color-green)' }}>
+                    {s.lynchVal != null ? fNum(s.lynchVal, 2) : '—'}
+                  </td>
+
+                  {/* Joel Earnings Yield */}
+                  <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
+                    style={{ color: 'var(--color-amber)' }}>
+                    {s.joelVal != null ? fPct(s.joelVal) : '—'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
