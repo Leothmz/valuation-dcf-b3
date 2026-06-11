@@ -21,14 +21,14 @@ def get_stock_quote(ticker: str) -> StockQuote:
         i10_by_year = {e.year: e for e in i10_history}
         merged = []
         for entry in quote.netIncomeHistory:
-            if entry.year in i10_by_year:
+            if entry.year in i10_by_year and entry.year >= 2021:
                 merged.append(i10_by_year[entry.year])
             else:
                 merged.append(entry)
-        # Add any years in i10 not in yfinance
+        # Add any years in i10 not in yfinance (only years >= 2021)
         existing_years = {e.year for e in quote.netIncomeHistory}
         for entry in i10_history:
-            if entry.year not in existing_years:
+            if entry.year not in existing_years and entry.year >= 2021:
                 merged.append(entry)
         merged.sort(key=lambda e: e.year, reverse=True)
         quote = quote.model_copy(update={"netIncomeHistory": merged[:5]})
