@@ -8,6 +8,7 @@ import {
   Building2,
   BarChart2,
   TrendingUp,
+  Briefcase,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { to: '/analise', icon: Activity, label: 'Análise' },
   { to: '/fiis', icon: Building2, label: 'FIIs' },
   { to: '/analise-fii', icon: BarChart2, label: 'Análise FII' },
+  { to: '/carteira', icon: Briefcase, label: 'Carteira' },
 ]
 
 export function Sidebar() {

@@ -122,6 +122,23 @@ export function useFundamentals(ticker: string | null) {
   })
 }
 
+export function usePortfolioHistory(tickers: string[], dates: string[]) {
+  return useQuery({
+    queryKey: ['portfolio-history', tickers.sort().join(',')],
+    queryFn: async () => {
+      const res = await fetch('/api/portfolio/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tickers, dates }),
+      })
+      if (!res.ok) throw new Error('FETCH_ERROR')
+      return res.json()
+    },
+    enabled: tickers.length > 0 && dates.length > 0,
+    staleTime: 60 * 60 * 1000,
+  })
+}
+
 // Batch fundamentals — returns dict { ticker: FundamentalsData }, normalized to array
 export function useBatchFundamentals(tickers: string[]) {
   const sortedKey = [...tickers].sort().join(',')
