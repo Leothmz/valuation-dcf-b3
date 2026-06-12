@@ -15,6 +15,14 @@ export interface StockQuote {
   dividendYield?: number
 }
 
+export interface LiveQuote {
+  ticker: string
+  price: number | null
+  changePercent: number | null
+  dividendYield: number | null
+  error?: boolean
+}
+
 export function useStockQuote(ticker: string | null) {
   return useQuery({
     queryKey: ['quote', ticker],
@@ -29,5 +37,45 @@ export function useStockQuote(ticker: string | null) {
     },
     enabled: !!ticker,
     staleTime: 5 * 60 * 1000,
+  })
+}
+
+export function useBatchQuotes(tickers: string[]) {
+  const sortedKey = [...tickers].sort().join(',')
+  return useQuery({
+    queryKey: ['batch-quotes', sortedKey],
+    queryFn: async (): Promise<LiveQuote[]> => {
+      if (!tickers.length) return []
+      const results = await Promise.allSettled(
+        tickers.map(async (t) => {
+          const res = await fetch(`/api/quote/${encodeURIComponent(t.toUpperCase())}`)
+          if (!res.ok) throw new Error('HTTP ' + res.status)
+          const data = await res.json()
+          if (data.code === 'NOT_FOUND' || data.code === 'NO_YFINANCE') {
+            throw new Error(data.code)
+          }
+          return {
+            ticker: t,
+            price: data.price ?? null,
+            changePercent: data.changePercent ?? null,
+            dividendYield: data.dividendYield ?? null,
+            error: false,
+          } as LiveQuote
+        })
+      )
+      return results.map((r, i) => {
+        if (r.status === 'fulfilled') return r.value
+        return {
+          ticker: tickers[i],
+          price: null,
+          changePercent: null,
+          dividendYield: null,
+          error: true,
+        } as LiveQuote
+      })
+    },
+    enabled: tickers.length > 0,
+    staleTime: 3 * 60 * 1000,
+    refetchInterval: 3 * 60 * 1000,
   })
 }
