@@ -4,6 +4,8 @@ import { DCFPage } from './pages/DCFPage'
 import { WatchlistPage } from './pages/WatchlistPage'
 import { RankingPage } from './pages/RankingPage'
 import { AnalisePage } from './pages/AnalisePage'
+import { FIIRankingPage } from './pages/FIIRankingPage'
+import { AnaliseFIIPage } from './pages/AnaliseFIIPage'
 
 export default function App() {
   return (
@@ -14,8 +16,8 @@ export default function App() {
         <Route path="/watchlist" element={<WatchlistPage />} />
         <Route path="/ranking" element={<RankingPage />} />
         <Route path="/analise" element={<AnalisePage />} />
-        <Route path="/fiis" element={<div className="p-8 text-text-base">FIIs</div>} />
-        <Route path="/analise-fii" element={<div className="p-8 text-text-base">Análise FII</div>} />
+        <Route path="/fiis" element={<FIIRankingPage />} />
+        <Route path="/analise-fii" element={<AnaliseFIIPage />} />
       </Routes>
     </Layout>
   )
