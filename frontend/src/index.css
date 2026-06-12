@@ -1,1 +1,72 @@
-/* Reset — Tailwind will be added in card #43 */
+@import "tailwindcss";
+
+@theme {
+  /* Backgrounds */
+  --color-bg-0: #060910;
+  --color-bg-1: #0b0f17;
+  --color-bg-2: #111827;
+  --color-bg-3: #1a2233;
+  --color-bg-4: #1f2a3f;
+
+  /* Borders */
+  --color-border: #1e2d42;
+  --color-border-muted: #151e2d;
+
+  /* Text */
+  --color-text-base: #f0f4f8;
+  --color-text-sec: #94a3b8;
+  --color-text-muted: #4a5568;
+
+  /* Cyan accent */
+  --color-cyan: #06b6d4;
+  --color-cyan-dim: rgba(6, 182, 212, 0.12);
+
+  /* Emerald */
+  --color-green: #10b981;
+  --color-green-dim: rgba(16, 185, 129, 0.12);
+
+  /* Red */
+  --color-red: #ef4444;
+  --color-red-dim: rgba(239, 68, 68, 0.12);
+
+  /* Amber */
+  --color-amber: #f59e0b;
+  --color-amber-dim: rgba(245, 158, 11, 0.12);
+
+  /* Purple */
+  --color-purple: #8b5cf6;
+  --color-purple-dim: rgba(139, 92, 246, 0.12);
+
+  /* Fonts */
+  --font-ui: 'Inter', -apple-system, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+
+/* Base styles */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--color-bg-1);
+    color: var(--color-text-base);
+    font-family: var(--font-ui);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Skeleton shimmer animation */
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--color-bg-3) 25%, var(--color-bg-4) 50%, var(--color-bg-3) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.8s infinite;
+    border-radius: 6px;
+    color: transparent !important;
+  }
+}
