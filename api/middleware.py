@@ -10,11 +10,7 @@ from starlette.responses import JSONResponse
 RATE_LIMIT_REQUESTS = 60
 RATE_LIMIT_WINDOW = 60.0
 
-<<<<<<< HEAD
 _rate_lock = asyncio.Lock()
-=======
-_rate_lock = __import__("threading").Lock()
->>>>>>> master
 _rate_windows: dict[str, collections.deque] = collections.defaultdict(collections.deque)
 
 
@@ -25,17 +21,10 @@ def _get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-<<<<<<< HEAD
 async def _check_rate_limit(ip: str) -> bool:
     """Return True if request is allowed, False if rate-limited."""
     now = time.time()
     async with _rate_lock:
-=======
-def _check_rate_limit(ip: str) -> bool:
-    """Return True if request is allowed, False if rate-limited."""
-    now = time.time()
-    with _rate_lock:
->>>>>>> master
         window = _rate_windows[ip]
         # Evict timestamps older than the window
         while window and now - window[0] >= RATE_LIMIT_WINDOW:
@@ -53,11 +42,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         ip = _get_client_ip(request)
-<<<<<<< HEAD
         if not await _check_rate_limit(ip):
-=======
-        if not _check_rate_limit(ip):
->>>>>>> master
             return JSONResponse(
                 {"error": "rate_limit_exceeded", "retry_after": 60},
                 status_code=429,
