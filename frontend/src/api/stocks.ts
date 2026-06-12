@@ -1,5 +1,29 @@
 import { useQuery } from '@tanstack/react-query'
 
+export interface FundamentalsData {
+  ticker: string
+  name?: string
+  price?: number
+  changePercent?: number
+  pl?: number | null
+  pvp?: number | null
+  roe?: number | null
+  roic?: number | null
+  margemLiquida?: number | null
+  dividaLiquidaEbit?: number | null
+  liquidezMedia?: number | null
+  dy?: number | null
+  dpa?: number | null
+  lpa?: number | null
+  vpa?: number | null
+  crescimentoLucros?: number | null
+  pegRatio?: number | null
+  setor?: string
+  subsetor?: string
+  fiftyTwoWeekHigh?: number | null
+  fiftyTwoWeekLow?: number | null
+}
+
 export interface StockQuote {
   ticker: string
   name?: string
@@ -77,5 +101,23 @@ export function useBatchQuotes(tickers: string[]) {
     enabled: tickers.length > 0,
     staleTime: 3 * 60 * 1000,
     refetchInterval: 3 * 60 * 1000,
+  })
+}
+
+// Batch fundamentals — returns dict { ticker: FundamentalsData }, normalized to array
+export function useBatchFundamentals(tickers: string[]) {
+  const sortedKey = [...tickers].sort().join(',')
+  return useQuery({
+    queryKey: ['batch-fundamentals', sortedKey],
+    queryFn: async (): Promise<FundamentalsData[]> => {
+      if (!tickers.length) return []
+      const res = await fetch(`/api/batch-fundamentals?tickers=${tickers.join(',')}`)
+      if (!res.ok) throw new Error('FETCH_ERROR')
+      const dict = await res.json() as Record<string, FundamentalsData>
+      return Object.values(dict).filter((d) => d && !('code' in d))
+    },
+    enabled: tickers.length > 0,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   })
 }
