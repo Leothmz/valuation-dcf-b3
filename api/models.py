@@ -81,4 +81,4 @@ class PortfolioHistoryResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     tickers: list[str]
     dates: list[str]
-    prices: dict[str, list[float]]
+    prices: dict[str, list[float | None]]
