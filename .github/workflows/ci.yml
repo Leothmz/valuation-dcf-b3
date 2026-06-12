@@ -32,6 +32,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install yfinance pytest pandas
-      - run: if [ -f requirements-api.txt ]; then pip install -r requirements-api.txt; fi
+      - run: pip install yfinance pytest pandas "fastapi>=0.115" "diskcache>=5.6" httpx
       - run: python -m pytest tests/python/ -v
