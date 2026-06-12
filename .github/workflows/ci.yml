@@ -33,4 +33,5 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install yfinance pytest pandas
+      - run: if [ -f requirements-api.txt ]; then pip install -r requirements-api.txt; fi
       - run: python -m pytest tests/python/ -v
