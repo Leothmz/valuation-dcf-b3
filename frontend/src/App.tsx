@@ -1,12 +1,13 @@
 import { Routes, Route } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { DCFPage } from './pages/DCFPage'
 
 export default function App() {
   return (
     <Layout>
       <Routes>
         <Route path="/" element={<div className="p-8 text-text-base">Home</div>} />
-        <Route path="/dcf" element={<div className="p-8 text-text-base">DCF</div>} />
+        <Route path="/dcf" element={<DCFPage />} />
         <Route path="/watchlist" element={<div className="p-8 text-text-base">Watchlist</div>} />
         <Route path="/ranking" element={<div className="p-8 text-text-base">Ranking</div>} />
         <Route path="/analise" element={<div className="p-8 text-text-base">Análise</div>} />
