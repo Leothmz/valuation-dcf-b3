@@ -1,91 +1,78 @@
 # Valuation DCF · B3
 
-Calculadora de Valuation por **Fluxo de Caixa Descontado (DCF)** para ações da B3. Roda 100% local, sem API key, sem cadastro.
+Calculadora de Valuation por **Fluxo de Caixa Descontado (DCF)** para ações da B3.
 
 Informe um ticker, ajuste as premissas e obtenha o **preço teto (valor intrínseco)** da ação.
 
 ---
 
-## Demonstração
+## Stack
 
-![home](https://i.imgur.com/placeholder-home.png)
-
-> Telas: Home → Calculadora DCF → Watchlist de valuations salvos.
+| Camada | Tecnologia |
+|--------|-----------|
+| Backend | FastAPI + Pydantic v2 + diskcache (SQLite) |
+| Frontend | React 19 + TypeScript + Vite + Tailwind v4 |
+| Roteamento | React Router v7 |
+| Data fetching | TanStack Query v5 |
+| Estado | Zustand v5 |
+| Dados | yfinance + scraping investidor10 / statusinvest / fundamentus |
 
 ---
 
 ## Funcionalidades
 
-- **Busca automática de dados** — preço, ROE, Payout, Lucro Líquido histórico e número de ações via [yfinance](https://github.com/ranaroussi/yfinance)
-- **Engine DCF completa** — projeta fluxos de caixa por 3 ou 5 anos + Valor Terminal pelo modelo de Gordon Growth
-- **Tabela DCF editável** — edite o Lucro Líquido ou o Crescimento de cada ano diretamente na tabela
-- **Premissas personalizáveis** — taxa de desconto (WACC), crescimento na perpetuidade, payout, ROE, taxa de crescimento
-- **Botão restaurar** — reverte qualquer campo ao valor original da API com um clique
-- **Watchlist** — salva múltiplos valuations e exibe cotações ao vivo com upside calculado em tempo real
-- **Ranking fundamentalista** — screening de ~130 ações da B3 com 5 métodos: Thomaz/GD, Bazin, Graham, Peter Lynch e Joel Greenblatt (Magic Formula)
-- **Ranking de FIIs** — screening de ~40 FIIs pelo Método 2em1 (rank DY + rank P/VP), com filtros de segmento, vacância, liquidez e FFO Yield
-- **Análise individual de FII** — hero com KPIs, indicadores (rentabilidade, imóveis, mercado), histórico de proventos TTM e gráfico TradingView
-- **Filtros avançados** — filtre por P/L, DY mínimo, Dívida/EBITDA, Margem Líquida, ROE e liquidez; salve e reutilize conjuntos de filtros
-- **Favoritos** — marque ações e FIIs com ★ para acompanhá-los separadamente no ranking
-- **Persistência local** — sessão, watchlist e cache do ranking salvos no `localStorage`; nada vai para nenhum servidor
-- **Zero dependências de frontend** — HTML + CSS + JS vanilla, sem npm, sem build
+- **Calculadora DCF** — Engine DCF completa com projeção por 3 ou 5 anos + Gordon Growth Model; tabela editável ano a ano
+- **Watchlist** — acompanhe valuations salvos com cotações ao vivo e upside calculado
+- **Ranking de Ações** — screening de ~130 tickers com 5 métodos: Thomaz/GD, Bazin, Graham, Peter Lynch, Joel Greenblatt
+- **Ranking de FIIs** — Método 2em1 (rank DY + rank P/VP), filtros de segmento, vacância, liquidez, FFO Yield
+- **Análise Individual** — hero com KPIs, indicadores com tooltips, valuations teóricos, histórico de LL, gráfico TradingView
+- **Análise de FII** — indicadores de rentabilidade/imóveis/mercado, histórico de proventos TTM
+- **Carteira** — rastreamento de posições com P&L ao vivo, histórico gráfico, log de operações, proventos e renda fixa
+- **Rate limiting** — 60 req/60s por IP na API
+- **Cache inteligente** — cotações 5 min, fundamentals 6h, dados de mercado 1h (diskcache SQLite)
 
 ---
 
 ## Pré-requisitos
 
-- Python 3.8+
+- Python 3.10+
+- Node.js 20+
 - pip
 
 ---
 
-## Instalação
+## Instalação e uso
+
+### Backend (FastAPI)
 
 ```bash
-# 1. Clone o repositório
+# Clone o repositório
 git clone https://github.com/Leothmz/valuation-dcf-b3.git
 cd valuation-dcf-b3
 
-# 2. Instale a única dependência Python
-pip install yfinance
+# Instale as dependências Python
+pip install -r requirements-api.txt
+
+# Inicie o servidor
+python -m uvicorn api.main:app --reload --port 8000
 ```
 
----
-
-## Como Usar
-
-### Windows
-
-Dê um duplo-clique em `start.bat` **ou** execute no terminal:
-
-```bat
-start.bat
-```
-
-### Linux / macOS
+### Frontend (React + Vite)
 
 ```bash
-python server.py
+cd frontend
+npm install
+npm run dev
+# Acesse: http://localhost:5173
 ```
 
-Acesse no browser: **http://localhost:8000**
+O frontend em dev faz proxy automático para `http://localhost:8000` (configurado em `vite.config.ts`).
 
 ---
 
-## Fluxo de Uso
+## A Matemática DCF
 
-1. **Home** — ponto de entrada com links para todas as ferramentas
-2. **Calculadora DCF** — digite o ticker (ex: `WEGE3`, `PETR4`, `ITUB4`) e pressione Enter; ajuste as premissas; salve o preço teto
-3. **Watchlist** — acompanhe todos os valuations salvos com preços atualizados a cada 3 minutos
-4. **Ranking de Ações** — carregue os dados fundamentalistas de ~130 tickers da B3, aplique filtros e escolha o método de ranking
-5. **Ranking de FIIs** — carregue ~40 FIIs rankeados pelo Método 2em1, filtre por segmento/DY/vacância; clique direito → análise individual
-6. **Análise Individual** — indicadores, valuations e gráfico TradingView para qualquer ação ou FII
-
----
-
-## A Matemática
-
-### Taxa de crescimento esperada (modelo de Gordon)
+### Taxa de crescimento esperada
 ```
 g = (1 − Payout) × ROE
 ```
@@ -98,22 +85,17 @@ VPL_i = CF_i / (1 + disc)^i
 
 ### Valor Terminal (Gordon Growth Model)
 ```
-TV = CF_n × (1 + perp) / (disc − perp)
+TV  = CF_n × (1 + perp) / (disc − perp)
 VPL_TV = TV / (1 + disc)^n
 ```
 
-### Valor intrínseco por ação
+### Preço teto
 ```
 EV = Σ VPL_i + VPL_TV
 Preço Teto = EV / Número de Ações
 ```
 
-**Parâmetros padrão:**
-| Parâmetro | Valor |
-|-----------|-------|
-| Taxa de desconto (WACC) | 15% |
-| Crescimento na perpetuidade | 3% |
-| Horizonte de projeção | 5 anos |
+**Parâmetros padrão:** WACC 15% · Perpetuidade 3% · Horizonte 5 anos
 
 ---
 
@@ -121,94 +103,92 @@ Preço Teto = EV / Número de Ações
 
 ```
 valuation-dcf-b3/
-├── index.html       — Calculadora DCF
-├── watchlist.html   — Lista de valuations salvos com preços ao vivo
-├── ranking.html     — Ranking e screening fundamentalista (5 métodos)
-├── analise.html     — Análise avançada individual de ações
-├── fii.html         — Ranking de FIIs (Método 2em1)
-├── analise-fii.html — Análise individual de FII
-├── home.html        — Página inicial com navegação
-├── server.py        — Servidor HTTP local + API de dados via yfinance
-├── start.bat        — Atalho Windows para iniciar o servidor
-├── src/             — Módulos JS puros (importados pelos HTMLs via ES modules)
-│   ├── formatters.js
-│   ├── parsers.js
-│   ├── dcf-engine.js
-│   ├── ranking-scores.js
-│   └── fii-scores.js
+├── api/                     — Backend FastAPI
+│   ├── main.py              — App entry point (CORS, rate limiter, routers)
+│   ├── models.py            — Pydantic v2 response models
+│   ├── cache.py             — diskcache SQLite wrapper + TTL constants
+│   ├── middleware.py        — Rate limiter (asyncio.Lock, deque por IP)
+│   ├── routers/
+│   │   ├── health.py        — GET /health
+│   │   ├── stocks.py        — GET /api/quote, /api/fundamentals, /api/batch/*
+│   │   ├── fiis.py          — GET /api/fii
+│   │   ├── market.py        — GET /api/cdi, /api/exchange
+│   │   └── portfolio.py     — POST /api/portfolio/history
+│   ├── services/
+│   │   ├── stock_service.py — cache-first + investidor10 enrichment
+│   │   └── fii_service.py   — cache-first + statusinvest + fundamentus
+│   └── adapters/
+│       ├── yfinance_adapter.py  — fonte primária (StockQuote, FIIData, FundamentalsData)
+│       ├── investidor10.py      — scraping net income history
+│       ├── statusinvest.py      — scraping FII extras (ffoYield, vacância, segmento)
+│       └── fundamentus.py       — fallback FII extras
+├── frontend/                — Frontend React 19 + TypeScript + Vite
+│   ├── src/
+│   │   ├── engines/         — formatters, parsers, dcf-engine, ranking-scores, fii-scores (TS)
+│   │   ├── components/      — Layout, Sidebar, Skeleton, Notification, lucide icons
+│   │   ├── stores/          — Zustand: DCF, Ranking, FII, Carteira
+│   │   ├── pages/           — DCF, Watchlist, Ranking, Análise, FII, Carteira, Home
+│   │   └── api/             — TanStack Query hooks (stocks, FIIs, market, portfolio)
+│   └── dist/                — Build de produção (Netlify aponta aqui)
 ├── tests/
-│   ├── js/         — Testes Vitest (84 testes)
-│   └── python/     — Testes pytest (31 testes)
-└── README.md
+│   ├── js/                  — Vitest vanilla (136 testes)
+│   └── python/              — pytest FastAPI TestClient (149 testes)
+├── requirements-api.txt     — fastapi, uvicorn, httpx, diskcache, yfinance
+├── Dockerfile               — CMD: uvicorn api.main:app
+└── netlify.toml             — base: frontend/, publish: dist
 ```
 
 ---
 
-## API Local
+## API
 
-O servidor expõe três endpoints:
+| Endpoint | Método | Descrição |
+|----------|--------|-----------|
+| `GET /health` | — | Health check |
+| `GET /api/quote/{ticker}` | — | Dados DCF (preço, ROE, payout, histórico LL) |
+| `GET /api/fundamentals/{ticker}` | — | Dados de ranking (P/L, P/VP, margens, DY…) |
+| `GET /api/batch/quotes?tickers=` | — | Cotações em lote (comma-separated) |
+| `GET /api/batch/fundamentals?tickers=` | — | Fundamentals em lote |
+| `GET /api/fii/{ticker}` | — | Dados de FII (DY, P/VP, vacância, segmento, proventos) |
+| `GET /api/cdi` | — | Taxa CDI acumulada (BCB) |
+| `GET /api/exchange` | — | Câmbio BRL/USD via yfinance |
+| `POST /api/portfolio/history` | `{tickers, dates}` | Histórico de preços para carteira |
 
-| Endpoint | Uso |
-|----------|-----|
-| `GET /api/quote/<TICKER>` | Dados para a calculadora DCF (preço, ROE, Payout, histórico de LL) |
-| `GET /api/fundamentals/<TICKER>` | Dados estendidos para o ranking (P/L, P/VP, margens, DY, DPA, LPA, VPA…) |
-| `GET /api/fii/<TICKER>` | Dados de FIIs (DY, P/VP, vacância, segmento, FFO Yield, histórico de proventos) |
-| `GET /api/b3-tickers` | Lista de tickers da B3 usada pelo ranking |
-
-**Exemplo:**
-```bash
-curl http://localhost:8000/api/quote/WEGE3
-curl http://localhost:8000/api/fundamentals/WEGE3
-```
-
-O servidor adiciona `.SA` automaticamente aos tickers brasileiros.
+Todos os endpoints de `/api/*` têm rate limit de 60 req/60s por IP.
 
 ---
 
 ## Testes
 
 ```bash
-# Testes JS — engine DCF, formatadores, parsers e scores de ranking (Vitest)
-npm install
+# Python — FastAPI TestClient (pytest)
+python -m pytest tests/python/ -v
+
+# JS vanilla — engines DCF, formatadores, parsers, scores (Vitest)
 npm test
 
-# Testes Python — lógica de negócio e rotas HTTP (pytest)
-pip install pytest
-python -m pytest tests/python/ -v
+# Frontend React — componentes RTL (Vitest + RTL)
+cd frontend && npm test
 ```
 
 | Suite | Ferramenta | Testes |
 |-------|-----------|--------|
-| `tests/js/formatters.test.js` | Vitest | 14 |
-| `tests/js/parsers.test.js` | Vitest | 13 |
-| `tests/js/dcf-engine.test.js` | Vitest | 23 |
-| `tests/js/ranking-scores.test.js` | Vitest | 22 |
-| `tests/js/fii-scores.test.js` | Vitest | 12 |
-| `tests/python/test_server.py` | pytest | 24 |
-| `tests/python/test_handler.py` | pytest | 7 |
+| `tests/python/` | pytest | 149 |
+| `tests/js/` | Vitest | 136 |
+| `frontend/src/` | Vitest + RTL | 36 |
+
+---
+
+## Deploy
+
+- **Backend:** Fly.io — `docker build` usa `Dockerfile` (uvicorn na porta 8000)
+- **Frontend:** Netlify — build em `frontend/`, publish `dist/`, proxy `/api/*` → Fly.io
 
 ---
 
 ## Privacidade
 
-Todos os dados ficam **100% locais**:
-- Nenhuma informação é enviada para servidores externos
-- Valuations salvos ficam no `localStorage` do seu browser
-- A única comunicação de rede é com a API do Yahoo Finance (via yfinance), feita pelo servidor local
-
----
-
-## Limitações
-
-- Dados via [yfinance](https://github.com/ranaroussi/yfinance) (Yahoo Finance) — podem ocorrer atrasos ou inconsistências pontuais
-- Funciona exclusivamente para tickers da B3 (Bolsa brasileira)
-- ROE e Payout podem não estar disponíveis para todos os tickers — nesses casos, insira manualmente
-
----
-
-## Contribuindo
-
-Pull requests são bem-vindos. Para mudanças maiores, abra uma issue primeiro para discutir o que você gostaria de alterar.
+Todos os dados ficam locais. A única comunicação externa é com Yahoo Finance (via yfinance) e os scrapers de dados públicos (investidor10, statusinvest, fundamentus) — feita pelo backend, nunca pelo browser.
 
 ---
 
