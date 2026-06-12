@@ -22,6 +22,8 @@ export interface FundamentalsData {
   subsetor?: string
   fiftyTwoWeekHigh?: number | null
   fiftyTwoWeekLow?: number | null
+  marketCap?: number | null
+  shares?: number | null
 }
 
 export interface StockQuote {
@@ -101,6 +103,22 @@ export function useBatchQuotes(tickers: string[]) {
     enabled: tickers.length > 0,
     staleTime: 3 * 60 * 1000,
     refetchInterval: 3 * 60 * 1000,
+  })
+}
+
+export function useFundamentals(ticker: string | null) {
+  return useQuery({
+    queryKey: ['fundamentals', ticker],
+    queryFn: async () => {
+      const res = await fetch(`/api/fundamentals/${ticker}`)
+      if (!res.ok) throw new Error('NOT_FOUND')
+      const data = await res.json()
+      if (data.code === 'NOT_FOUND') throw new Error('NOT_FOUND')
+      if (data.code === 'NO_YFINANCE') throw new Error('NO_YFINANCE')
+      return data as FundamentalsData
+    },
+    enabled: !!ticker,
+    staleTime: 6 * 60 * 60 * 1000,
   })
 }
 
