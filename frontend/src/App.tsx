@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { DCFPage } from './pages/DCFPage'
+import { WatchlistPage } from './pages/WatchlistPage'
 
 export default function App() {
   return (
@@ -8,7 +9,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<div className="p-8 text-text-base">Home</div>} />
         <Route path="/dcf" element={<DCFPage />} />
-        <Route path="/watchlist" element={<div className="p-8 text-text-base">Watchlist</div>} />
+        <Route path="/watchlist" element={<WatchlistPage />} />
         <Route path="/ranking" element={<div className="p-8 text-text-base">Ranking</div>} />
         <Route path="/analise" element={<div className="p-8 text-text-base">Análise</div>} />
         <Route path="/fiis" element={<div className="p-8 text-text-base">FIIs</div>} />
