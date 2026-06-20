@@ -5,6 +5,8 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
+    "@types/node": "^26.0.0",
     "vitest": "^4.1.8"
   }
 }
