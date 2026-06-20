@@ -317,7 +317,7 @@ export function DCFPage() {
   } as StockQuote : null)
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col min-h-screen md:h-screen md:overflow-hidden">
       {/* Header */}
       <header className="bg-bg-2 border-b border-border px-5 py-[10px]
                           flex items-center gap-4 sticky top-0 z-40 flex-shrink-0">
@@ -330,10 +330,10 @@ export function DCFPage() {
           onClick={() => setSettingsOpen(true)}
           className="ml-auto bg-none border border-border rounded-[10px] text-text-sec text-[13px]
                      font-ui px-[14px] h-[38px] cursor-pointer flex items-center gap-1.5
-                     hover:bg-bg-3 hover:text-text-base transition-colors"
+                     hover:bg-bg-3 hover:text-text-base transition-colors shrink-0"
         >
           <Settings size={14} />
-          Configurações
+          <span className="hidden sm:inline">Configurações</span>
         </button>
       </header>
 
@@ -355,10 +355,9 @@ export function DCFPage() {
           </div>
         </div>
       ) : (
-        <div className="grid flex-1 overflow-hidden"
-             style={{ gridTemplateColumns: '390px 1fr' }}>
+        <div className="grid flex-1 md:overflow-hidden grid-cols-1 md:grid-cols-[390px_1fr]">
           {/* Left panel */}
-          <div className="bg-bg-2 border-r border-border overflow-y-auto p-5">
+          <div className="bg-bg-2 border-b md:border-b-0 md:border-r border-border md:overflow-y-auto p-5">
             <div className="text-[11px] font-semibold text-text-muted tracking-[0.12em] uppercase mb-[14px]">
               Premissas
             </div>
@@ -388,7 +387,7 @@ export function DCFPage() {
           </div>
 
           {/* Right panel */}
-          <div className="bg-bg-1 overflow-y-auto p-5">
+          <div className="bg-bg-1 md:overflow-y-auto p-5">
             <DCFTable
               results={store.results}
               history={store.history}

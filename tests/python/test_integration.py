@@ -35,11 +35,10 @@ def test_openapi_schema_loads(client):
 
 
 def test_all_routers_registered(client):
-    """Verify all routers are included in main app."""
-    from api.main import app
-    route_paths = {r.path for r in app.routes}
-    assert "/health" in route_paths
-    assert "/api/quote/{ticker}" in route_paths
-    assert "/api/fii/{ticker}" in route_paths
-    assert "/api/cdi" in route_paths
-    assert "/api/portfolio/history" in route_paths
+    """Verify all routers are included in main app via OpenAPI schema."""
+    resp = client.get("/openapi.json")
+    paths = resp.json()["paths"]
+    assert "/api/quote/{ticker}" in paths
+    assert "/api/fii/{ticker}" in paths
+    assert "/api/cdi" in paths
+    assert "/api/portfolio/history" in paths

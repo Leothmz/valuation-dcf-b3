@@ -121,7 +121,7 @@ export function CarteiraPage() {
 
         {/* Tabs */}
         <div
-          className="flex gap-1 mt-6 mb-5"
+          className="flex gap-1 mt-6 mb-5 overflow-x-auto scrollbar-none"
           style={{ borderBottom: '1px solid #1e2d42' }}
         >
           {TABS.map(({ key, label }) => (
