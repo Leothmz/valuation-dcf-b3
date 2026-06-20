@@ -196,6 +196,20 @@ describe('WatchlistPage — live data state', () => {
   })
 })
 
+describe('CSV export', () => {
+  it('renders "Exportar CSV" button when there are entries', () => {
+    mockUseWatchlist.mockReturnValue({
+      entries: { PETR4: makeEntry('PETR4') },
+      remove: vi.fn(),
+      updateNotes: vi.fn(),
+      updateHistoryAnnotation: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+
+    renderPage()
+    expect(screen.getByRole('button', { name: /exportar csv/i })).toBeInTheDocument()
+  })
+})
+
 describe('Price history feature', () => {
   it('renders history modal when triggered via context menu', async () => {
     const user = userEvent.setup()
