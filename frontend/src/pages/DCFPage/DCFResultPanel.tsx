@@ -1,7 +1,7 @@
 import { Settings2 } from 'lucide-react'
 import { fBRL, fShort, fPct, fShares } from '../../engines/formatters'
 import type { DCFResult } from '../../engines/dcf-engine'
-import type { NullableDCFAssumptions } from '../../stores/dcfStore'
+import type { NullableDCFAssumptions, ScenarioState } from '../../stores/dcfStore'
 
 interface DCFResultPanelProps {
   results: DCFResult | null
@@ -13,6 +13,10 @@ interface DCFResultPanelProps {
   onSave: () => void
   isSaved: boolean
   onOpenMethodModal: () => void
+  scenarios: ScenarioState
+  scenarioResults: { bear: number | null; base: number | null; bull: number | null } | null
+  onToggleScenarios: (currentG: number | null) => void
+  onSetScenario: (key: 'bear' | 'base' | 'bull', value: number | null) => void
 }
 
 export function DCFResultPanel({
@@ -25,6 +29,10 @@ export function DCFResultPanel({
   onSave,
   isSaved,
   onOpenMethodModal,
+  scenarios,
+  scenarioResults,
+  onToggleScenarios,
+  onSetScenario,
 }: DCFResultPanelProps) {
   const r = results
   const gordonError = r && 'error' in r && r.error === 'gordon'
@@ -143,6 +151,72 @@ export function DCFResultPanel({
           </div>
         </div>
       </div>
+
+      {/* Scenarios section */}
+      {r && !('error' in r) && (
+        <div className="mt-4">
+          <button
+            onClick={() => onToggleScenarios(assumptions.g)}
+            className="w-full flex items-center justify-between border border-border rounded-[10px]
+                       text-[12px] font-semibold text-text-sec px-3 h-[34px] cursor-pointer
+                       hover:bg-bg-3 hover:text-text-base transition-colors"
+            style={{ background: 'none' }}
+          >
+            <span>Cenários bull / base / bear</span>
+            <span style={{ color: scenarios.enabled ? 'var(--color-cyan)' : 'var(--color-text-muted)' }}>
+              {scenarios.enabled ? 'ON' : 'OFF'}
+            </span>
+          </button>
+
+          {scenarios.enabled && (
+            <div className="mt-3 space-y-2">
+              {(
+                [
+                  { key: 'bear', label: 'Bear', color: 'var(--color-red)', dim: 'var(--color-red-dim)' },
+                  { key: 'base', label: 'Base', color: 'var(--color-text-sec)', dim: 'var(--color-bg-3)' },
+                  { key: 'bull', label: 'Bull', color: 'var(--color-green)', dim: 'var(--color-green-dim)' },
+                ] as const
+              ).map(({ key, label, color, dim }) => (
+                <div
+                  key={key}
+                  className="flex items-center gap-2 rounded-[10px] px-3 py-2 border border-border"
+                  style={{ background: dim }}
+                >
+                  <span
+                    className="text-[11px] font-bold uppercase tracking-[.08em] w-[34px]"
+                    style={{ color }}
+                  >
+                    {label}
+                  </span>
+                  <div className="flex items-center gap-1 flex-1">
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      className="bg-bg-3 border border-border rounded-[6px] text-[13px] font-mono
+                                 text-text-base px-2 py-1 outline-none w-[70px]
+                                 focus:border-cyan"
+                      value={scenarios[key] != null ? (scenarios[key]! * 100).toFixed(1) : ''}
+                      onChange={(e) => {
+                        const n = parseFloat(e.target.value)
+                        onSetScenario(key, isNaN(n) ? null : n / 100)
+                      }}
+                    />
+                    <span className="text-[11px] text-text-muted">%</span>
+                  </div>
+                  <span
+                    className="font-mono text-[14px] font-semibold ml-auto"
+                    style={{ color }}
+                  >
+                    {scenarioResults?.[key] != null ? fBRL.format(scenarioResults[key]!) : '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
