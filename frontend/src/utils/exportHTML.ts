@@ -74,11 +74,11 @@ export function buildExportHTML(p: ExportHTMLParams): string {
   const upsideText = upside != null ? `${upside >= 0 ? '+' : ''}${fPct(upside)}` : ''
 
   const flowRows = (r && !('error' in r) ? r.pvFlows : [])
-    .map((f) => `<tr>
-      <td>${f.year}</td>
-      <td class="val">${fBRL(f.cf)}</td>
-      <td class="val">${fPct(f.g)}</td>
-      <td class="val">${fBRL(f.pv)}</td>
+    .map((flow) => `<tr>
+      <td>${flow.year}</td>
+      <td class="val">${fBRL(flow.cf)}</td>
+      <td class="val">${fPct(flow.g)}</td>
+      <td class="val">${fBRL(flow.pv)}</td>
     </tr>`)
     .join('')
 

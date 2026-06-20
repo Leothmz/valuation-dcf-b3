@@ -356,7 +356,9 @@ export function DCFPage() {
       const anchor = document.createElement('a')
       anchor.href = url
       anchor.download = `${store.ticker}-valuation-${new Date().toISOString().slice(0, 10)}.html`
+      document.body.appendChild(anchor)
       anchor.click()
+      document.body.removeChild(anchor)
       URL.revokeObjectURL(url)
     } finally {
       setIsExporting(false)

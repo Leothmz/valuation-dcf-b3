@@ -45,7 +45,8 @@ describe('buildExportHTML', () => {
 
   it('includes the fair price', () => {
     const html = buildExportHTML(baseParams)
-    expect(html).toContain('39')
+    expect(html).toContain('R$')
+    expect(html).toContain('39,74')
   })
 
   it('includes the export date', () => {
