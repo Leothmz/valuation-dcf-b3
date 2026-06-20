@@ -30,7 +30,7 @@ interface SidebarProps {
 export function Sidebar({ onOpenSearch }: SidebarProps) {
   return (
     <nav
-      className="group fixed left-0 top-0 h-screen z-40 flex flex-col
+      className="group fixed left-0 top-0 h-screen z-40 hidden md:flex flex-col
                  border-r border-border overflow-hidden
                  transition-[width] duration-[220ms] ease-in-out
                  w-[58px] hover:w-56"
