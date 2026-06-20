@@ -184,7 +184,7 @@ export const useDCFStore = create<DCFState & DCFActions>()(
           if (state.scenarios.enabled) {
             return { scenarios: INITIAL_SCENARIOS }
           }
-          const base = currentG ?? null
+          const base = currentG
           const bear = base != null ? Math.round(base * 0.7 * 10000) / 10000 : null
           const bull = base != null ? Math.round(base * 1.3 * 10000) / 10000 : null
           return { scenarios: { enabled: true, bear, base, bull } }

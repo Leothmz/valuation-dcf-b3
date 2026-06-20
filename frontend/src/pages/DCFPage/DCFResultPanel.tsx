@@ -172,9 +172,9 @@ export function DCFResultPanel({
             <div className="mt-3 space-y-2">
               {(
                 [
-                  { key: 'bear', label: 'Bear', color: 'var(--color-red)', dim: 'rgba(239,68,68,.08)' },
-                  { key: 'base', label: 'Base', color: 'var(--color-text-sec)', dim: 'rgba(255,255,255,.03)' },
-                  { key: 'bull', label: 'Bull', color: 'var(--color-green)', dim: 'rgba(16,185,129,.08)' },
+                  { key: 'bear', label: 'Bear', color: 'var(--color-red)', dim: 'var(--color-red-dim)' },
+                  { key: 'base', label: 'Base', color: 'var(--color-text-sec)', dim: 'var(--color-bg-3)' },
+                  { key: 'bull', label: 'Bull', color: 'var(--color-green)', dim: 'var(--color-green-dim)' },
                 ] as const
               ).map(({ key, label, color, dim }) => (
                 <div
