@@ -20,7 +20,7 @@ ENV/
 
 # Node
 node_modules/
-package-lock.json
+/package-lock.json
 
 # Claude AI (uso interno)
 .claude/
@@ -38,3 +38,4 @@ desktop.ini
 .idea/
 *.swp
 *.swo
+frontend/coverage/
