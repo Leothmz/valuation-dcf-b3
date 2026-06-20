@@ -9,6 +9,7 @@ import {
   BarChart2,
   TrendingUp,
   Briefcase,
+  Search,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -22,7 +23,11 @@ const NAV_ITEMS = [
   { to: '/carteira', icon: Briefcase, label: 'Carteira' },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  onOpenSearch?: () => void
+}
+
+export function Sidebar({ onOpenSearch }: SidebarProps) {
   return (
     <nav
       className="group fixed left-0 top-0 h-screen z-40 flex flex-col
@@ -46,6 +51,25 @@ export function Sidebar() {
         >
           Valuation DCF
         </span>
+      </div>
+
+      {/* Search button */}
+      <div className="p-2 border-b border-border-muted min-w-56">
+        <button
+          onClick={onOpenSearch}
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg
+                     text-text-muted hover:text-text-base hover:bg-bg-3
+                     transition-colors duration-150 whitespace-nowrap"
+        >
+          <Search size={16} className="shrink-0" strokeWidth={1.75} />
+          <span
+            className="text-sm font-medium
+                       opacity-0 group-hover:opacity-100 transition-opacity duration-[220ms]"
+          >
+            Buscar
+            <span className="ml-auto pl-4 text-[11px] text-text-muted font-mono">Ctrl+K</span>
+          </span>
+        </button>
       </div>
 
       {/* Nav items */}
