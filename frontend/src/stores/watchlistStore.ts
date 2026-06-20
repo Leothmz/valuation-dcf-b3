@@ -43,9 +43,23 @@ export const useWatchlistStore = create<WatchlistState & WatchlistActions>()(
       entries: {},
 
       save: (entry) =>
-        set((state) => ({
-          entries: { ...state.entries, [entry.ticker]: entry },
-        })),
+        set((state) => {
+          const existing = state.entries[entry.ticker]
+          const prevHistory = existing?.priceHistory ?? []
+          const newHistory = existing
+            ? [{ fairPrice: existing.fairPrice, savedAt: existing.savedAt }, ...prevHistory]
+            : prevHistory
+          return {
+            entries: {
+              ...state.entries,
+              [entry.ticker]: {
+                ...entry,
+                priceHistory: newHistory.slice(0, 50),
+                notes: existing?.notes,       // preserve notes across re-saves
+              },
+            },
+          }
+        }),
 
       remove: (ticker) =>
         set((state) => {
