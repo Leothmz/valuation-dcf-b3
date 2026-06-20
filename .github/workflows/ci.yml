@@ -39,6 +39,21 @@ jobs:
       - run: npm run test:coverage
         working-directory: frontend
 
+  test-e2e:
+    name: test-e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright test --reporter=list
+
   test-python:
     name: test-python
     runs-on: ubuntu-latest
