@@ -50,6 +50,33 @@ beforeEach(() => {
   } as ReturnType<typeof useBatchQuotes>)
 })
 
+describe('Notes feature', () => {
+  it('renders note badge (●) on ticker when entry has notes', () => {
+    const mockUpdateNotes = vi.fn()
+    mockUseWatchlist.mockReturnValue({
+      entries: { PETR4: makeEntry('PETR4', { notes: 'Boa empresa' }) },
+      remove: vi.fn(),
+      updateNotes: mockUpdateNotes,
+      updateHistoryAnnotation: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+
+    renderPage()
+    expect(screen.getByTitle('Boa empresa')).toBeInTheDocument()
+  })
+
+  it('does not render note badge when entry has no notes', () => {
+    mockUseWatchlist.mockReturnValue({
+      entries: { PETR4: makeEntry('PETR4') },
+      remove: vi.fn(),
+      updateNotes: vi.fn(),
+      updateHistoryAnnotation: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+
+    renderPage()
+    expect(screen.queryByTitle(/boa empresa/i)).not.toBeInTheDocument()
+  })
+})
+
 describe('WatchlistPage — empty state', () => {
   beforeEach(() => {
     mockUseWatchlist.mockReturnValue({
