@@ -20,9 +20,35 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-      - run: npm ci
+      - run: npm install
       - run: npm test
+
+  test-js-frontend:
+    name: test-js-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+        working-directory: frontend
+      - run: npm run test:coverage
+        working-directory: frontend
+
+  test-e2e:
+    name: test-e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: npm install
+        working-directory: frontend
+      - run: npx playwright test --reporter=list
 
   test-python:
     name: test-python
