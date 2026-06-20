@@ -5,6 +5,15 @@ import type { DCFResult, DCFHistoryEntry } from '../engines/dcf-engine'
 // The vanilla JS S.dcfMethod values
 export type DCFMethod = 'buffett' | 'classico'
 
+export interface ScenarioState {
+  enabled: boolean
+  bear: number | null
+  base: number | null
+  bull: number | null
+}
+
+const INITIAL_SCENARIOS: ScenarioState = { enabled: false, bear: null, base: null, bull: null }
+
 /**
  * Nullable version of DCFAssumptions matching the vanilla S.assumptions object.
  * Fields that require user input can be null before the user loads a ticker.
@@ -51,6 +60,9 @@ export interface DCFState {
   results: DCFResult | null
   resultsClassico: DCFResult | null
   resultsBuffett: DCFResult | null
+
+  // Scenario analysis — NOT persisted
+  scenarios: ScenarioState
 }
 
 export interface DCFActions {
@@ -67,6 +79,8 @@ export interface DCFActions {
   setDCFMethod: (method: DCFMethod) => void
   setHistory: (history: DCFHistoryEntry[]) => void
   setResults: (results: DCFResult | null, resultsClassico: DCFResult | null, resultsBuffett: DCFResult | null) => void
+  setScenario: (key: 'bear' | 'base' | 'bull', value: number | null) => void
+  toggleScenarios: (currentG: number | null) => void
   reset: () => void
 }
 
@@ -81,7 +95,7 @@ const DEFAULT_ASSUMPTIONS: DCFState['assumptions'] = {
   price: null,
 }
 
-const INITIAL_STATE: Omit<DCFState, 'results' | 'resultsClassico' | 'resultsBuffett'> = {
+const INITIAL_STATE: Omit<DCFState, 'results' | 'resultsClassico' | 'resultsBuffett' | 'scenarios'> = {
   ticker: null,
   companyName: null,
   apiData: null,
@@ -99,10 +113,11 @@ export const useDCFStore = create<DCFState & DCFActions>()(
     (set) => ({
       ...INITIAL_STATE,
 
-      // results are runtime-only, never persisted
+      // results and scenarios are runtime-only, never persisted
       results: null,
       resultsClassico: null,
       resultsBuffett: null,
+      scenarios: INITIAL_SCENARIOS,
 
       setTicker: (ticker, name, apiData) =>
         set({
@@ -112,6 +127,7 @@ export const useDCFStore = create<DCFState & DCFActions>()(
           results: null,
           resultsClassico: null,
           resultsBuffett: null,
+          scenarios: INITIAL_SCENARIOS,
         }),
 
       setAssumption: (field, value) =>
@@ -158,20 +174,43 @@ export const useDCFStore = create<DCFState & DCFActions>()(
       setResults: (results, resultsClassico, resultsBuffett) =>
         set({ results, resultsClassico, resultsBuffett }),
 
+      setScenario: (key, value) =>
+        set((state) => ({
+          scenarios: { ...state.scenarios, [key]: value },
+        })),
+
+      toggleScenarios: (currentG) =>
+        set((state) => {
+          if (state.scenarios.enabled) {
+            return { scenarios: INITIAL_SCENARIOS }
+          }
+          const base = currentG ?? null
+          const bear = base != null ? Math.round(base * 0.7 * 10000) / 10000 : null
+          const bull = base != null ? Math.round(base * 1.3 * 10000) / 10000 : null
+          return { scenarios: { enabled: true, bear, base, bull } }
+        }),
+
       reset: () =>
         set({
           ...INITIAL_STATE,
           results: null,
           resultsClassico: null,
           resultsBuffett: null,
+          scenarios: INITIAL_SCENARIOS,
         }),
     }),
     {
       name: 'dcf_session',
       storage: createJSONStorage(() => localStorage),
-      // results are derived — exclude from persistence
+      // results and scenarios are derived/ephemeral — exclude from persistence
       partialize: (state) => {
-        const { results: _r, resultsClassico: _rc, resultsBuffett: _rb, ...persisted } = state
+        const {
+          results: _r,
+          resultsClassico: _rc,
+          resultsBuffett: _rb,
+          scenarios: _s,
+          ...persisted
+        } = state
         return persisted
       },
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Settings } from 'lucide-react'
 import { useDCFStore, useWatchlistStore } from '../../stores'
@@ -72,6 +72,30 @@ export function DCFPage() {
     )
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedAssumptions, debouncedYearOverrides, store.projYears, store.dcfMethod, store.history])
+
+  const scenarioResults = useMemo(() => {
+    if (!store.scenarios.enabled) return null
+    const a = store.assumptions
+    if (!a.ll || !a.shares) return null
+
+    function computePrice(g: number | null): number | null {
+      if (g == null) return null
+      const res = runDCF(
+        { ll: a.ll!, payout: a.payout ?? undefined, roe: a.roe ?? undefined,
+          g, disc: a.disc, perp: a.perp, shares: a.shares! },
+        store.history,
+        store.projYears,
+        store.yearOverrides as Record<number, number>,
+      )
+      return res && !('error' in res) ? res.fairPrice : null
+    }
+
+    return {
+      bear: computePrice(store.scenarios.bear),
+      base: computePrice(store.scenarios.base),
+      bull: computePrice(store.scenarios.bull),
+    }
+  }, [store.scenarios, store.assumptions, store.history, store.projYears, store.yearOverrides])
 
   // On first mount: handle URL params and restore persisted state
   useEffect(() => {
@@ -383,6 +407,10 @@ export function DCFPage() {
               onSave={handleSave}
               isSaved={isSaved}
               onOpenMethodModal={() => setMethodModalOpen(true)}
+              scenarios={store.scenarios}
+              scenarioResults={scenarioResults}
+              onToggleScenarios={(g) => store.toggleScenarios(g)}
+              onSetScenario={(key, value) => store.setScenario(key, value)}
             />
           </div>
 

@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { DCFResultPanel } from './DCFResultPanel'
 import type { DCFResult } from '../../engines/dcf-engine'
 import type { NullableDCFAssumptions } from '../../stores/dcfStore'
@@ -39,6 +40,10 @@ function renderPanel(overrides: Partial<Parameters<typeof DCFResultPanel>[0]> = 
     onSave: vi.fn(),
     isSaved: false,
     onOpenMethodModal: vi.fn(),
+    scenarios: { enabled: false, bear: null, base: null, bull: null },
+    scenarioResults: null,
+    onToggleScenarios: vi.fn(),
+    onSetScenario: vi.fn(),
   }
   return render(<DCFResultPanel {...defaults} {...overrides} />)
 }
@@ -109,5 +114,63 @@ describe('DCFResultPanel', () => {
     renderPanel({ results: baseResult, assumptions: { ...baseAssumptions, price: 25.5 } })
     const matches = screen.getAllByText(/R\$\s*25/)
     expect(matches.length).toBeGreaterThan(0)
+  })
+})
+
+describe('scenarios section', () => {
+  const scenariosOff = { enabled: false, bear: null, base: null, bull: null }
+  const scenariosOn = { enabled: true, bear: 0.07, base: 0.10, bull: 0.13 }
+  const scenarioResults = { bear: 35.0, base: 40.0, bull: 48.0 }
+
+  it('does not render scenario toggle when results is null', () => {
+    renderPanel({
+      scenarios: scenariosOff,
+      scenarioResults: null,
+      onToggleScenarios: vi.fn(),
+      onSetScenario: vi.fn(),
+    })
+    expect(screen.queryByText(/bull \/ base \/ bear/i)).not.toBeInTheDocument()
+  })
+
+  it('renders scenario toggle when results exist', () => {
+    renderPanel({
+      results: baseResult,
+      ticker: 'PETR4',
+      scenarios: scenariosOff,
+      scenarioResults: null,
+      onToggleScenarios: vi.fn(),
+      onSetScenario: vi.fn(),
+    })
+    expect(screen.getByText(/bull \/ base \/ bear/i)).toBeInTheDocument()
+    expect(screen.getByText('OFF')).toBeInTheDocument()
+  })
+
+  it('shows scenario price chips when enabled', () => {
+    renderPanel({
+      results: baseResult,
+      ticker: 'PETR4',
+      scenarios: scenariosOn,
+      scenarioResults,
+      onToggleScenarios: vi.fn(),
+      onSetScenario: vi.fn(),
+    })
+    expect(screen.getByText('ON')).toBeInTheDocument()
+    expect(screen.getByText(/R\$\s*35/)).toBeInTheDocument()
+    expect(screen.getByText(/R\$\s*48/)).toBeInTheDocument()
+  })
+
+  it('calls onToggleScenarios when button clicked', async () => {
+    const user = userEvent.setup()
+    const onToggle = vi.fn()
+    renderPanel({
+      results: baseResult,
+      ticker: 'PETR4',
+      scenarios: scenariosOff,
+      scenarioResults: null,
+      onToggleScenarios: onToggle,
+      onSetScenario: vi.fn(),
+    })
+    await user.click(screen.getByText(/bull \/ base \/ bear/i))
+    expect(onToggle).toHaveBeenCalledWith(0.12) // baseAssumptions.g
   })
 })
