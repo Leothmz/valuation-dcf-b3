@@ -71,7 +71,7 @@ interface ContextMenuState {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export function WatchlistPage() {
-  const { entries, remove, updateNotes, updateHistoryAnnotation } = useWatchlistStore()
+  const { entries, remove, updateNotes } = useWatchlistStore()
   const navigate = useNavigate()
 
   const tickers = Object.keys(entries)
