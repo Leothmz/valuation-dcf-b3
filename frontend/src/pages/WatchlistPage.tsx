@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { StickyNote, History, X, Download } from 'lucide-react'
 import { useWatchlistStore } from '../stores'
 import { useBatchQuotes } from '../api/stocks'
 import { fBRL, fPct } from '../engines/formatters'
@@ -70,7 +71,7 @@ interface ContextMenuState {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export function WatchlistPage() {
-  const { entries, remove } = useWatchlistStore()
+  const { entries, remove, updateNotes, updateHistoryAnnotation } = useWatchlistStore()
   const navigate = useNavigate()
 
   const tickers = Object.keys(entries)
@@ -78,6 +79,8 @@ export function WatchlistPage() {
 
   const [filterText, setFilterText] = useState('')
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const [notesModal, setNotesModal] = useState<{ ticker: string; draft: string } | null>(null)
+  const [historyModal, setHistoryModal] = useState<string | null>(null) // ticker
   const contextMenuRef = useRef<HTMLDivElement>(null)
 
   // Build live price map: ticker → LiveQuote
@@ -153,6 +156,57 @@ export function WatchlistPage() {
     setContextMenu({ x, y, ticker })
   }
 
+  function exportCSV() {
+    const BOM = '﻿'
+    const SEP = ';'
+    const headers = [
+      'Ticker', 'Empresa', 'Preço Teto', 'Preço Atual', 'Upside (%)',
+      'DY (%)', 'Salvo Em', 'g (%)', 'Disc (%)', 'Perp (%)',
+      'Payout (%)', 'ROE (%)', 'LL Base', 'Shares',
+    ]
+
+    const fNum = (v: number | null | undefined, mult = 1, dec = 2): string => {
+      if (v == null) return ''
+      return (v * mult).toFixed(dec).replace('.', ',')
+    }
+
+    const dataRows = Object.values(entries).map((entry) => {
+      const live = liveMap[entry.ticker]
+      const price = live?.price ?? null
+      const dy = live?.dividendYield ?? null
+      const upside =
+        price != null && entry.fairPrice
+          ? ((entry.fairPrice - price) / entry.fairPrice) * 100
+          : null
+      const a = entry.assumptions
+      return [
+        entry.ticker,
+        `"${(entry.name ?? '').replace(/"/g, '""')}"`,
+        fNum(entry.fairPrice),
+        fNum(price),
+        fNum(upside, 1),
+        fNum(dy, 100),
+        new Date(entry.savedAt).toLocaleDateString('pt-BR'),
+        fNum(a.g as number | null, 100),
+        fNum(a.disc as number | null, 100),
+        fNum(a.perp as number | null, 100),
+        fNum(a.payout as number | null, 100),
+        fNum(a.roe as number | null, 100),
+        fNum(a.ll as number | null, 1, 0),
+        fNum(a.shares as number | null, 1, 0),
+      ].join(SEP)
+    })
+
+    const csv = BOM + [headers.join(SEP), ...dataRows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `watchlist-${new Date().toISOString().slice(0, 10)}.csv`
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
   // ── Empty state ─────────────────────────────────────────────────────────────
   if (tickers.length === 0) {
     return (
@@ -225,11 +279,23 @@ export function WatchlistPage() {
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
         />
-        {dataUpdatedAt > 0 && (
-          <span className="text-[12px] text-text-muted ml-auto">
-            Atualizado às {fTime(new Date(dataUpdatedAt))} · próximo em 3 min
-          </span>
-        )}
+        <div className="ml-auto flex items-center gap-3">
+          {dataUpdatedAt > 0 && (
+            <span className="text-[12px] text-text-muted">
+              Atualizado às {fTime(new Date(dataUpdatedAt))} · próximo em 3 min
+            </span>
+          )}
+          <button
+            onClick={exportCSV}
+            className="inline-flex items-center gap-1.5 border border-border rounded-[10px] text-text-sec
+                       text-[13px] font-ui px-[14px] h-[36px] cursor-pointer hover:bg-bg-3
+                       hover:text-text-base transition-colors"
+            style={{ background: 'none' }}
+          >
+            <Download size={13} />
+            Exportar CSV
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -307,6 +373,14 @@ export function WatchlistPage() {
                       <span className="font-semibold text-[14px] font-mono text-cyan">
                         {ticker}
                       </span>
+                      {entry.notes && (
+                        <span
+                          title={entry.notes.slice(0, 80)}
+                          style={{ color: 'var(--color-amber)', display: 'flex', alignItems: 'center' }}
+                        >
+                          <StickyNote size={11} />
+                        </span>
+                      )}
                     </div>
                   </td>
 
@@ -431,6 +505,150 @@ export function WatchlistPage() {
         </table>
       </div>
 
+      {/* Notes modal */}
+      {notesModal && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center"
+          onClick={(e) => { if (e.target === e.currentTarget) setNotesModal(null) }}
+        >
+          <div className="bg-bg-2 border border-border rounded-[16px] p-6 w-[440px] max-w-[92vw]"
+               style={{ boxShadow: '0 8px 32px rgba(0,0,0,.6)' }}>
+            <div className="text-[16px] font-semibold mb-4">
+              Nota · <span style={{ color: 'var(--color-cyan)' }}>{notesModal.ticker}</span>
+            </div>
+            <textarea
+              className="w-full bg-bg-3 border border-border rounded-[10px] text-text-base text-[13px]
+                         p-3 resize-none outline-none h-[120px] placeholder-text-muted
+                         focus:border-cyan focus:shadow-[0_0_0_3px_rgba(6,182,212,.06)]"
+              maxLength={500}
+              value={notesModal.draft}
+              onChange={(e) => setNotesModal({ ...notesModal, draft: e.target.value })}
+              placeholder="Adicione suas observações sobre este ativo…"
+              autoFocus
+            />
+            <div className="text-[11px] text-text-muted text-right mt-1">
+              {notesModal.draft.length}/500
+            </div>
+            <div className="flex gap-2 justify-end mt-4">
+              <button
+                className="border border-border rounded-[10px] text-text-sec text-[13px] font-ui
+                           px-4 h-[38px] cursor-pointer hover:bg-bg-3 hover:text-text-base transition-colors"
+                style={{ background: 'none' }}
+                onClick={() => setNotesModal(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="rounded-[10px] text-[13px] font-semibold font-ui px-4 h-[38px] cursor-pointer
+                           hover:-translate-y-px transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, var(--color-cyan) 0%, #0891b2 100%)',
+                  color: 'var(--bg-0)',
+                  boxShadow: '0 2px 8px rgba(6,182,212,.2)',
+                }}
+                onClick={() => {
+                  updateNotes(notesModal.ticker, notesModal.draft)
+                  setNotesModal(null)
+                }}
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History modal */}
+      {historyModal && (() => {
+        const entry = entries[historyModal]
+        const hist = entry?.priceHistory ?? []
+        return (
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center"
+            onClick={(e) => { if (e.target === e.currentTarget) setHistoryModal(null) }}
+          >
+            <div
+              className="bg-bg-2 border border-border rounded-[16px] p-6 w-[640px] max-w-[94vw]"
+              style={{ boxShadow: '0 8px 32px rgba(0,0,0,.6)' }}
+            >
+              <div className="flex items-center justify-between mb-5">
+                <div className="text-[16px] font-semibold">
+                  Histórico · <span style={{ color: 'var(--color-cyan)' }}>{historyModal}</span>
+                </div>
+                <button
+                  className="text-text-muted hover:text-text-base transition-colors"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                  onClick={() => setHistoryModal(null)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {hist.length === 0 ? (
+                <p className="text-[13px] text-text-muted text-center py-6">
+                  Nenhum histórico ainda — salve o preço teto mais de uma vez para registrar a evolução.
+                </p>
+              ) : (
+                <div className="overflow-auto max-h-[400px]">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr>
+                        {['Data', 'Preço Teto', 'Variação', 'Anotação'].map((h) => (
+                          <th
+                            key={h}
+                            className="text-[11px] text-text-muted uppercase tracking-[.08em] font-semibold
+                                       py-2 px-3 text-left border-b border-border bg-bg-3"
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {hist.map((h, i) => {
+                        const prev = hist[i + 1]
+                        const diff = prev ? ((h.fairPrice - prev.fairPrice) / prev.fairPrice) : null
+                        return (
+                          <tr key={h.savedAt} className="border-b border-border-muted last:border-b-0">
+                            <td className="font-mono text-[13px] py-3 px-3 text-text-sec whitespace-nowrap">
+                              {fDate(h.savedAt)}
+                            </td>
+                            <td className="font-mono text-[13px] py-3 px-3 font-semibold"
+                                style={{ color: 'var(--color-cyan)' }}>
+                              {fBRL.format(h.fairPrice)}
+                            </td>
+                            <td className="font-mono text-[13px] py-3 px-3 whitespace-nowrap">
+                              {diff == null ? (
+                                <span className="text-text-muted">—</span>
+                              ) : (
+                                <span style={{ color: diff >= 0 ? 'var(--color-green)' : 'var(--color-red)' }}>
+                                  {diff >= 0 ? '+' : ''}{(diff * 100).toFixed(1)}%
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3">
+                              <input
+                                type="text"
+                                className="bg-bg-3 border border-border rounded-[6px] text-text-sec text-[12px]
+                                           px-2 py-1 outline-none w-full placeholder-text-muted
+                                           focus:border-cyan"
+                                defaultValue={h.annotation ?? ''}
+                                placeholder="Anotação…"
+                                onBlur={(e) => updateHistoryAnnotation(historyModal, h.savedAt, e.target.value)}
+                              />
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Context menu */}
       {contextMenu && (
         <div
@@ -452,6 +670,29 @@ export function WatchlistPage() {
             }}
           >
             Ver Análise Avançada
+          </button>
+          <button
+            className="w-full flex items-center gap-2 px-4 py-[10px] text-[13px] text-text-sec text-left cursor-pointer hover:bg-bg-4 hover:text-text-base"
+            style={{ background: 'none', border: 'none', transition: 'background .12s ease, color .12s ease' }}
+            onClick={() => {
+              const entry = entries[contextMenu!.ticker]
+              setNotesModal({ ticker: contextMenu!.ticker, draft: entry?.notes ?? '' })
+              setContextMenu(null)
+            }}
+          >
+            <StickyNote size={13} />
+            Editar nota
+          </button>
+          <button
+            className="w-full flex items-center gap-2 px-4 py-[10px] text-[13px] text-text-sec text-left cursor-pointer hover:bg-bg-4 hover:text-text-base"
+            style={{ background: 'none', border: 'none', transition: 'background .12s ease, color .12s ease' }}
+            onClick={() => {
+              setHistoryModal(contextMenu!.ticker)
+              setContextMenu(null)
+            }}
+          >
+            <History size={13} />
+            Histórico de preço teto
           </button>
           <button
             className="w-full flex items-center gap-2 px-4 py-[10px] text-[13px] text-text-sec text-left cursor-pointer"

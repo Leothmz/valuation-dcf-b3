@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { WatchlistPage } from './WatchlistPage'
 import type { WatchlistEntry } from '../stores/watchlistStore'
@@ -48,6 +49,33 @@ beforeEach(() => {
     isLoading: false,
     dataUpdatedAt: 0,
   } as ReturnType<typeof useBatchQuotes>)
+})
+
+describe('Notes feature', () => {
+  it('renders note badge (●) on ticker when entry has notes', () => {
+    const mockUpdateNotes = vi.fn()
+    mockUseWatchlist.mockReturnValue({
+      entries: { PETR4: makeEntry('PETR4', { notes: 'Boa empresa' }) },
+      remove: vi.fn(),
+      updateNotes: mockUpdateNotes,
+      updateHistoryAnnotation: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+
+    renderPage()
+    expect(screen.getByTitle('Boa empresa')).toBeInTheDocument()
+  })
+
+  it('does not render note badge when entry has no notes', () => {
+    mockUseWatchlist.mockReturnValue({
+      entries: { PETR4: makeEntry('PETR4') },
+      remove: vi.fn(),
+      updateNotes: vi.fn(),
+      updateHistoryAnnotation: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+
+    renderPage()
+    expect(screen.queryByTitle(/boa empresa/i)).not.toBeInTheDocument()
+  })
 })
 
 describe('WatchlistPage — empty state', () => {
@@ -165,5 +193,67 @@ describe('WatchlistPage — live data state', () => {
     renderPage()
     const dashes = screen.getAllByText('—')
     expect(dashes.length).toBeGreaterThan(0)
+  })
+})
+
+describe('CSV export', () => {
+  it('renders "Exportar CSV" button when there are entries', () => {
+    mockUseWatchlist.mockReturnValue({
+      entries: { PETR4: makeEntry('PETR4') },
+      remove: vi.fn(),
+      updateNotes: vi.fn(),
+      updateHistoryAnnotation: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+
+    renderPage()
+    expect(screen.getByRole('button', { name: /exportar csv/i })).toBeInTheDocument()
+  })
+})
+
+describe('Price history feature', () => {
+  it('renders history modal when triggered via context menu', async () => {
+    const user = userEvent.setup()
+    mockUseWatchlist.mockReturnValue({
+      entries: {
+        PETR4: makeEntry('PETR4', {
+          priceHistory: [
+            { fairPrice: 45, savedAt: '2026-05-01T00:00:00.000Z' },
+          ],
+        }),
+      },
+      remove: vi.fn(),
+      updateNotes: vi.fn(),
+      updateHistoryAnnotation: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+
+    renderPage()
+
+    // right-click on row to open context menu
+    const row = screen.getByText('PETR4').closest('tr')!
+    await user.pointer({ target: row, keys: '[MouseRight]' })
+
+    // click history option
+    await user.click(screen.getByText('Histórico de preço teto'))
+
+    // modal header visible
+    expect(screen.getByText(/Histórico/)).toBeInTheDocument()
+    // price visible
+    expect(screen.getByText(/R\$\s*45/)).toBeInTheDocument()
+  })
+
+  it('shows empty state when priceHistory is empty', async () => {
+    const user = userEvent.setup()
+    mockUseWatchlist.mockReturnValue({
+      entries: { PETR4: makeEntry('PETR4', { priceHistory: [] }) },
+      remove: vi.fn(),
+      updateNotes: vi.fn(),
+      updateHistoryAnnotation: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+
+    renderPage()
+    const row = screen.getByText('PETR4').closest('tr')!
+    await user.pointer({ target: row, keys: '[MouseRight]' })
+    await user.click(screen.getByText('Histórico de preço teto'))
+    expect(screen.getByText(/Nenhum histórico ainda/)).toBeInTheDocument()
   })
 })

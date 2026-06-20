@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Settings } from 'lucide-react'
 import { useDCFStore, useWatchlistStore } from '../../stores'
@@ -13,6 +13,7 @@ import { DCFInputPanel } from './DCFInputPanel'
 import { DCFResultPanel } from './DCFResultPanel'
 import { DCFTable } from './DCFTable'
 import { DCFMethodModal } from './DCFMethodModal'
+import { buildExportHTML } from '../../utils/exportHTML'
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)
@@ -31,6 +32,7 @@ export function DCFPage() {
   const [methodModalOpen, setMethodModalOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   const store = useDCFStore()
   const watchlist = useWatchlistStore()
@@ -72,6 +74,30 @@ export function DCFPage() {
     )
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedAssumptions, debouncedYearOverrides, store.projYears, store.dcfMethod, store.history])
+
+  const scenarioResults = useMemo(() => {
+    if (!store.scenarios.enabled) return null
+    const a = store.assumptions
+    if (!a.ll || !a.shares) return null
+
+    function computePrice(g: number | null): number | null {
+      if (g == null) return null
+      const res = runDCF(
+        { ll: a.ll!, payout: a.payout ?? undefined, roe: a.roe ?? undefined,
+          g, disc: a.disc, perp: a.perp, shares: a.shares! },
+        store.history,
+        store.projYears,
+        store.yearOverrides as Record<number, number>,
+      )
+      return res && !('error' in res) ? res.fairPrice : null
+    }
+
+    return {
+      bear: computePrice(store.scenarios.bear),
+      base: computePrice(store.scenarios.base),
+      bull: computePrice(store.scenarios.bull),
+    }
+  }, [store.scenarios, store.assumptions, store.history, store.projYears, store.yearOverrides])
 
   // On first mount: handle URL params and restore persisted state
   useEffect(() => {
@@ -300,6 +326,45 @@ export function DCFPage() {
     notify(`Preço Teto de ${store.ticker} (${fBRL.format(r.fairPrice)}) salvo!`, 'success')
   }
 
+  async function handleExportHTML() {
+    if (!store.ticker || !store.results || 'error' in store.results) return
+    setIsExporting(true)
+    try {
+      let fundamentals = null
+      try {
+        const res = await fetch(`/api/fundamentals/${encodeURIComponent(store.ticker)}`)
+        if (res.ok) fundamentals = await res.json()
+      } catch {
+        // fundamentals are optional; export proceeds without them
+      }
+      const html = buildExportHTML({
+        ticker: store.ticker,
+        name: store.companyName ?? store.ticker,
+        exportDate: new Date().toISOString().slice(0, 10),
+        assumptions: store.assumptions,
+        results: store.results,
+        resultsClassico: store.resultsClassico,
+        resultsBuffett: store.resultsBuffett,
+        history: store.history,
+        projYears: store.projYears,
+        scenarios: store.scenarios,
+        scenarioResults,
+        fundamentals,
+      })
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `${store.ticker}-valuation-${new Date().toISOString().slice(0, 10)}.html`
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+      URL.revokeObjectURL(url)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   const llHint = store.history.length
     ? `Fonte: ${store.history[0].year} · ${store.history[0].value.toLocaleString('pt-BR')}`
     : 'Ano de referência para projeção'
@@ -383,6 +448,12 @@ export function DCFPage() {
               onSave={handleSave}
               isSaved={isSaved}
               onOpenMethodModal={() => setMethodModalOpen(true)}
+              scenarios={store.scenarios}
+              scenarioResults={scenarioResults}
+              onToggleScenarios={(g) => store.toggleScenarios(g)}
+              onSetScenario={(key, value) => store.setScenario(key, value)}
+              onExportHTML={handleExportHTML}
+              isExporting={isExporting}
             />
           </div>
 
