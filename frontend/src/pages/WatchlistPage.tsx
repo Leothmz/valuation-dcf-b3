@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { StickyNote, History, X } from 'lucide-react'
+import { StickyNote, History, X, Download } from 'lucide-react'
 import { useWatchlistStore } from '../stores'
 import { useBatchQuotes } from '../api/stocks'
 import { fBRL, fPct } from '../engines/formatters'
@@ -156,6 +156,57 @@ export function WatchlistPage() {
     setContextMenu({ x, y, ticker })
   }
 
+  function exportCSV() {
+    const BOM = '﻿'
+    const SEP = ';'
+    const headers = [
+      'Ticker', 'Empresa', 'Preço Teto', 'Preço Atual', 'Upside (%)',
+      'DY (%)', 'Salvo Em', 'g (%)', 'Disc (%)', 'Perp (%)',
+      'Payout (%)', 'ROE (%)', 'LL Base', 'Shares',
+    ]
+
+    const fNum = (v: number | null | undefined, mult = 1, dec = 2): string => {
+      if (v == null) return ''
+      return (v * mult).toFixed(dec).replace('.', ',')
+    }
+
+    const dataRows = Object.values(entries).map((entry) => {
+      const live = liveMap[entry.ticker]
+      const price = live?.price ?? null
+      const dy = live?.dividendYield ?? null
+      const upside =
+        price != null && entry.fairPrice
+          ? ((entry.fairPrice - price) / entry.fairPrice) * 100
+          : null
+      const a = entry.assumptions
+      return [
+        entry.ticker,
+        `"${(entry.name ?? '').replace(/"/g, '""')}"`,
+        fNum(entry.fairPrice),
+        fNum(price),
+        fNum(upside, 1),
+        fNum(dy, 100),
+        new Date(entry.savedAt).toLocaleDateString('pt-BR'),
+        fNum(a.g as number | null, 100),
+        fNum(a.disc as number | null, 100),
+        fNum(a.perp as number | null, 100),
+        fNum(a.payout as number | null, 100),
+        fNum(a.roe as number | null, 100),
+        fNum(a.ll as number | null, 1, 0),
+        fNum(a.shares as number | null, 1, 0),
+      ].join(SEP)
+    })
+
+    const csv = BOM + [headers.join(SEP), ...dataRows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `watchlist-${new Date().toISOString().slice(0, 10)}.csv`
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
   // ── Empty state ─────────────────────────────────────────────────────────────
   if (tickers.length === 0) {
     return (
@@ -228,11 +279,23 @@ export function WatchlistPage() {
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
         />
-        {dataUpdatedAt > 0 && (
-          <span className="text-[12px] text-text-muted ml-auto">
-            Atualizado às {fTime(new Date(dataUpdatedAt))} · próximo em 3 min
-          </span>
-        )}
+        <div className="ml-auto flex items-center gap-3">
+          {dataUpdatedAt > 0 && (
+            <span className="text-[12px] text-text-muted">
+              Atualizado às {fTime(new Date(dataUpdatedAt))} · próximo em 3 min
+            </span>
+          )}
+          <button
+            onClick={exportCSV}
+            className="inline-flex items-center gap-1.5 border border-border rounded-[10px] text-text-sec
+                       text-[13px] font-ui px-[14px] h-[36px] cursor-pointer hover:bg-bg-3
+                       hover:text-text-base transition-colors"
+            style={{ background: 'none' }}
+          >
+            <Download size={13} />
+            Exportar CSV
+          </button>
+        </div>
       </div>
 
       {/* Table */}
