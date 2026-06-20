@@ -44,6 +44,8 @@ function renderPanel(overrides: Partial<Parameters<typeof DCFResultPanel>[0]> = 
     scenarioResults: null,
     onToggleScenarios: vi.fn(),
     onSetScenario: vi.fn(),
+    onExportHTML: vi.fn().mockResolvedValue(undefined),
+    isExporting: false,
   }
   return render(<DCFResultPanel {...defaults} {...overrides} />)
 }
@@ -172,5 +174,22 @@ describe('scenarios section', () => {
     })
     await user.click(screen.getByText(/bull \/ base \/ bear/i))
     expect(onToggle).toHaveBeenCalledWith(0.12) // baseAssumptions.g
+  })
+})
+
+describe('export HTML button', () => {
+  it('renders export button when results exist', () => {
+    renderPanel({ results: baseResult, ticker: 'PETR4' })
+    expect(screen.getByRole('button', { name: /exportar relatório html/i })).toBeInTheDocument()
+  })
+
+  it('shows loading text when isExporting', () => {
+    renderPanel({ results: baseResult, ticker: 'PETR4', isExporting: true })
+    expect(screen.getByText(/gerando relatório/i)).toBeInTheDocument()
+  })
+
+  it('does not render export button when results is null', () => {
+    renderPanel({ results: null })
+    expect(screen.queryByRole('button', { name: /exportar relatório/i })).not.toBeInTheDocument()
   })
 })

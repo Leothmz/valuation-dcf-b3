@@ -1,4 +1,4 @@
-import { Settings2 } from 'lucide-react'
+import { Settings2, FileDown } from 'lucide-react'
 import { fBRL, fShort, fPct, fShares } from '../../engines/formatters'
 import type { DCFResult } from '../../engines/dcf-engine'
 import type { NullableDCFAssumptions, ScenarioState } from '../../stores/dcfStore'
@@ -17,6 +17,8 @@ interface DCFResultPanelProps {
   scenarioResults: { bear: number | null; base: number | null; bull: number | null } | null
   onToggleScenarios: (currentG: number | null) => void
   onSetScenario: (key: 'bear' | 'base' | 'bull', value: number | null) => void
+  onExportHTML: () => Promise<void>
+  isExporting: boolean
 }
 
 export function DCFResultPanel({
@@ -33,6 +35,8 @@ export function DCFResultPanel({
   scenarioResults,
   onToggleScenarios,
   onSetScenario,
+  onExportHTML,
+  isExporting,
 }: DCFResultPanelProps) {
   const r = results
   const gordonError = r && 'error' in r && r.error === 'gordon'
@@ -97,20 +101,35 @@ export function DCFResultPanel({
         )}
       </div>
 
-      {/* Save button */}
+      {/* Save + Export buttons */}
       {showSave && (
-        <button
-          onClick={onSave}
-          className={`w-full mb-3 h-[42px] font-semibold text-sm rounded-[10px] cursor-pointer
-                      transition-all font-ui
-                      ${isSaved
-                        ? 'bg-green text-bg-0 shadow-[0_2px_8px_rgba(16,185,129,0.2)]'
-                        : 'bg-gradient-to-br from-cyan to-[#0891b2] text-bg-0 shadow-[0_2px_8px_rgba(6,182,212,0.2)]'
-                      }
-                      hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(6,182,212,0.35)]`}
-        >
-          {isSaved ? '✓ Atualizar Preço Teto Salvo' : '＋ Salvar Preço Teto'}
-        </button>
+        <>
+          <button
+            onClick={onSave}
+            className={`w-full mb-3 h-[42px] font-semibold text-sm rounded-[10px] cursor-pointer
+                        transition-all font-ui
+                        ${isSaved
+                          ? 'bg-green text-bg-0 shadow-[0_2px_8px_rgba(16,185,129,0.2)]'
+                          : 'bg-gradient-to-br from-cyan to-[#0891b2] text-bg-0 shadow-[0_2px_8px_rgba(6,182,212,0.2)]'
+                        }
+                        hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(6,182,212,0.35)]`}
+          >
+            {isSaved ? '✓ Atualizar Preço Teto Salvo' : '＋ Salvar Preço Teto'}
+          </button>
+
+          <button
+            onClick={onExportHTML}
+            disabled={isExporting}
+            className="w-full mb-3 h-[38px] flex items-center justify-center gap-2 border border-border
+                       rounded-[10px] text-text-sec text-[13px] font-ui cursor-pointer
+                       hover:bg-bg-3 hover:text-text-base transition-colors disabled:opacity-50
+                       disabled:cursor-not-allowed"
+            style={{ background: 'none' }}
+          >
+            <FileDown size={14} />
+            {isExporting ? 'Gerando relatório…' : 'Exportar Relatório HTML'}
+          </button>
+        </>
       )}
 
       {/* Secondary metrics grid */}

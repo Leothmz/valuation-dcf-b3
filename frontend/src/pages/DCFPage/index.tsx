@@ -13,6 +13,7 @@ import { DCFInputPanel } from './DCFInputPanel'
 import { DCFResultPanel } from './DCFResultPanel'
 import { DCFTable } from './DCFTable'
 import { DCFMethodModal } from './DCFMethodModal'
+import { buildExportHTML } from '../../utils/exportHTML'
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)
@@ -31,6 +32,7 @@ export function DCFPage() {
   const [methodModalOpen, setMethodModalOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   const store = useDCFStore()
   const watchlist = useWatchlistStore()
@@ -324,6 +326,43 @@ export function DCFPage() {
     notify(`Preço Teto de ${store.ticker} (${fBRL.format(r.fairPrice)}) salvo!`, 'success')
   }
 
+  async function handleExportHTML() {
+    if (!store.ticker || !store.results || 'error' in store.results) return
+    setIsExporting(true)
+    try {
+      let fundamentals = null
+      try {
+        const res = await fetch(`/api/fundamentals/${encodeURIComponent(store.ticker)}`)
+        if (res.ok) fundamentals = await res.json()
+      } catch {
+        // fundamentals are optional; export proceeds without them
+      }
+      const html = buildExportHTML({
+        ticker: store.ticker,
+        name: store.companyName ?? store.ticker,
+        exportDate: new Date().toISOString().slice(0, 10),
+        assumptions: store.assumptions,
+        results: store.results,
+        resultsClassico: store.resultsClassico,
+        resultsBuffett: store.resultsBuffett,
+        history: store.history,
+        projYears: store.projYears,
+        scenarios: store.scenarios,
+        scenarioResults,
+        fundamentals,
+      })
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `${store.ticker}-valuation-${new Date().toISOString().slice(0, 10)}.html`
+      anchor.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   const llHint = store.history.length
     ? `Fonte: ${store.history[0].year} · ${store.history[0].value.toLocaleString('pt-BR')}`
     : 'Ano de referência para projeção'
@@ -411,6 +450,8 @@ export function DCFPage() {
               scenarioResults={scenarioResults}
               onToggleScenarios={(g) => store.toggleScenarios(g)}
               onSetScenario={(key, value) => store.setScenario(key, value)}
+              onExportHTML={handleExportHTML}
+              isExporting={isExporting}
             />
           </div>
 
