@@ -13,12 +13,20 @@ const PROV_TYPE_LABELS: Record<string, string> = {
   dividendo: 'Dividendo',
   jcp: 'JCP',
   rendimento: 'Rendimento',
+  reembolso: 'Reembolso',
+  fracao: 'Fração',
+  bonificacao: 'Bonificação',
+  outro: 'Outro',
 }
 
 const PROV_BADGE_CLASS: Record<string, string> = {
   dividendo: 'text-cyan bg-cyan-dim border-cyan/20',
   jcp: 'text-amber bg-amber-dim border-amber/20',
   rendimento: 'text-[#818cf8] bg-[rgba(99,102,241,.15)] border-[rgba(99,102,241,.25)]',
+  reembolso: 'text-green bg-green-dim border-green/20',
+  fracao: 'text-text-muted bg-transparent border-border',
+  bonificacao: 'text-purple bg-purple-dim border-purple/20',
+  outro: 'text-text-muted bg-transparent border-border',
 }
 
 interface CarteiraProventosProps {
@@ -223,6 +231,10 @@ export function CarteiraProventos({ proventos, onAdd, onDelete }: CarteiraProven
                     <option value="dividendo">Dividendo</option>
                     <option value="jcp">JCP</option>
                     <option value="rendimento">Rendimento</option>
+                    <option value="reembolso">Reembolso</option>
+                    <option value="fracao">Fração</option>
+                    <option value="bonificacao">Bonificação</option>
+                    <option value="outro">Outro</option>
                   </select>
                 </div>
               </div>
