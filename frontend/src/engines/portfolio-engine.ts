@@ -106,3 +106,97 @@ export function buildHoldingSummaries(operations: Operation[]): HoldingSummary[]
     }
   })
 }
+
+export interface PortfolioHistoryResponse {
+  tickers: string[]
+  dates: string[]
+  prices: Record<string, Array<number | null>>
+}
+
+export function buildHistoricalPriceMap(
+  history: PortfolioHistoryResponse
+): Record<string, Record<string, number | null>> {
+  const map: Record<string, Record<string, number | null>> = {}
+  if (!Array.isArray(history?.tickers)) return map
+  for (const ticker of history.tickers) {
+    const pricesForTicker = history.prices[ticker] ?? []
+    map[ticker] = {}
+    history.dates.forEach((date, i) => {
+      map[ticker][date] = pricesForTicker[i] ?? null
+    })
+  }
+  return map
+}
+
+export interface TWRRSubPeriod {
+  startValue: number
+  endValue: number
+}
+
+export function calcTWRR(subPeriods: TWRRSubPeriod[]): number | null {
+  if (!subPeriods.length) return null
+  let product = 1
+  let counted = 0
+  for (const { startValue, endValue } of subPeriods) {
+    if (startValue <= 0) continue
+    product *= 1 + (endValue - startValue) / startValue
+    counted++
+  }
+  return counted === 0 ? null : product - 1
+}
+
+export function buildTWRRSubPeriods(
+  operations: Operation[],
+  historicalPrices: Record<string, Record<string, number | null>>,
+  currentPrices: Record<string, number>
+): TWRRSubPeriod[] {
+  if (!operations.length) return []
+  const sorted = [...operations].sort((a, b) => a.date.localeCompare(b.date))
+  const uniqueDates = [...new Set(sorted.map((o) => o.date))]
+
+  const portfolioValue = (
+    ops: Operation[],
+    date: string | undefined,
+    useCurrentForFinalDate: boolean
+  ) => {
+    const holdings = calcHoldings(ops)
+    return Object.entries(holdings).reduce((sum, [ticker, qty]) => {
+      const price = useCurrentForFinalDate
+        ? currentPrices[ticker] ?? 0
+        : historicalPrices[ticker]?.[date ?? ''] ?? currentPrices[ticker] ?? 0
+      return sum + qty * price
+    }, 0)
+  }
+
+  const subPeriods: TWRRSubPeriod[] = []
+  for (let i = 0; i < uniqueDates.length; i++) {
+    const startDate = uniqueDates[i]
+    const isLast = i === uniqueDates.length - 1
+    const opsUpToStart = sorted.filter((o) => o.date <= startDate)
+    const opsUpToEnd = isLast ? sorted : sorted.filter((o) => o.date < uniqueDates[i + 1])
+    const startValue = portfolioValue(opsUpToStart, startDate, false)
+    const endValue = portfolioValue(opsUpToEnd, uniqueDates[i + 1], isLast)
+    if (startValue > 0) subPeriods.push({ startValue, endValue })
+  }
+  return subPeriods
+}
+
+export interface AssetTWRR {
+  twrr: number | null
+  subPeriods: TWRRSubPeriod[]
+}
+
+export function buildAssetTWRRMap(
+  operations: Operation[],
+  historicalPrices: Record<string, Record<string, number | null>>,
+  currentPrices: Record<string, number>
+): Record<string, AssetTWRR> {
+  const tickers = [...new Set(operations.map((o) => o.ticker))]
+  const map: Record<string, AssetTWRR> = {}
+  for (const ticker of tickers) {
+    const tickerOps = operations.filter((o) => o.ticker === ticker)
+    const subPeriods = buildTWRRSubPeriods(tickerOps, historicalPrices, currentPrices)
+    map[ticker] = { twrr: calcTWRR(subPeriods), subPeriods }
+  }
+  return map
+}

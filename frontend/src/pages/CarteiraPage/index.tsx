@@ -2,8 +2,13 @@ import { useState, useMemo } from 'react'
 import { Briefcase } from 'lucide-react'
 import { usePortfolioStore } from '../../stores/portfolioStore'
 import { useWatchlistStore } from '../../stores/watchlistStore'
-import { useBatchQuotes } from '../../api/stocks'
-import { buildHoldingSummaries, aggregateTitle } from '../../engines/portfolio-engine'
+import { useBatchQuotes, usePortfolioHistory } from '../../api/stocks'
+import {
+  buildHoldingSummaries,
+  aggregateTitle,
+  buildHistoricalPriceMap,
+  buildAssetTWRRMap,
+} from '../../engines/portfolio-engine'
 import { CarteiraKPIs } from './CarteiraKPIs'
 import { CarteiraVisaoGeral } from './CarteiraVisaoGeral'
 import { CarteiraAtivos } from './CarteiraAtivos'
@@ -55,6 +60,30 @@ export function CarteiraPage() {
     () => Object.fromEntries(quotes.map((q) => [q.ticker, q])),
     [quotes]
   )
+
+  const operationDates = useMemo(
+    () => [...new Set(operations.map((o) => o.date))],
+    [operations]
+  )
+
+  const { data: historyResponse, isLoading: historyLoading } = usePortfolioHistory(
+    tickers,
+    operationDates
+  )
+
+  const currentPriceMap = useMemo(
+    () =>
+      Object.fromEntries(
+        quotes.filter((q) => q.price != null).map((q) => [q.ticker, q.price as number])
+      ),
+    [quotes]
+  )
+
+  const twrrMap = useMemo(() => {
+    if (!historyResponse) return {}
+    const historicalPrices = buildHistoricalPriceMap(historyResponse)
+    return buildAssetTWRRMap(operations, historicalPrices, currentPriceMap)
+  }, [historyResponse, operations, currentPriceMap])
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -155,6 +184,8 @@ export function CarteiraPage() {
             quotes={quotes}
             watchlistEntries={watchlistEntries}
             quotesLoading={quotesLoading}
+            twrrMap={twrrMap}
+            twrrLoading={historyLoading}
           />
         )}
         {tab === 'operacoes' && (
