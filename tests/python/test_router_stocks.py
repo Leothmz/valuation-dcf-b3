@@ -106,3 +106,33 @@ def test_health_still_works(client):
     resp = client.get("/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
+
+
+def test_dividends_returns_200(client):
+    from api.models import DividendEntry
+
+    sample = [
+        DividendEntry(date="2024-01-12", amount=0.7),
+        DividendEntry(date="2023-07-15", amount=0.6),
+    ]
+    with patch("api.routers.stocks.get_dividend_history", return_value=sample):
+        resp = client.get("/api/dividends/WEGE3")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 2
+    assert data[0]["date"] == "2024-01-12"
+    assert data[0]["amount"] == pytest.approx(0.7)
+
+
+def test_dividends_empty_returns_200_empty_list(client):
+    with patch("api.routers.stocks.get_dividend_history", return_value=[]):
+        resp = client.get("/api/dividends/WEGE3")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+def test_dividends_no_yfinance_returns_503(client):
+    with patch("api.routers.stocks.get_dividend_history", side_effect=ImportError("NO_YFINANCE")):
+        resp = client.get("/api/dividends/WEGE3")
+    assert resp.status_code == 503
+    assert resp.json()["detail"]["code"] == "NO_YFINANCE"
