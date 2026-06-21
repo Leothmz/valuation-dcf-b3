@@ -125,7 +125,7 @@ export function useFundamentals(ticker: string | null) {
 
 export function usePortfolioHistory(tickers: string[], dates: string[]) {
   return useQuery({
-    queryKey: ['portfolio-history', tickers.sort().join(',')],
+    queryKey: ['portfolio-history', [...tickers].sort().join(',')],
     queryFn: async (): Promise<PortfolioHistoryResponse> => {
       const res = await fetch('/api/portfolio/history', {
         method: 'POST',
