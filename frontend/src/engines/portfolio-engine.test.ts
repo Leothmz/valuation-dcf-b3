@@ -22,6 +22,10 @@ describe('buildHistoricalPriceMap', () => {
   it('returns empty object for empty response', () => {
     expect(buildHistoricalPriceMap({ tickers: [], dates: [], prices: {} })).toEqual({})
   })
+
+  it('returns empty object instead of throwing when given a malformed response (e.g. a bare array)', () => {
+    expect(buildHistoricalPriceMap([] as unknown as Parameters<typeof buildHistoricalPriceMap>[0])).toEqual({})
+  })
 })
 
 describe('calcTWRR', () => {

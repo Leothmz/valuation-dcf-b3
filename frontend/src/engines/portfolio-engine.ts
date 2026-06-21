@@ -117,6 +117,7 @@ export function buildHistoricalPriceMap(
   history: PortfolioHistoryResponse
 ): Record<string, Record<string, number | null>> {
   const map: Record<string, Record<string, number | null>> = {}
+  if (!Array.isArray(history?.tickers)) return map
   for (const ticker of history.tickers) {
     const pricesForTicker = history.prices[ticker] ?? []
     map[ticker] = {}
