@@ -36,11 +36,20 @@ export interface RFTitle {
   deposits: RFDeposit[]
 }
 
+export type ProventoType =
+  | 'dividendo'
+  | 'jcp'
+  | 'rendimento'
+  | 'reembolso'
+  | 'fracao'
+  | 'bonificacao'
+  | 'outro'
+
 export interface Provento {
   id: string
   date: string
   ticker: string
-  type: 'dividendo' | 'jcp' | 'rendimento'
+  type: ProventoType
   qty: number
   valuePerShare: number
 }

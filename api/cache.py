@@ -19,11 +19,11 @@ def get_cache() -> diskcache.Cache:
     return _cache
 
 
-def cache_get(key: str) -> dict | None:
+def cache_get(key: str) -> dict | list | None:
     return get_cache().get(key)
 
 
-def cache_set(key: str, data: dict, ttl: int) -> None:
+def cache_set(key: str, data: dict | list, ttl: int) -> None:
     get_cache().set(key, data, expire=ttl)
 
 

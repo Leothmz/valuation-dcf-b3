@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { Briefcase } from 'lucide-react'
 import { usePortfolioStore } from '../../stores/portfolioStore'
 import { useWatchlistStore } from '../../stores/watchlistStore'
-import { useBatchQuotes, usePortfolioHistory } from '../../api/stocks'
+import { useBatchQuotes, usePortfolioHistory, useBatchDividendHistory, useDpaMap } from '../../api/stocks'
 import {
   buildHoldingSummaries,
   aggregateTitle,
@@ -44,6 +44,7 @@ export function CarteiraPage() {
     deleteDeposit,
     addProvento,
     deleteProvento,
+    importProventos,
   } = usePortfolioStore()
 
   const watchlistEntries = useWatchlistStore((s) => s.entries)
@@ -85,6 +86,11 @@ export function CarteiraPage() {
     return buildAssetTWRRMap(operations, historicalPrices, currentPriceMap)
   }, [historyResponse, operations, currentPriceMap])
 
+  const { data: dividendHistoryByTicker = {}, isLoading: dividendHistoryLoading } =
+    useBatchDividendHistory(tickers)
+
+  const { data: dpaMap = {}, isLoading: dpaLoading } = useDpaMap(tickers)
+
   const today = new Date().toISOString().slice(0, 10)
 
   const rfValue = useMemo(
@@ -121,6 +127,10 @@ export function CarteiraPage() {
 
   function handleAddProvento(p: Omit<Provento, 'id'>) {
     addProvento({ ...p, id: crypto.randomUUID() })
+  }
+
+  function handleImportProventos(provs: Provento[]) {
+    importProventos(provs)
   }
 
   function handleAddRFTitle(title: Omit<RFTitle, 'id'>) {
@@ -200,6 +210,12 @@ export function CarteiraPage() {
             proventos={proventos}
             onAdd={handleAddProvento}
             onDelete={deleteProvento}
+            onImport={handleImportProventos}
+            holdings={holdings}
+            operations={operations}
+            dividendHistoryByTicker={dividendHistoryByTicker}
+            dpaMap={dpaMap}
+            dividendDataLoading={dividendHistoryLoading || dpaLoading}
           />
         )}
         {tab === 'rf' && (

@@ -5,10 +5,12 @@ All yfinance I/O is mocked — no network calls.
 """
 from unittest.mock import MagicMock, patch
 import pytest
+import pandas as pd
 from api.adapters.yfinance_adapter import (
     fetch_stock,
     fetch_fundamentals,
     fetch_fii,
+    fetch_dividend_history,
     _normalize_dy,
     _normalize_ticker,
 )
@@ -304,3 +306,39 @@ def test_fetch_fii_liquidez_computed():
         result = fetch_fii("BTLG11")
 
     assert result.liquidez == pytest.approx(5_000_000.0)
+
+
+# ── fetch_dividend_history ────────────────────────────────────────────────────
+
+def test_fetch_dividend_history_no_yfinance_raises():
+    with patch("api.adapters.yfinance_adapter.yf", None):
+        with pytest.raises(ImportError):
+            fetch_dividend_history("WEGE3")
+
+
+def test_fetch_dividend_history_returns_full_list_sorted_desc():
+    dates = pd.to_datetime(["2023-01-10", "2023-07-15", "2024-01-12"])
+    divs = pd.Series([0.5, 0.6, 0.7], index=dates)
+
+    with patch("api.adapters.yfinance_adapter.yf") as mock_yf:
+        mock_ticker = make_mock_ticker(dividends=divs)
+        mock_yf.Ticker.return_value = mock_ticker
+        result = fetch_dividend_history("WEGE3")
+
+    assert len(result) == 3
+    assert result[0].date == "2024-01-12"
+    assert result[0].amount == pytest.approx(0.7)
+    assert result[-1].date == "2023-01-10"
+    assert result[-1].amount == pytest.approx(0.5)
+
+
+def test_fetch_dividend_history_empty_returns_empty_list():
+    mock_divs = MagicMock()
+    mock_divs.empty = True
+
+    with patch("api.adapters.yfinance_adapter.yf") as mock_yf:
+        mock_ticker = make_mock_ticker(dividends=mock_divs)
+        mock_yf.Ticker.return_value = mock_ticker
+        result = fetch_dividend_history("WEGE3")
+
+    assert result == []

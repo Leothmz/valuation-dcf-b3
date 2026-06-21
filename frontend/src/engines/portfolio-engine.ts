@@ -1,4 +1,4 @@
-import type { Operation, RFTitle } from '../stores/portfolioStore'
+import type { Operation, RFTitle, Provento } from '../stores/portfolioStore'
 
 export function calcPrecoMedio(operations: Operation[]): number | null {
   const buys = operations.filter((o) => o.type === 'buy')
@@ -199,4 +199,110 @@ export function buildAssetTWRRMap(
     map[ticker] = { twrr: calcTWRR(subPeriods), subPeriods }
   }
   return map
+}
+
+export interface ApiDividendEntry {
+  date: string
+  amount: number
+}
+
+export interface MergedDividendEntry {
+  date: string
+  ticker: string
+  type: Provento['type']
+  qty: number
+  valuePerShare: number
+  total: number
+  source: 'confirmed' | 'estimated'
+  provento: Provento | null
+}
+
+export function buildMergedDividendHistory(
+  ticker: string,
+  apiDividends: ApiDividendEntry[],
+  operations: Operation[],
+  storedProventos: Provento[]
+): MergedDividendEntry[] {
+  const storedForTicker = storedProventos.filter((p) => p.ticker === ticker)
+  const storedByDate = new Map(storedForTicker.map((p) => [p.date, p]))
+  const tickerOps = operations.filter((o) => o.ticker === ticker)
+
+  const entries: MergedDividendEntry[] = []
+  const seenDates = new Set<string>()
+
+  for (const div of apiDividends) {
+    seenDates.add(div.date)
+    const stored = storedByDate.get(div.date)
+    if (stored) {
+      entries.push({
+        date: stored.date,
+        ticker,
+        type: stored.type,
+        qty: stored.qty,
+        valuePerShare: stored.valuePerShare,
+        total: stored.qty * stored.valuePerShare,
+        source: 'confirmed',
+        provento: stored,
+      })
+      continue
+    }
+    const heldQty = calcHoldings(tickerOps.filter((o) => o.date <= div.date))[ticker] ?? 0
+    if (heldQty <= 0) continue
+    entries.push({
+      date: div.date,
+      ticker,
+      type: 'dividendo',
+      qty: heldQty,
+      valuePerShare: div.amount,
+      total: heldQty * div.amount,
+      source: 'estimated',
+      provento: null,
+    })
+  }
+
+  for (const stored of storedForTicker) {
+    if (!seenDates.has(stored.date)) {
+      entries.push({
+        date: stored.date,
+        ticker,
+        type: stored.type,
+        qty: stored.qty,
+        valuePerShare: stored.valuePerShare,
+        total: stored.qty * stored.valuePerShare,
+        source: 'confirmed',
+        provento: stored,
+      })
+    }
+  }
+
+  return entries.sort((a, b) => b.date.localeCompare(a.date))
+}
+
+export function calcYieldOnCost(dpa: number | null, precoMedio: number | null): number | null {
+  if (dpa == null || precoMedio == null || precoMedio <= 0) return null
+  return dpa / precoMedio
+}
+
+export interface DividendProjection {
+  perTicker: Record<string, number | null>
+  total: number
+}
+
+export function buildDividendProjection(
+  holdings: HoldingSummary[],
+  dpaMap: Record<string, number | null>
+): DividendProjection {
+  const perTicker: Record<string, number | null> = {}
+  let total = 0
+  for (const h of holdings) {
+    const dpa = dpaMap[h.ticker]
+    if (dpa == null) {
+      perTicker[h.ticker] = null
+      continue
+    }
+    const projected = dpa * h.qty
+    perTicker[h.ticker] = projected
+    total += projected
+  }
+  return { perTicker, total }
 }
