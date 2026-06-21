@@ -9,10 +9,24 @@ function makeCsvFile(text: string, name = 'extrato.csv') {
   return new File([text], name, { type: 'text/csv' })
 }
 
+const DEFAULT_PROPS = {
+  holdings: [],
+  operations: [],
+  dividendHistoryByTicker: {},
+  dpaMap: {},
+  dividendDataLoading: false,
+}
+
 describe('CarteiraProventos — CSV import', () => {
   it('shows a preview modal with parsed rows after selecting a CSV file', async () => {
     render(
-      <CarteiraProventos proventos={[]} onAdd={() => {}} onDelete={() => {}} onImport={() => {}} />
+      <CarteiraProventos
+        proventos={[]}
+        onAdd={() => {}}
+        onDelete={() => {}}
+        onImport={() => {}}
+        {...DEFAULT_PROPS}
+      />
     )
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     fireEvent.change(input, { target: { files: [makeCsvFile(SAMPLE_CSV)] } })
@@ -23,7 +37,13 @@ describe('CarteiraProventos — CSV import', () => {
   it('confirm import calls onImport only with checked rows', async () => {
     const onImport = vi.fn()
     render(
-      <CarteiraProventos proventos={[]} onAdd={() => {}} onDelete={() => {}} onImport={onImport} />
+      <CarteiraProventos
+        proventos={[]}
+        onAdd={() => {}}
+        onDelete={() => {}}
+        onImport={onImport}
+        {...DEFAULT_PROPS}
+      />
     )
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     fireEvent.change(input, { target: { files: [makeCsvFile(SAMPLE_CSV)] } })
@@ -46,7 +66,13 @@ describe('CarteiraProventos — CSV import', () => {
       { id: '1', date: '2024-01-15', ticker: 'WEGE3', type: 'dividendo' as const, qty: 100, valuePerShare: 0.5 },
     ]
     render(
-      <CarteiraProventos proventos={existing} onAdd={() => {}} onDelete={() => {}} onImport={() => {}} />
+      <CarteiraProventos
+        proventos={existing}
+        onAdd={() => {}}
+        onDelete={() => {}}
+        onImport={() => {}}
+        {...DEFAULT_PROPS}
+      />
     )
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     fireEvent.change(input, { target: { files: [makeCsvFile(SAMPLE_CSV)] } })

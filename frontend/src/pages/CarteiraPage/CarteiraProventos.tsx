@@ -3,7 +3,9 @@ import { Trash2 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { fBRL as fBRLFormatter } from '../../engines/formatters'
 import { parseB3Proventos } from '../../engines/b3-csv-parser'
-import type { Provento } from '../../stores/portfolioStore'
+import { CarteiraProventosPorAtivo } from './CarteiraProventosPorAtivo'
+import type { HoldingSummary, ApiDividendEntry } from '../../engines/portfolio-engine'
+import type { Provento, Operation } from '../../stores/portfolioStore'
 
 const fBRL = (v: number) => fBRLFormatter.format(v)
 
@@ -36,6 +38,11 @@ interface CarteiraProventosProps {
   onAdd: (p: Omit<Provento, 'id'>) => void
   onDelete: (id: string) => void
   onImport: (provs: Provento[]) => void
+  holdings: HoldingSummary[]
+  operations: Operation[]
+  dividendHistoryByTicker: Record<string, ApiDividendEntry[]>
+  dpaMap: Record<string, number | null>
+  dividendDataLoading: boolean
 }
 
 const EMPTY_FORM = {
@@ -46,7 +53,17 @@ const EMPTY_FORM = {
   valuePerShare: '',
 }
 
-export function CarteiraProventos({ proventos, onAdd, onDelete, onImport }: CarteiraProventosProps) {
+export function CarteiraProventos({
+  proventos,
+  onAdd,
+  onDelete,
+  onImport,
+  holdings,
+  operations,
+  dividendHistoryByTicker,
+  dpaMap,
+  dividendDataLoading,
+}: CarteiraProventosProps) {
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [yearFilter, setYearFilter] = useState('')
@@ -183,6 +200,21 @@ export function CarteiraProventos({ proventos, onAdd, onDelete, onImport }: Cart
             if (file) handleImportFile(file)
             e.target.value = ''
           }}
+        />
+      </div>
+
+      <div className="mb-5">
+        <div className="text-[13px] font-semibold text-text-sec uppercase tracking-[0.5px] mb-2.5">
+          Por Ativo
+        </div>
+        <CarteiraProventosPorAtivo
+          holdings={holdings}
+          dividendHistoryByTicker={dividendHistoryByTicker}
+          dpaMap={dpaMap}
+          operations={operations}
+          proventos={proventos}
+          loading={dividendDataLoading}
+          onConfirm={onAdd}
         />
       </div>
 
