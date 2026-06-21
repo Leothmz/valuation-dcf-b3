@@ -179,3 +179,23 @@ export function buildTWRRSubPeriods(
   }
   return subPeriods
 }
+
+export interface AssetTWRR {
+  twrr: number | null
+  subPeriods: TWRRSubPeriod[]
+}
+
+export function buildAssetTWRRMap(
+  operations: Operation[],
+  historicalPrices: Record<string, Record<string, number | null>>,
+  currentPrices: Record<string, number>
+): Record<string, AssetTWRR> {
+  const tickers = [...new Set(operations.map((o) => o.ticker))]
+  const map: Record<string, AssetTWRR> = {}
+  for (const ticker of tickers) {
+    const tickerOps = operations.filter((o) => o.ticker === ticker)
+    const subPeriods = buildTWRRSubPeriods(tickerOps, historicalPrices, currentPrices)
+    map[ticker] = { twrr: calcTWRR(subPeriods), subPeriods }
+  }
+  return map
+}

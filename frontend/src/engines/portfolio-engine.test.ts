@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildHistoricalPriceMap, calcTWRR, buildTWRRSubPeriods } from './portfolio-engine'
+import { buildHistoricalPriceMap, calcTWRR, buildTWRRSubPeriods, buildAssetTWRRMap } from './portfolio-engine'
 import type { Operation } from '../stores/portfolioStore'
 
 describe('buildHistoricalPriceMap', () => {
@@ -105,5 +105,39 @@ describe('buildTWRRSubPeriods', () => {
     expect(periods[0].endValue).toBeCloseTo(3200, 2)
     expect(periods[1].startValue).toBeCloseTo(4800, 2)
     expect(periods[1].endValue).toBeCloseTo(5250, 2)
+  })
+})
+
+describe('buildAssetTWRRMap', () => {
+  function op(overrides: Partial<Operation>): Operation {
+    return {
+      id: '1',
+      date: '2024-01-02',
+      ticker: 'PETR4',
+      assetClass: 'acao_br',
+      type: 'buy',
+      qty: 100,
+      price: 30,
+      currency: 'BRL',
+      fees: 0,
+      ...overrides,
+    }
+  }
+
+  it('computes independent TWRR per ticker', () => {
+    const ops = [
+      op({ id: '1', ticker: 'PETR4', qty: 100, price: 30 }),
+      op({ id: '2', ticker: 'VALE3', qty: 10, price: 60 }),
+    ]
+    const hist = { PETR4: { '2024-01-02': 30 }, VALE3: { '2024-01-02': 60 } }
+    const curr = { PETR4: 33, VALE3: 54 }
+    const map = buildAssetTWRRMap(ops, hist, curr)
+    expect(map.PETR4.twrr).toBeCloseTo(0.1, 4)
+    expect(map.VALE3.twrr).toBeCloseTo(-0.1, 4)
+    expect(map.PETR4.subPeriods).toHaveLength(1)
+  })
+
+  it('returns empty object for no operations', () => {
+    expect(buildAssetTWRRMap([], {}, {})).toEqual({})
   })
 })
