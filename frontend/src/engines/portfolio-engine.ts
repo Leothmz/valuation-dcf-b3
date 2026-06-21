@@ -106,3 +106,23 @@ export function buildHoldingSummaries(operations: Operation[]): HoldingSummary[]
     }
   })
 }
+
+export interface PortfolioHistoryResponse {
+  tickers: string[]
+  dates: string[]
+  prices: Record<string, Array<number | null>>
+}
+
+export function buildHistoricalPriceMap(
+  history: PortfolioHistoryResponse
+): Record<string, Record<string, number | null>> {
+  const map: Record<string, Record<string, number | null>> = {}
+  for (const ticker of history.tickers) {
+    const pricesForTicker = history.prices[ticker] ?? []
+    map[ticker] = {}
+    history.dates.forEach((date, i) => {
+      map[ticker][date] = pricesForTicker[i] ?? null
+    })
+  }
+  return map
+}
