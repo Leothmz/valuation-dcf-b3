@@ -69,8 +69,8 @@ export function CarteiraProventos({ proventos, onAdd, onDelete, onImport }: Cart
   }
 
   async function handleImportFile(file: File) {
-    const text = await readFileAsCSVText(file)
     try {
+      const text = await readFileAsCSVText(file)
       const parsed = parseB3Proventos(text)
       const withIds: Provento[] = parsed.map((p) => ({
         id: crypto.randomUUID(),
