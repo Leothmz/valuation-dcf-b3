@@ -76,7 +76,12 @@ describe('CarteiraProventos — CSV import', () => {
     )
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     fireEvent.change(input, { target: { files: [makeCsvFile(SAMPLE_CSV)] } })
-    await waitFor(() => expect(screen.getByText('WEGE3')).toBeInTheDocument())
+    // proventos already contains a WEGE3 row rendered in the main table, so waiting on
+    // getByText('WEGE3') alone can resolve before the import modal opens — wait for the
+    // modal's own heading instead, which only exists once the parse completes.
+    await waitFor(() =>
+      expect(screen.getByText('Confirmar importação de proventos')).toBeInTheDocument()
+    )
 
     const checkboxes = screen
       .getAllByRole('checkbox')
