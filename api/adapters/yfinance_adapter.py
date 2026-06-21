@@ -376,3 +376,35 @@ def fetch_fii(ticker: str) -> FIIData:
         segmento=None,
         dividends=dividends_list,
     )
+
+
+def fetch_dividend_history(ticker: str) -> list[DividendEntry]:
+    """
+    Fetch the full historical dividend payments for a ticker from yfinance.
+
+    Unlike fetch_fii's embedded dividend list (capped at 24 entries), this
+    returns the complete history, most recent first.
+
+    Args:
+        ticker: B3 ticker (e.g. "WEGE3") or any yfinance-recognized symbol
+
+    Raises:
+        ImportError: if yfinance is not installed ("NO_YFINANCE")
+    """
+    if yf is None:
+        raise ImportError("NO_YFINANCE")
+
+    symbol = _normalize_ticker(ticker)
+    stock = yf.Ticker(symbol)
+
+    entries: list[DividendEntry] = []
+    divs = stock.dividends
+    if divs is not None and not (hasattr(divs, "empty") and divs.empty):
+        for ts, amount in divs.sort_index(ascending=False).items():
+            entries.append(
+                DividendEntry(
+                    date=ts.strftime("%Y-%m-%d"),
+                    amount=round(float(amount), 4),
+                )
+            )
+    return entries
