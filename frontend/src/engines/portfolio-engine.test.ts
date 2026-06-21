@@ -7,8 +7,12 @@ import {
   buildMergedDividendHistory,
   calcYieldOnCost,
   buildDividendProjection,
+  mapAssetClassToCategory,
+  buildCategoryAllocation,
+  calcAllocationDeviation,
+  buildRebalancingSuggestions,
 } from './portfolio-engine'
-import type { Operation, Provento } from '../stores/portfolioStore'
+import type { Operation, Provento, Category } from '../stores/portfolioStore'
 
 describe('buildHistoricalPriceMap', () => {
   it('maps parallel price arrays to a nested ticker/date lookup', () => {
@@ -265,5 +269,159 @@ describe('buildDividendProjection', () => {
     const projection = buildDividendProjection(holdings, { WEGE3: null })
     expect(projection.perTicker.WEGE3).toBeNull()
     expect(projection.total).toBe(0)
+  })
+})
+
+describe('mapAssetClassToCategory', () => {
+  it('maps acao_br to acoes_br', () => {
+    expect(mapAssetClassToCategory('acao_br')).toBe('acoes_br')
+  })
+
+  it('maps fii to fiis', () => {
+    expect(mapAssetClassToCategory('fii')).toBe('fiis')
+  })
+
+  it('maps both etf and stock_intl to internacional', () => {
+    expect(mapAssetClassToCategory('etf')).toBe('internacional')
+    expect(mapAssetClassToCategory('stock_intl')).toBe('internacional')
+  })
+
+  it('maps cripto to criptoativos', () => {
+    expect(mapAssetClassToCategory('cripto')).toBe('criptoativos')
+  })
+
+  it('falls back to acoes_br for an unknown class', () => {
+    expect(mapAssetClassToCategory('unknown')).toBe('acoes_br')
+  })
+})
+
+describe('buildCategoryAllocation', () => {
+  it('groups holdings into categories by price x qty, adds rfValue and cashBalance', () => {
+    const holdings = [
+      { ticker: 'WEGE3', assetClass: 'acao_br', qty: 100, precoMedio: 30, investido: 3000 },
+      { ticker: 'XPLG11', assetClass: 'fii', qty: 50, precoMedio: 100, investido: 5000 },
+      { ticker: 'IVVB11', assetClass: 'etf', qty: 10, precoMedio: 200, investido: 2000 },
+      { ticker: 'AAPL34', assetClass: 'stock_intl', qty: 5, precoMedio: 50, investido: 250 },
+      { ticker: 'BTC', assetClass: 'cripto', qty: 0.1, precoMedio: 200000, investido: 20000 },
+    ]
+    const priceMap = { WEGE3: 40, XPLG11: 110, IVVB11: 220, AAPL34: 60, BTC: 250000 }
+    const result = buildCategoryAllocation(holdings, priceMap, 8000, 1500)
+    expect(result.acoes_br).toBeCloseTo(4000) // 100 * 40
+    expect(result.fiis).toBeCloseTo(5500) // 50 * 110
+    expect(result.internacional).toBeCloseTo(2200 + 300) // (10*220) + (5*60)
+    expect(result.criptoativos).toBeCloseTo(25000) // 0.1 * 250000
+    expect(result.renda_fixa).toBe(8000)
+    expect(result.caixa).toBe(1500)
+  })
+
+  it('skips a holding with no price instead of throwing', () => {
+    const holdings = [{ ticker: 'WEGE3', assetClass: 'acao_br', qty: 100, precoMedio: 30, investido: 3000 }]
+    const result = buildCategoryAllocation(holdings, {}, 0, 0)
+    expect(result.acoes_br).toBe(0)
+  })
+
+  it('returns all six categories even with no holdings, zero rfValue and zero cashBalance', () => {
+    const result = buildCategoryAllocation([], {}, 0, 0)
+    expect(Object.keys(result).sort()).toEqual(
+      ['acoes_br', 'caixa', 'criptoativos', 'fiis', 'internacional', 'renda_fixa'].sort()
+    )
+    expect(Object.values(result).every((v) => v === 0)).toBe(true)
+  })
+})
+
+describe('calcAllocationDeviation', () => {
+  const actualValues: Record<Category, number> = {
+    acoes_br: 4000,
+    fiis: 2000,
+    renda_fixa: 3000,
+    internacional: 1000,
+    criptoativos: 0,
+    caixa: 0,
+  } // total = 10000
+
+  it('computes actualPct, targetPct, and deviations as raw percent numbers', () => {
+    const targets: Record<Category, number> = {
+      acoes_br: 30,
+      fiis: 30,
+      renda_fixa: 20,
+      internacional: 10,
+      criptoativos: 5,
+      caixa: 5,
+    }
+    const dev = calcAllocationDeviation(actualValues, targets)
+    expect(dev.acoes_br.actualPct).toBeCloseTo(40) // 4000/10000 * 100
+    expect(dev.acoes_br.targetPct).toBe(30)
+    expect(dev.acoes_br.deviationPct).toBeCloseTo(10) // 40 - 30, overweight
+    expect(dev.acoes_br.targetValue).toBeCloseTo(3000) // 30% of 10000
+    expect(dev.acoes_br.deviationValue).toBeCloseTo(1000) // 4000 - 3000, overweight by R$1000
+  })
+
+  it('produces a negative deviation when actual is below target (underweight)', () => {
+    const targets: Record<Category, number> = {
+      acoes_br: 10,
+      fiis: 10,
+      renda_fixa: 10,
+      internacional: 10,
+      criptoativos: 30,
+      caixa: 30,
+    }
+    const dev = calcAllocationDeviation(actualValues, targets)
+    expect(dev.criptoativos.deviationValue).toBeCloseTo(-3000) // 0 - 3000 (30% of 10000)
+  })
+
+  it('returns all-zero pct fields when total portfolio value is zero, without dividing by zero', () => {
+    const zeroActual: Record<Category, number> = {
+      acoes_br: 0, fiis: 0, renda_fixa: 0, internacional: 0, criptoativos: 0, caixa: 0,
+    }
+    const targets: Record<Category, number> = {
+      acoes_br: 50, fiis: 50, renda_fixa: 0, internacional: 0, criptoativos: 0, caixa: 0,
+    }
+    const dev = calcAllocationDeviation(zeroActual, targets)
+    expect(dev.acoes_br.actualPct).toBe(0)
+    expect(Number.isFinite(dev.acoes_br.actualPct)).toBe(true)
+  })
+})
+
+describe('buildRebalancingSuggestions', () => {
+  it('suggests vender with a positive amount when a category is overweight', () => {
+    const deviations: Record<Category, ReturnType<typeof calcAllocationDeviation>['acoes_br']> = {
+      acoes_br: { actualValue: 4000, actualPct: 40, targetPct: 30, targetValue: 3000, deviationPct: 10, deviationValue: 1000 },
+      fiis: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+      renda_fixa: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+      internacional: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+      criptoativos: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+      caixa: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+    }
+    const suggestions = buildRebalancingSuggestions(deviations)
+    expect(suggestions.acoes_br.action).toBe('vender')
+    expect(suggestions.acoes_br.amount).toBeCloseTo(1000)
+  })
+
+  it('suggests comprar with a positive amount when a category is underweight', () => {
+    const deviations: Record<Category, ReturnType<typeof calcAllocationDeviation>['acoes_br']> = {
+      acoes_br: { actualValue: 0, actualPct: 0, targetPct: 30, targetValue: 3000, deviationPct: -30, deviationValue: -3000 },
+      fiis: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+      renda_fixa: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+      internacional: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+      criptoativos: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+      caixa: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+    }
+    const suggestions = buildRebalancingSuggestions(deviations)
+    expect(suggestions.acoes_br.action).toBe('comprar')
+    expect(suggestions.acoes_br.amount).toBeCloseTo(3000)
+  })
+
+  it('suggests manter with amount 0 when the deviation is under R$0.01', () => {
+    const deviations: Record<Category, ReturnType<typeof calcAllocationDeviation>['acoes_br']> = {
+      acoes_br: { actualValue: 3000, actualPct: 30, targetPct: 30, targetValue: 3000, deviationPct: 0, deviationValue: 0.001 },
+      fiis: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+      renda_fixa: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+      internacional: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+      criptoativos: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+      caixa: { actualValue: 0, actualPct: 0, targetPct: 0, targetValue: 0, deviationPct: 0, deviationValue: 0 },
+    }
+    const suggestions = buildRebalancingSuggestions(deviations)
+    expect(suggestions.acoes_br.action).toBe('manter')
+    expect(suggestions.acoes_br.amount).toBe(0)
   })
 })

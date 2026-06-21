@@ -15,9 +15,10 @@ import { CarteiraAtivos } from './CarteiraAtivos'
 import { CarteiraOperacoes } from './CarteiraOperacoes'
 import { CarteiraProventos } from './CarteiraProventos'
 import { CarteiraRF } from './CarteiraRF'
+import { CarteiraMetas } from './CarteiraMetas'
 import type { Operation, Provento, RFTitle } from '../../stores/portfolioStore'
 
-type Tab = 'visao' | 'ativos' | 'operacoes' | 'proventos' | 'rf'
+type Tab = 'visao' | 'ativos' | 'operacoes' | 'proventos' | 'rf' | 'metas'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'visao', label: 'Visão Geral' },
@@ -25,6 +26,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'operacoes', label: 'Operações' },
   { key: 'proventos', label: 'Proventos' },
   { key: 'rf', label: 'Renda Fixa' },
+  { key: 'metas', label: 'Metas' },
 ]
 
 const CDI_DEFAULT = 0.1415 // approx CDI accumulated 2024 — fetched from /api/cdi when available
@@ -37,6 +39,8 @@ export function CarteiraPage() {
     operations,
     fixedIncome,
     proventos,
+    cashBalance,
+    allocationTargets,
     addOperation,
     deleteOperation,
     addFixedIncomeTitle,
@@ -45,6 +49,8 @@ export function CarteiraPage() {
     addProvento,
     deleteProvento,
     importProventos,
+    setCashBalance,
+    setAllocationTarget,
   } = usePortfolioStore()
 
   const watchlistEntries = useWatchlistStore((s) => s.entries)
@@ -225,6 +231,17 @@ export function CarteiraPage() {
             onAdd={handleAddRFTitle}
             onDelete={deleteFixedIncomeTitle}
             onDeleteDeposit={deleteDeposit}
+          />
+        )}
+        {tab === 'metas' && (
+          <CarteiraMetas
+            holdings={holdings}
+            priceMap={currentPriceMap}
+            rfValue={rfValue}
+            cashBalance={cashBalance}
+            allocationTargets={allocationTargets}
+            onSetCashBalance={setCashBalance}
+            onSetTarget={setAllocationTarget}
           />
         )}
       </div>

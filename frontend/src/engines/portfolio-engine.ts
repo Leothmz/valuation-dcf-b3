@@ -1,4 +1,5 @@
-import type { Operation, RFTitle, Provento } from '../stores/portfolioStore'
+import type { Operation, RFTitle, Provento, Category } from '../stores/portfolioStore'
+import { CATEGORIES } from '../stores/portfolioStore'
 
 export function calcPrecoMedio(operations: Operation[]): number | null {
   const buys = operations.filter((o) => o.type === 'buy')
@@ -305,4 +306,95 @@ export function buildDividendProjection(
     total += projected
   }
   return { perTicker, total }
+}
+
+export function mapAssetClassToCategory(assetClass: string): Category {
+  switch (assetClass) {
+    case 'fii':
+      return 'fiis'
+    case 'etf':
+    case 'stock_intl':
+      return 'internacional'
+    case 'cripto':
+      return 'criptoativos'
+    default:
+      return 'acoes_br'
+  }
+}
+
+export function buildCategoryAllocation(
+  holdings: HoldingSummary[],
+  priceMap: Record<string, number>,
+  rfValue: number,
+  cashBalance: number
+): Record<Category, number> {
+  const values: Record<Category, number> = {
+    acoes_br: 0,
+    fiis: 0,
+    renda_fixa: rfValue,
+    internacional: 0,
+    criptoativos: 0,
+    caixa: cashBalance,
+  }
+  for (const h of holdings) {
+    const price = priceMap[h.ticker]
+    if (price == null) continue
+    const category = mapAssetClassToCategory(h.assetClass)
+    values[category] += h.qty * price
+  }
+  return values
+}
+
+export interface CategoryDeviation {
+  actualValue: number
+  actualPct: number
+  targetPct: number
+  targetValue: number
+  deviationPct: number
+  deviationValue: number
+}
+
+export function calcAllocationDeviation(
+  actualValues: Record<Category, number>,
+  targets: Record<Category, number>
+): Record<Category, CategoryDeviation> {
+  const total = CATEGORIES.reduce((sum, c) => sum + (actualValues[c] ?? 0), 0)
+  const result = {} as Record<Category, CategoryDeviation>
+  for (const category of CATEGORIES) {
+    const actualValue = actualValues[category] ?? 0
+    const actualPct = total > 0 ? (actualValue / total) * 100 : 0
+    const targetPct = targets[category] ?? 0
+    const targetValue = total * (targetPct / 100)
+    result[category] = {
+      actualValue,
+      actualPct,
+      targetPct,
+      targetValue,
+      deviationPct: actualPct - targetPct,
+      deviationValue: actualValue - targetValue,
+    }
+  }
+  return result
+}
+
+export interface RebalanceSuggestion {
+  action: 'comprar' | 'vender' | 'manter'
+  amount: number
+}
+
+export function buildRebalancingSuggestions(
+  deviations: Record<Category, CategoryDeviation>
+): Record<Category, RebalanceSuggestion> {
+  const result = {} as Record<Category, RebalanceSuggestion>
+  for (const category of CATEGORIES) {
+    const dev = deviations[category]
+    if (Math.abs(dev.deviationValue) < 0.01) {
+      result[category] = { action: 'manter', amount: 0 }
+    } else if (dev.deviationValue > 0) {
+      result[category] = { action: 'vender', amount: dev.deviationValue }
+    } else {
+      result[category] = { action: 'comprar', amount: -dev.deviationValue }
+    }
+  }
+  return result
 }

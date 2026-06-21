@@ -7,6 +7,7 @@ import type { LiveQuote } from '../../api/stocks'
 const holdings: HoldingSummary[] = [
   { ticker: 'PETR4', assetClass: 'acao_br', qty: 100, precoMedio: 30, investido: 3000 },
   { ticker: 'VALE3', assetClass: 'acao_br', qty: 10, precoMedio: 60, investido: 600 },
+  { ticker: 'BTC', assetClass: 'cripto', qty: 0.1, precoMedio: 200000, investido: 20000 },
 ]
 
 // Quote prices are chosen so each ticker's simple "Retorno" differs from its TWRR
@@ -72,5 +73,17 @@ describe('CarteiraAtivos — TWRR', () => {
   it('shows a skeleton in the TWRR cell while loading and no value yet', () => {
     const { container } = renderAtivos({ twrrMap: {}, twrrLoading: true })
     expect(container.querySelectorAll('.skeleton').length).toBeGreaterThan(0)
+  })
+
+  it('shows the Criptoativo badge and label for a cripto holding', () => {
+    renderAtivos()
+    expect(screen.getByText('Criptoativo')).toBeInTheDocument()
+  })
+
+  it('offers a Cripto filter chip that isolates cripto holdings', () => {
+    renderAtivos()
+    fireEvent.click(screen.getByText('Cripto'))
+    expect(screen.getByText('BTC')).toBeInTheDocument()
+    expect(screen.queryByText('PETR4')).not.toBeInTheDocument()
   })
 })

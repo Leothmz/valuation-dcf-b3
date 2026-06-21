@@ -14,6 +14,7 @@ const CLASS_LABELS: Record<string, string> = {
   fii: 'FII',
   etf: 'ETF',
   stock_intl: 'Stock Intl',
+  cripto: 'Criptoativo',
 }
 
 const CLASS_BADGE_CLASS: Record<string, string> = {
@@ -21,6 +22,7 @@ const CLASS_BADGE_CLASS: Record<string, string> = {
   fii: 'text-[#818cf8] bg-[rgba(99,102,241,.15)] border-[rgba(99,102,241,.25)]',
   etf: 'text-amber bg-amber-dim border-amber/20',
   stock_intl: 'text-purple bg-purple-dim border-purple/20',
+  cripto: 'text-green bg-green-dim border-green/20',
 }
 
 const COLUMNS = [
@@ -36,7 +38,7 @@ const COLUMNS = [
   'Situação',
 ] as const
 
-type AssetFilter = 'all' | 'acao_br' | 'fii' | 'etf' | 'stock_intl'
+type AssetFilter = 'all' | 'acao_br' | 'fii' | 'etf' | 'stock_intl' | 'cripto'
 type SortKey = 'simple' | 'twrr' | null
 
 interface CarteiraAtivosProps {
@@ -80,6 +82,7 @@ export function CarteiraAtivos({
     { key: 'fii', label: 'FIIs' },
     { key: 'etf', label: 'ETFs' },
     { key: 'stock_intl', label: 'Stocks Intl' },
+    { key: 'cripto', label: 'Cripto' },
   ]
 
   function toggleSort(key: 'simple' | 'twrr') {
