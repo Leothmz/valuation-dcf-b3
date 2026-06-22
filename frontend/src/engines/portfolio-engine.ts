@@ -1,4 +1,4 @@
-import type { Operation, RFTitle, Provento, Category } from '../stores/portfolioStore'
+import type { Operation, RFTitle, Provento, Category, SplitEvent } from '../stores/portfolioStore'
 import { CATEGORIES } from '../stores/portfolioStore'
 
 export function calcPrecoMedio(operations: Operation[]): number | null {
@@ -397,4 +397,49 @@ export function buildRebalancingSuggestions(
     }
   }
   return result
+}
+
+export function adjustOperationsForSplits(
+  operations: Operation[],
+  splitEvents: SplitEvent[]
+): Operation[] {
+  return operations.map((op) => {
+    const cumulativeRatio = splitEvents
+      .filter((e) => e.ticker === op.ticker && e.date > op.date)
+      .reduce((product, e) => product * e.ratio, 1)
+    if (cumulativeRatio === 1) return { ...op }
+    return { ...op, qty: op.qty * cumulativeRatio, price: op.price / cumulativeRatio }
+  })
+}
+
+export interface AvgCostPoint {
+  operation: Operation
+  qtyBefore: number
+  avgCostBefore: number
+  qtyAfter: number
+  avgCostAfter: number
+}
+
+export function buildAvgCostTimeline(tickerOperations: Operation[]): AvgCostPoint[] {
+  const sorted = [...tickerOperations].sort((a, b) => a.date.localeCompare(b.date))
+  let qty = 0
+  let avgCost = 0
+  const timeline: AvgCostPoint[] = []
+  for (const operation of sorted) {
+    const qtyBefore = qty
+    const avgCostBefore = avgCost
+    if (operation.type === 'buy') {
+      const newQty = qty + operation.qty
+      avgCost = newQty > 0 ? (qty * avgCost + operation.qty * operation.price) / newQty : 0
+      qty = newQty
+    } else {
+      qty -= operation.qty
+      if (qty <= 0) {
+        qty = 0
+        avgCost = 0
+      }
+    }
+    timeline.push({ operation, qtyBefore, avgCostBefore, qtyAfter: qty, avgCostAfter: avgCost })
+  }
+  return timeline
 }

@@ -11,8 +11,10 @@ import {
   buildCategoryAllocation,
   calcAllocationDeviation,
   buildRebalancingSuggestions,
+  adjustOperationsForSplits,
+  buildAvgCostTimeline,
 } from './portfolio-engine'
-import type { Operation, Provento, Category } from '../stores/portfolioStore'
+import type { Operation, Provento, Category, SplitEvent } from '../stores/portfolioStore'
 
 describe('buildHistoricalPriceMap', () => {
   it('maps parallel price arrays to a nested ticker/date lookup', () => {
@@ -423,5 +425,121 @@ describe('buildRebalancingSuggestions', () => {
     const suggestions = buildRebalancingSuggestions(deviations)
     expect(suggestions.acoes_br.action).toBe('manter')
     expect(suggestions.acoes_br.amount).toBe(0)
+  })
+})
+
+describe('adjustOperationsForSplits', () => {
+  it('leaves operations unchanged when there are no split events', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 30, currency: 'BRL', fees: 0 },
+    ]
+    const result = adjustOperationsForSplits(ops, [])
+    expect(result).toEqual(ops)
+  })
+
+  it('applies a single split ratio to an operation dated before the split', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 10, price: 100, currency: 'BRL', fees: 0 },
+    ]
+    const splits: SplitEvent[] = [{ id: 's1', ticker: 'VALE3', date: '2024-06-01', ratio: 2 }]
+    const result = adjustOperationsForSplits(ops, splits)
+    expect(result[0].qty).toBeCloseTo(20)
+    expect(result[0].price).toBeCloseTo(50)
+  })
+
+  it('does not apply a split to an operation dated after it', () => {
+    const ops = [
+      { id: '1', date: '2024-09-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 10, price: 50, currency: 'BRL', fees: 0 },
+    ]
+    const splits: SplitEvent[] = [{ id: 's1', ticker: 'VALE3', date: '2024-06-01', ratio: 2 }]
+    const result = adjustOperationsForSplits(ops, splits)
+    expect(result[0].qty).toBe(10)
+    expect(result[0].price).toBe(50)
+  })
+
+  it('compounds two splits for an operation before both, and applies only the later one for an operation between them', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 10, price: 100, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-04-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 5, price: 50, currency: 'BRL', fees: 0 },
+      { id: '3', date: '2024-10-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 3, price: 50 / 3, currency: 'BRL', fees: 0 },
+    ]
+    const splits: SplitEvent[] = [
+      { id: 's1', ticker: 'VALE3', date: '2024-03-01', ratio: 2 },
+      { id: 's2', ticker: 'VALE3', date: '2024-09-01', ratio: 3 },
+    ]
+    const result = adjustOperationsForSplits(ops, splits)
+    // op1 (before both): cumulative ratio 2*3=6
+    expect(result[0].qty).toBeCloseTo(60)
+    expect(result[0].price).toBeCloseTo(100 / 6)
+    // op2 (after split 1, before split 2): only split 2's ratio (3) applies
+    expect(result[1].qty).toBeCloseTo(15)
+    expect(result[1].price).toBeCloseTo(50 / 3)
+    // op3 (after both): no future split applies, unchanged
+    expect(result[2].qty).toBeCloseTo(3)
+    expect(result[2].price).toBeCloseTo(50 / 3)
+  })
+
+  it('only applies a split to the matching ticker', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 10, price: 100, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-01-01', ticker: 'PETR4', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 10, price: 100, currency: 'BRL', fees: 0 },
+    ]
+    const splits: SplitEvent[] = [{ id: 's1', ticker: 'VALE3', date: '2024-06-01', ratio: 2 }]
+    const result = adjustOperationsForSplits(ops, splits)
+    expect(result[0].qty).toBeCloseTo(20) // VALE3 adjusted
+    expect(result[1].qty).toBe(10) // PETR4 untouched
+  })
+
+  it('does not mutate the input array or its operations', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 10, price: 100, currency: 'BRL', fees: 0 },
+    ]
+    const splits: SplitEvent[] = [{ id: 's1', ticker: 'VALE3', date: '2024-06-01', ratio: 2 }]
+    adjustOperationsForSplits(ops, splits)
+    expect(ops[0].qty).toBe(10)
+    expect(ops[0].price).toBe(100)
+  })
+})
+
+describe('buildAvgCostTimeline', () => {
+  it('computes a simple weighted average across two buys, unaffected by a later sell', () => {
+    const ops = [
+      { id: '1', date: '2024-01-05', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 10, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-01-15', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 20, currency: 'BRL', fees: 0 },
+      { id: '3', date: '2024-02-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 50, price: 25, currency: 'BRL', fees: 0 },
+    ]
+    const timeline = buildAvgCostTimeline(ops)
+    expect(timeline[1].avgCostAfter).toBeCloseTo(15) // (100*10 + 100*20) / 200
+    expect(timeline[2].avgCostBefore).toBeCloseTo(15) // sell uses the pre-existing average
+    expect(timeline[2].qtyBefore).toBe(200)
+    expect(timeline[2].avgCostAfter).toBeCloseTo(15) // selling never changes average cost
+    expect(timeline[2].qtyAfter).toBe(150)
+  })
+
+  it('resets average cost to zero when a position is fully liquidated, then starts fresh on reopening', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 10, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-02-01', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 100, price: 30, currency: 'BRL', fees: 0 },
+      { id: '3', date: '2024-03-01', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 50, price: 8, currency: 'BRL', fees: 0 },
+      { id: '4', date: '2024-04-01', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 20, price: 12, currency: 'BRL', fees: 0 },
+    ]
+    const timeline = buildAvgCostTimeline(ops)
+    expect(timeline[1].qtyAfter).toBe(0)
+    expect(timeline[1].avgCostAfter).toBe(0) // reset after full liquidation
+    expect(timeline[2].avgCostBefore).toBe(0) // confirms the reset carried into the next operation
+    expect(timeline[2].avgCostAfter).toBeCloseTo(8) // fresh average, NOT blended with the old position's R$10 cost
+    expect(timeline[3].avgCostBefore).toBeCloseTo(8)
+    expect(timeline[3].avgCostAfter).toBeCloseTo(8)
+    expect(timeline[3].qtyAfter).toBe(30)
+  })
+
+  it('handles operations passed out of date order by sorting internally', () => {
+    const ops = [
+      { id: '2', date: '2024-01-15', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 20, currency: 'BRL', fees: 0 },
+      { id: '1', date: '2024-01-05', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 10, currency: 'BRL', fees: 0 },
+    ]
+    const timeline = buildAvgCostTimeline(ops)
+    expect(timeline[0].operation.id).toBe('1') // earlier date processed first
+    expect(timeline[1].avgCostAfter).toBeCloseTo(15)
   })
 })
