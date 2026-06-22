@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useRankingStore } from '../../stores'
 import { useBatchFundamentals } from '../../api/stocks'
 import type { FundamentalsData } from '../../api/stocks'
@@ -16,6 +17,8 @@ import { SectorTabs } from './SectorTabs'
 import type { SectorTab } from './SectorTabs'
 import { FilterChips } from './FilterChips'
 import { RankingTable } from './RankingTable'
+
+const MAX_COMPARE = 3
 
 // Enriched ranked row — includes valuation columns from all 4 methods
 export interface RankedRow extends StockData {
@@ -63,9 +66,24 @@ export function RankingPage() {
     setSortDir,
   } = useRankingStore()
 
+  const navigate = useNavigate()
   const [sectorTab, setSectorTab] = useState<SectorTab>('')
   const [search, setSearch] = useState('')
   const [newTicker, setNewTicker] = useState('')
+  const [compareSelection, setCompareSelection] = useState<string[]>([])
+
+  function toggleCompareSelection(ticker: string) {
+    setCompareSelection((prev) =>
+      prev.includes(ticker)
+        ? prev.filter((t) => t !== ticker)
+        : prev.length < MAX_COMPARE ? [...prev, ticker] : prev
+    )
+  }
+
+  function handleCompareGo() {
+    if (compareSelection.length < 2) return
+    navigate(`/compare?tickers=${compareSelection.join(',')}`)
+  }
 
   const allTickers = useMemo(
     () => [...B3_TICKERS, ...customTickers.filter((t) => !B3_TICKERS.includes(t))],
@@ -289,9 +307,38 @@ export function RankingPage() {
             sortDir={sortDir}
             onSort={handleSort}
             onRemoveCustom={removeCustomTicker}
+            compareSelection={compareSelection}
+            onToggleCompare={toggleCompareSelection}
+            maxCompare={MAX_COMPARE}
           />
         </div>
       </div>
+
+      {compareSelection.length > 0 && (
+        <div
+          className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 rounded-[12px] border border-border px-4 py-3"
+          style={{ background: 'var(--color-bg-2)', boxShadow: '0 4px 20px rgba(0,0,0,.6)' }}
+        >
+          <span className="text-[13px] text-text-sec">
+            {compareSelection.length} ticker{compareSelection.length > 1 ? 's' : ''} selecionado{compareSelection.length > 1 ? 's' : ''}
+          </span>
+          <button
+            onClick={handleCompareGo}
+            disabled={compareSelection.length < 2}
+            className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ background: 'var(--color-cyan-dim)', color: 'var(--color-cyan)', border: '1px solid var(--color-border-glow)' }}
+          >
+            Comparar
+          </button>
+          <button
+            onClick={() => setCompareSelection([])}
+            className="text-[13px] text-text-muted cursor-pointer"
+            style={{ background: 'none', border: 'none', padding: 0 }}
+          >
+            Limpar
+          </button>
+        </div>
+      )}
     </div>
   )
 }
