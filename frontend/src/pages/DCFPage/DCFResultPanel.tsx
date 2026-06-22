@@ -1,12 +1,12 @@
 import { Settings2, FileDown } from 'lucide-react'
 import { fBRL, fShort, fPct, fShares } from '../../engines/formatters'
-import type { DCFResult } from '../../engines/dcf-engine'
+import type { DCFResult, DCFGordonError } from '../../engines/dcf-engine'
 import type { NullableDCFAssumptions, ScenarioState } from '../../stores/dcfStore'
 
 interface DCFResultPanelProps {
-  results: DCFResult | null
-  resultsClassico: DCFResult | null
-  resultsBuffett: DCFResult | null
+  results: DCFResult | DCFGordonError | null
+  resultsClassico: DCFResult | DCFGordonError | null
+  resultsBuffett: DCFResult | DCFGordonError | null
   dcfMethod: 'buffett' | 'classico'
   assumptions: NullableDCFAssumptions
   ticker: string | null
