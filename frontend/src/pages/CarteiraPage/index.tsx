@@ -16,9 +16,10 @@ import { CarteiraOperacoes } from './CarteiraOperacoes'
 import { CarteiraProventos } from './CarteiraProventos'
 import { CarteiraRF } from './CarteiraRF'
 import { CarteiraMetas } from './CarteiraMetas'
-import type { Operation, Provento, RFTitle } from '../../stores/portfolioStore'
+import { CarteiraIR } from './CarteiraIR'
+import type { Operation, Provento, RFTitle, SplitEvent } from '../../stores/portfolioStore'
 
-type Tab = 'visao' | 'ativos' | 'operacoes' | 'proventos' | 'rf' | 'metas'
+type Tab = 'visao' | 'ativos' | 'operacoes' | 'proventos' | 'rf' | 'metas' | 'ir'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'visao', label: 'Visão Geral' },
@@ -27,6 +28,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'proventos', label: 'Proventos' },
   { key: 'rf', label: 'Renda Fixa' },
   { key: 'metas', label: 'Metas' },
+  { key: 'ir', label: 'IR/DARF' },
 ]
 
 const CDI_DEFAULT = 0.1415 // approx CDI accumulated 2024 — fetched from /api/cdi when available
@@ -41,6 +43,7 @@ export function CarteiraPage() {
     proventos,
     cashBalance,
     allocationTargets,
+    splitEvents,
     addOperation,
     deleteOperation,
     addFixedIncomeTitle,
@@ -51,6 +54,8 @@ export function CarteiraPage() {
     importProventos,
     setCashBalance,
     setAllocationTarget,
+    addSplitEvent,
+    deleteSplitEvent,
   } = usePortfolioStore()
 
   const watchlistEntries = useWatchlistStore((s) => s.entries)
@@ -141,6 +146,10 @@ export function CarteiraPage() {
 
   function handleAddRFTitle(title: Omit<RFTitle, 'id'>) {
     addFixedIncomeTitle({ ...title, id: crypto.randomUUID() })
+  }
+
+  function handleAddSplitEvent(event: Omit<SplitEvent, 'id'>) {
+    addSplitEvent({ ...event, id: crypto.randomUUID() })
   }
 
   return (
@@ -242,6 +251,14 @@ export function CarteiraPage() {
             allocationTargets={allocationTargets}
             onSetCashBalance={setCashBalance}
             onSetTarget={setAllocationTarget}
+          />
+        )}
+        {tab === 'ir' && (
+          <CarteiraIR
+            operations={operations}
+            splitEvents={splitEvents}
+            onAddSplitEvent={handleAddSplitEvent}
+            onDeleteSplitEvent={deleteSplitEvent}
           />
         )}
       </div>

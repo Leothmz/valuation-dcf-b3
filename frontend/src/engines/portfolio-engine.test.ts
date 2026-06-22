@@ -17,7 +17,7 @@ import {
   buildMonthlyIRSummary,
   buildIRPFAnnualSummary,
 } from './portfolio-engine'
-import type { MonthlyIRSummary } from './portfolio-engine'
+import type { MonthlyIRSummary, SaleGain } from './portfolio-engine'
 import type { Operation, Provento, Category, SplitEvent } from '../stores/portfolioStore'
 
 describe('buildHistoricalPriceMap', () => {
