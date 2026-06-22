@@ -444,7 +444,7 @@ export function buildAvgCostTimeline(tickerOperations: Operation[]): AvgCostPoin
   return timeline
 }
 
-export type GainCategory = 'swing_acoes' | 'day_trade' | 'swing_fii'
+export type GainCategory = 'swing_acoes' | 'day_trade' | 'swing_fii' | 'cripto'
 
 export interface SaleGain {
   date: string
@@ -462,6 +462,7 @@ export function classifySaleGains(operations: Operation[]): SaleGain[] {
   for (const ticker of tickers) {
     const tickerOps = operations.filter((o) => o.ticker === ticker)
     const assetClass = tickerOps[tickerOps.length - 1].assetClass
+    const isCripto = assetClass === 'cripto'
     const sorted = [...tickerOps].sort((a, b) => a.date.localeCompare(b.date))
     const dates = [...new Set(sorted.map((o) => o.date))].sort()
 
@@ -476,7 +477,8 @@ export function classifySaleGains(operations: Operation[]): SaleGain[] {
       const dayBuyCost = buysToday.reduce((s, o) => s + o.qty * o.price, 0)
       const daySellQty = sellsToday.reduce((s, o) => s + o.qty, 0)
       const daySellRevenue = sellsToday.reduce((s, o) => s + o.qty * o.price, 0)
-      const dayTradeQty = Math.min(dayBuyQty, daySellQty)
+      // Crypto has no day-trade/swing split — every sale is one "cripto" bucket (see buildMonthlyIRSummary)
+      const dayTradeQty = isCripto ? 0 : Math.min(dayBuyQty, daySellQty)
       const daySellAvgPrice = daySellQty > 0 ? daySellRevenue / daySellQty : 0
 
       if (dayTradeQty > 0) {
@@ -496,7 +498,7 @@ export function classifySaleGains(operations: Operation[]): SaleGain[] {
         result.push({
           date,
           ticker,
-          category: assetClass === 'fii' ? 'swing_fii' : 'swing_acoes',
+          category: isCripto ? 'cripto' : assetClass === 'fii' ? 'swing_fii' : 'swing_acoes',
           qty: swingSellQty,
           proceeds: swingSellQty * daySellAvgPrice,
           gain: swingSellQty * (daySellAvgPrice - runningAvgCost),
@@ -530,9 +532,15 @@ const IR_RATES: Record<GainCategory, number> = {
   swing_acoes: 0.15,
   day_trade: 0.20,
   swing_fii: 0.20,
+  cripto: 0.15,
 }
 
-const GAIN_CATEGORY_ORDER: GainCategory[] = ['swing_acoes', 'day_trade', 'swing_fii']
+const GAIN_CATEGORY_ORDER: GainCategory[] = ['swing_acoes', 'day_trade', 'swing_fii', 'cripto']
+
+const MONTHLY_EXEMPTION_LIMIT: Partial<Record<GainCategory, number>> = {
+  swing_acoes: 20000,
+  cripto: 35000,
+}
 
 function lastDayOfNextMonth(month: string): string {
   const [year, monthNum] = month.split('-').map(Number)
@@ -556,7 +564,7 @@ export interface MonthlyIRSummary {
 
 export function buildMonthlyIRSummary(saleGains: SaleGain[]): MonthlyIRSummary[] {
   const months = [...new Set(saleGains.map((g) => g.date.slice(0, 7)))].sort()
-  const lossCarry: Record<GainCategory, number> = { swing_acoes: 0, day_trade: 0, swing_fii: 0 }
+  const lossCarry: Record<GainCategory, number> = { swing_acoes: 0, day_trade: 0, swing_fii: 0, cripto: 0 }
   const result: MonthlyIRSummary[] = []
 
   for (const month of months) {
@@ -572,9 +580,11 @@ export function buildMonthlyIRSummary(saleGains: SaleGain[]): MonthlyIRSummary[]
       let taxableAmount = 0
       let lossCarriedOut = lossCarriedIn
 
+      const exemptionLimit = MONTHLY_EXEMPTION_LIMIT[category]
+
       if (grossGain <= 0) {
         lossCarriedOut = lossCarriedIn + -grossGain
-      } else if (category === 'swing_acoes' && proceeds <= 20000) {
+      } else if (exemptionLimit != null && proceeds <= exemptionLimit) {
         exempt = true
       } else {
         const afterLoss = grossGain - lossCarriedIn

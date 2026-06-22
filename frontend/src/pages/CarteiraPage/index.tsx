@@ -3,6 +3,7 @@ import { Briefcase } from 'lucide-react'
 import { usePortfolioStore } from '../../stores/portfolioStore'
 import { useWatchlistStore } from '../../stores/watchlistStore'
 import { useBatchQuotes, usePortfolioHistory, useBatchDividendHistory, useDpaMap } from '../../api/stocks'
+import { useBatchCryptoQuotes } from '../../api/crypto'
 import {
   buildHoldingSummaries,
   aggregateTitle,
@@ -65,10 +66,20 @@ export function CarteiraPage() {
 
   // Compute holdings
   const holdings = useMemo(() => buildHoldingSummaries(operations), [operations])
-  const tickers = useMemo(() => holdings.map((h) => h.ticker), [holdings])
+  const stockTickers = useMemo(
+    () => holdings.filter((h) => h.assetClass !== 'cripto').map((h) => h.ticker),
+    [holdings]
+  )
+  const cryptoTickers = useMemo(
+    () => holdings.filter((h) => h.assetClass === 'cripto').map((h) => h.ticker),
+    [holdings]
+  )
 
-  // Fetch live quotes
-  const { data: quotes = [], isLoading: quotesLoading } = useBatchQuotes(tickers)
+  // Fetch live quotes — crypto goes through CoinGecko, everything else through yfinance
+  const { data: stockQuotes = [], isLoading: stockQuotesLoading } = useBatchQuotes(stockTickers)
+  const { data: cryptoQuotes = [], isLoading: cryptoQuotesLoading } = useBatchCryptoQuotes(cryptoTickers)
+  const quotes = useMemo(() => [...stockQuotes, ...cryptoQuotes], [stockQuotes, cryptoQuotes])
+  const quotesLoading = stockQuotesLoading || cryptoQuotesLoading
 
   // Compute totals
   const quoteMap = useMemo(
@@ -82,7 +93,7 @@ export function CarteiraPage() {
   )
 
   const { data: historyResponse, isLoading: historyLoading } = usePortfolioHistory(
-    tickers,
+    stockTickers,
     operationDates
   )
 
@@ -101,9 +112,9 @@ export function CarteiraPage() {
   }, [historyResponse, operations, currentPriceMap])
 
   const { data: dividendHistoryByTicker = {}, isLoading: dividendHistoryLoading } =
-    useBatchDividendHistory(tickers)
+    useBatchDividendHistory(stockTickers)
 
-  const { data: dpaMap = {}, isLoading: dpaLoading } = useDpaMap(tickers)
+  const { data: dpaMap = {}, isLoading: dpaLoading } = useDpaMap(stockTickers)
 
   const today = new Date().toISOString().slice(0, 10)
 

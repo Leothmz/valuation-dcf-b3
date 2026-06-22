@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routers import health, stocks, fiis, market, portfolio
+from api.routers import health, stocks, fiis, market, portfolio, crypto
 from api.middleware import RateLimitMiddleware
 from api.cache import cache_close
 
@@ -30,6 +30,7 @@ app.include_router(stocks.router)
 app.include_router(fiis.router)
 app.include_router(market.router)
 app.include_router(portfolio.router)
+app.include_router(crypto.router)
 
 if __name__ == "__main__":
     uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)
