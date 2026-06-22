@@ -8,6 +8,7 @@ import { AnalisePage } from './pages/AnalisePage'
 import { FIIRankingPage } from './pages/FIIRankingPage'
 import { AnaliseFIIPage } from './pages/AnaliseFIIPage'
 import { CarteiraPage } from './pages/CarteiraPage'
+import { ComparePage } from './pages/ComparePage'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/dcf" element={<DCFPage />} />
         <Route path="/watchlist" element={<WatchlistPage />} />
         <Route path="/ranking" element={<RankingPage />} />
+        <Route path="/compare" element={<ComparePage />} />
         <Route path="/analise" element={<AnalisePage />} />
         <Route path="/fiis" element={<FIIRankingPage />} />
         <Route path="/analise-fii" element={<AnaliseFIIPage />} />

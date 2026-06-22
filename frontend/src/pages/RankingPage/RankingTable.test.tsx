@@ -120,6 +120,36 @@ describe('RankingTable', () => {
     expect(onRemoveCustom).toHaveBeenCalledWith('PETR4')
   })
 
+  it('does not render compare checkbox when onToggleCompare is absent', () => {
+    renderTable([makeRow()])
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  })
+
+  it('renders compare checkbox when onToggleCompare is provided', () => {
+    renderTable([makeRow()], { onToggleCompare: noop })
+    expect(screen.getByRole('checkbox')).toBeInTheDocument()
+  })
+
+  it('checkbox reflects compareSelection state', () => {
+    renderTable([makeRow()], { onToggleCompare: noop, compareSelection: ['PETR4'] })
+    expect(screen.getByRole('checkbox')).toBeChecked()
+  })
+
+  it('calls onToggleCompare with ticker on checkbox click', () => {
+    const onToggleCompare = vi.fn()
+    renderTable([makeRow()], { onToggleCompare })
+    screen.getByRole('checkbox').click()
+    expect(onToggleCompare).toHaveBeenCalledWith('PETR4')
+  })
+
+  it('disables unchecked checkboxes when maxCompare is reached', () => {
+    const rows = [makeRow({ ticker: 'PETR4' }), makeRow({ ticker: 'VALE3', rank: 2 })]
+    renderTable(rows, { onToggleCompare: noop, compareSelection: ['VALE3', 'ITUB4'], maxCompare: 2 })
+    const checkboxes = screen.getAllByRole('checkbox')
+    expect(checkboxes[0]).toBeDisabled() // PETR4 not selected, limit reached
+    expect(checkboxes[1]).not.toBeDisabled() // VALE3 already selected, stays enabled
+  })
+
   it('shows all table headers', () => {
     renderTable([makeRow()])
     expect(screen.getByText(/Ticker/i)).toBeInTheDocument()
