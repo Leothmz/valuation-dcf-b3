@@ -16,6 +16,7 @@ const CATEGORY_LABELS: Record<GainCategory, string> = {
   swing_acoes: 'Swing Trade (Ações)',
   day_trade: 'Day Trade',
   swing_fii: 'FIIs',
+  cripto: 'Criptoativos',
 }
 
 interface CarteiraIRProps {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { fBRL as fBRLFormatter } from '../../engines/formatters'
+import { useCryptoList } from '../../api/crypto'
 import type { Operation, AssetClass, OperationType } from '../../stores/portfolioStore'
 
 const fBRL = (v: number) => fBRLFormatter.format(v)
@@ -39,13 +40,17 @@ export function CarteiraOperacoes({
   const [filter, setFilter] = useState<OpFilter>('all')
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_FORM })
+  const { data: cryptoList = [] } = useCryptoList()
+  const cryptoLabel = (id: string) =>
+    cryptoList.find((c) => c.id === id)?.symbol ?? id.toUpperCase()
 
   const sorted = [...operations]
     .filter((o) => filter === 'all' || o.type === filter)
     .sort((a, b) => b.date.localeCompare(a.date))
 
   function handleSave() {
-    const ticker = form.ticker.toUpperCase().trim()
+    // Crypto tickers are CoinGecko ids (lowercase, e.g. "bitcoin") — never uppercase those
+    const ticker = form.assetClass === 'cripto' ? form.ticker.trim() : form.ticker.toUpperCase().trim()
     const qty = parseFloat(form.qty) || 0
     const price = parseFloat(form.price) || 0
     if (!ticker || !qty || !form.date) return
@@ -130,7 +135,9 @@ export function CarteiraOperacoes({
                   className="border-b border-border-muted hover:bg-white/[0.02] transition-colors"
                 >
                   <td className="px-2.5 py-2.5 text-sm font-mono">{op.date}</td>
-                  <td className="px-2.5 py-2.5 text-sm font-bold">{op.ticker}</td>
+                  <td className="px-2.5 py-2.5 text-sm font-bold">
+                    {op.assetClass === 'cripto' ? cryptoLabel(op.ticker) : op.ticker}
+                  </td>
                   <td className="px-2.5 py-2.5">
                     <span
                       className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold border
@@ -193,17 +200,30 @@ export function CarteiraOperacoes({
                 </select>
               </FormField>
               <FormField label="Ticker">
-                <input
-                  value={form.ticker}
-                  onChange={(e) => setForm({ ...form, ticker: e.target.value })}
-                  placeholder="Ex: WEGE3"
-                  className="form-input-dark"
-                />
+                {form.assetClass === 'cripto' ? (
+                  <select
+                    value={form.ticker}
+                    onChange={(e) => setForm({ ...form, ticker: e.target.value })}
+                    className="form-select-dark"
+                  >
+                    <option value="">Selecione…</option>
+                    {cryptoList.map((c) => (
+                      <option key={c.id} value={c.id}>{c.symbol} — {c.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={form.ticker}
+                    onChange={(e) => setForm({ ...form, ticker: e.target.value })}
+                    placeholder="Ex: WEGE3"
+                    className="form-input-dark"
+                  />
+                )}
               </FormField>
               <FormField label="Classe">
                 <select
                   value={form.assetClass}
-                  onChange={(e) => setForm({ ...form, assetClass: e.target.value as AssetClass })}
+                  onChange={(e) => setForm({ ...form, assetClass: e.target.value as AssetClass, ticker: '' })}
                   className="form-select-dark"
                 >
                   <option value="acao_br">Ação BR</option>
