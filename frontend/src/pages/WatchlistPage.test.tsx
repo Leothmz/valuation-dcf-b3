@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { WatchlistPage } from './WatchlistPage'
 import type { WatchlistEntry } from '../stores/watchlistStore'
+import type { LiveQuote } from '../api/stocks'
 
 // Mock stores and API
 vi.mock('../stores', () => ({
@@ -45,7 +46,7 @@ function renderPage() {
 
 beforeEach(() => {
   mockUseBatchQuotes.mockReturnValue({
-    data: [],
+    data: [] as LiveQuote[],
     isLoading: false,
     dataUpdatedAt: 0,
   } as ReturnType<typeof useBatchQuotes>)
