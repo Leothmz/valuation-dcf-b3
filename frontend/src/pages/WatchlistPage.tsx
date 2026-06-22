@@ -6,6 +6,7 @@ import { useBatchQuotes } from '../api/stocks'
 import { fBRL, fPct } from '../engines/formatters'
 import { Skeleton } from '../components'
 import { isPriceInBuyRange, shouldRecordAlert } from '../engines/alert-engine'
+import { useEscapeToClose } from '../hooks/useKeyBinding'
 
 // ── Ticker logo helpers ───────────────────────────────────────────────────────
 const PALETTE: [string, string][] = [
@@ -128,6 +129,12 @@ export function WatchlistPage() {
       document.removeEventListener('keydown', onKeyDown)
     }
   }, [])
+
+  useEscapeToClose(!!notesModal || !!historyModal || !!alertHistoryModal, () => {
+    setNotesModal(null)
+    setHistoryModal(null)
+    setAlertHistoryModal(null)
+  })
 
   // Build and sort rows
   const q = filterText.toLowerCase()

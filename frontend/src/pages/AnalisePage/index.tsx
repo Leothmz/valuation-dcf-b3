@@ -8,6 +8,7 @@ import { AnaliseValuations } from './AnaliseValuations'
 import { AnaliseHistorico } from './AnaliseHistorico'
 import { AnaliseGrafico } from './AnaliseGrafico'
 import { B3_TICKERS } from '../../data/b3Tickers'
+import { useTabArrowNav } from '../../hooks/useKeyBinding'
 
 type TabId = 'indicadores' | 'valuations' | 'historico' | 'grafico'
 
@@ -121,6 +122,8 @@ export function AnalisePage() {
   const [searchParams] = useSearchParams()
   const ticker = searchParams.get('ticker')?.toUpperCase() ?? null
   const [activeTab, setActiveTab] = useState<TabId>('indicadores')
+
+  useTabArrowNav(TABS.map((t) => t.id), activeTab, setActiveTab)
 
   const { data: fund, isLoading: fundLoading, error: fundError } = useFundamentals(ticker)
   const { data: quote } = useStockQuote(ticker)

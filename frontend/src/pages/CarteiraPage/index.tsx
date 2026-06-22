@@ -18,6 +18,7 @@ import { CarteiraRF } from './CarteiraRF'
 import { CarteiraMetas } from './CarteiraMetas'
 import { CarteiraIR } from './CarteiraIR'
 import type { Operation, Provento, RFTitle, SplitEvent } from '../../stores/portfolioStore'
+import { useTabArrowNav } from '../../hooks/useKeyBinding'
 
 type Tab = 'visao' | 'ativos' | 'operacoes' | 'proventos' | 'rf' | 'metas' | 'ir'
 
@@ -36,6 +37,8 @@ const CDI_DEFAULT = 0.1415 // approx CDI accumulated 2024 — fetched from /api/
 export function CarteiraPage() {
   const [tab, setTab] = useState<Tab>('visao')
   const [cdiAccumulated] = useState(CDI_DEFAULT)
+
+  useTabArrowNav(TABS.map((t) => t.key), tab, setTab)
 
   const {
     operations,
