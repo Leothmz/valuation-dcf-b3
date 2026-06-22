@@ -525,3 +525,84 @@ export function classifySaleGains(operations: Operation[]): SaleGain[] {
 
   return result.sort((a, b) => a.date.localeCompare(b.date))
 }
+
+const IR_RATES: Record<GainCategory, number> = {
+  swing_acoes: 0.15,
+  day_trade: 0.20,
+  swing_fii: 0.20,
+}
+
+const GAIN_CATEGORY_ORDER: GainCategory[] = ['swing_acoes', 'day_trade', 'swing_fii']
+
+function lastDayOfNextMonth(month: string): string {
+  const [year, monthNum] = month.split('-').map(Number)
+  const d = new Date(year, monthNum + 1, 0)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+export interface MonthlyIRSummary {
+  month: string
+  category: GainCategory
+  grossGain: number
+  proceeds: number
+  exempt: boolean
+  lossCarriedIn: number
+  taxableAmount: number
+  rate: number
+  darfAmount: number
+  lossCarriedOut: number
+  dueDate: string
+}
+
+export function buildMonthlyIRSummary(saleGains: SaleGain[]): MonthlyIRSummary[] {
+  const months = [...new Set(saleGains.map((g) => g.date.slice(0, 7)))].sort()
+  const lossCarry: Record<GainCategory, number> = { swing_acoes: 0, day_trade: 0, swing_fii: 0 }
+  const result: MonthlyIRSummary[] = []
+
+  for (const month of months) {
+    for (const category of GAIN_CATEGORY_ORDER) {
+      const entries = saleGains.filter((g) => g.date.slice(0, 7) === month && g.category === category)
+      if (!entries.length) continue
+
+      const grossGain = entries.reduce((s, g) => s + g.gain, 0)
+      const proceeds = entries.reduce((s, g) => s + g.proceeds, 0)
+      const lossCarriedIn = lossCarry[category]
+
+      let exempt = false
+      let taxableAmount = 0
+      let lossCarriedOut = lossCarriedIn
+
+      if (grossGain <= 0) {
+        lossCarriedOut = lossCarriedIn + -grossGain
+      } else if (category === 'swing_acoes' && proceeds <= 20000) {
+        exempt = true
+      } else {
+        const afterLoss = grossGain - lossCarriedIn
+        if (afterLoss <= 0) {
+          lossCarriedOut = -afterLoss
+        } else {
+          taxableAmount = afterLoss
+          lossCarriedOut = 0
+        }
+      }
+
+      const rate = IR_RATES[category]
+      lossCarry[category] = lossCarriedOut
+      result.push({
+        month,
+        category,
+        grossGain,
+        proceeds,
+        exempt,
+        lossCarriedIn,
+        taxableAmount,
+        rate,
+        darfAmount: taxableAmount * rate,
+        lossCarriedOut,
+        dueDate: lastDayOfNextMonth(month),
+      })
+    }
+  }
+
+  return result
+}

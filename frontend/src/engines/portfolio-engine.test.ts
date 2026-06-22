@@ -14,6 +14,7 @@ import {
   adjustOperationsForSplits,
   buildAvgCostTimeline,
   classifySaleGains,
+  buildMonthlyIRSummary,
 } from './portfolio-engine'
 import type { Operation, Provento, Category, SplitEvent } from '../stores/portfolioStore'
 
@@ -631,5 +632,119 @@ describe('classifySaleGains', () => {
     expect(gains).toHaveLength(2)
     expect(gains.find((g) => g.ticker === 'WEGE3')!.gain).toBeCloseTo(500) // 50*(40-30)
     expect(gains.find((g) => g.ticker === 'VALE3')!.gain).toBeCloseTo(-1000) // 100*(50-60), a loss
+  })
+})
+
+describe('buildMonthlyIRSummary', () => {
+  it('applies the R$20k exemption to a small swing-trade-stock month (based on proceeds, not gain)', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-03-10', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 15000, gain: 1000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary).toHaveLength(1)
+    expect(summary[0]).toMatchObject({
+      month: '2024-03', category: 'swing_acoes', grossGain: 1000, proceeds: 15000,
+      exempt: true, taxableAmount: 0, darfAmount: 0, lossCarriedIn: 0, lossCarriedOut: 0,
+    })
+  })
+
+  it('taxes a swing-trade-stock month at 15% when proceeds exceed R$20k', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-03-10', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 25000, gain: 2000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary[0].exempt).toBe(false)
+    expect(summary[0].taxableAmount).toBeCloseTo(2000)
+    expect(summary[0].rate).toBeCloseTo(0.15)
+    expect(summary[0].darfAmount).toBeCloseTo(300)
+  })
+
+  it('never exempts a FII swing-trade month regardless of proceeds', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-03-10', ticker: 'XPLG11', category: 'swing_fii', qty: 100, proceeds: 5000, gain: 500 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary[0].exempt).toBe(false)
+    expect(summary[0].taxableAmount).toBeCloseTo(500)
+    expect(summary[0].rate).toBeCloseTo(0.20)
+    expect(summary[0].darfAmount).toBeCloseTo(100)
+  })
+
+  it('never exempts a day-trade month regardless of proceeds', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-03-10', ticker: 'VALE3', category: 'day_trade', qty: 50, proceeds: 1000, gain: 200 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary[0].exempt).toBe(false)
+    expect(summary[0].taxableAmount).toBeCloseTo(200)
+    expect(summary[0].rate).toBeCloseTo(0.20)
+    expect(summary[0].darfAmount).toBeCloseTo(40)
+  })
+
+  it('carries a loss forward, partially offsets a later gain, then a later month is exempt without disturbing a zero loss balance', () => {
+    // Hand-verified 3-month scenario for the swing_acoes bucket:
+    // Jan: loss of R$500 (proceeds irrelevant to a loss) -> lossCarriedOut = 500, no tax.
+    // Feb: gain R$2000, proceeds R$25000 (not exempt, > 20k) -> taxable = 2000 - 500(carried) = 1500, darf = 1500*0.15 = 225, lossCarriedOut = 0.
+    // Mar: gain R$1000, proceeds R$10000 (<= 20k -> exempt) -> exempt, taxable 0, darf 0, lossCarriedOut stays 0 (exemption never touches the loss balance).
+    const gains: SaleGain[] = [
+      { date: '2024-01-15', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 30000, gain: -500 },
+      { date: '2024-02-15', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 25000, gain: 2000 },
+      { date: '2024-03-15', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 10000, gain: 1000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary).toHaveLength(3)
+
+    const jan = summary.find((s) => s.month === '2024-01')!
+    expect(jan.grossGain).toBeCloseTo(-500)
+    expect(jan.taxableAmount).toBe(0)
+    expect(jan.darfAmount).toBe(0)
+    expect(jan.lossCarriedIn).toBe(0)
+    expect(jan.lossCarriedOut).toBeCloseTo(500)
+
+    const feb = summary.find((s) => s.month === '2024-02')!
+    expect(feb.lossCarriedIn).toBeCloseTo(500)
+    expect(feb.exempt).toBe(false)
+    expect(feb.taxableAmount).toBeCloseTo(1500)
+    expect(feb.darfAmount).toBeCloseTo(225)
+    expect(feb.lossCarriedOut).toBe(0)
+
+    const mar = summary.find((s) => s.month === '2024-03')!
+    expect(mar.lossCarriedIn).toBe(0)
+    expect(mar.exempt).toBe(true)
+    expect(mar.taxableAmount).toBe(0)
+    expect(mar.darfAmount).toBe(0)
+    expect(mar.lossCarriedOut).toBe(0) // exemption does not touch the (already-zero) loss balance
+  })
+
+  it('keeps the three category buckets fully independent — a swing-stock loss does not offset a FII gain', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-01-15', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 30000, gain: -1000 },
+      { date: '2024-02-15', ticker: 'XPLG11', category: 'swing_fii', qty: 100, proceeds: 6000, gain: 1000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    const fiiMonth = summary.find((s) => s.category === 'swing_fii')!
+    expect(fiiMonth.lossCarriedIn).toBe(0) // unaffected by the swing_acoes loss
+    expect(fiiMonth.taxableAmount).toBeCloseTo(1000)
+    expect(fiiMonth.darfAmount).toBeCloseTo(200)
+  })
+
+  it('computes the DARF due date as the last calendar day of the following month, including a leap-year case', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-01-15', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 25000, gain: 1000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary[0].dueDate).toBe('2024-02-29') // 2024 is a leap year
+  })
+
+  it('rolls the due date over into the next year for a December reference month', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-12-10', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 25000, gain: 1000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary[0].dueDate).toBe('2025-01-31')
+  })
+
+  it('returns an empty array for no sale gains', () => {
+    expect(buildMonthlyIRSummary([])).toEqual([])
   })
 })
