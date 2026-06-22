@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { DCFHistoryEntry } from '../engines/dcf-engine'
+import type { AlertEvent } from '../engines/alert-engine'
 
 export interface PriceHistoryEntry {
   fairPrice: number
@@ -22,6 +23,8 @@ export interface WatchlistEntry {
   history: DCFHistoryEntry[]
   notes?: string               // per-ticker notes
   priceHistory?: PriceHistoryEntry[]  // used in Task 2
+  alertEnabled?: boolean       // undefined treated as enabled (default on)
+  alertHistory?: AlertEvent[]
 }
 
 export interface WatchlistState {
@@ -35,6 +38,8 @@ export interface WatchlistActions {
   has: (ticker: string) => boolean
   updateNotes: (ticker: string, notes: string) => void
   updateHistoryAnnotation: (ticker: string, savedAt: string, annotation: string) => void
+  toggleAlert: (ticker: string) => void
+  recordAlertFired: (ticker: string, event: AlertEvent) => void
 }
 
 export const useWatchlistStore = create<WatchlistState & WatchlistActions>()(
@@ -95,6 +100,32 @@ export const useWatchlistStore = create<WatchlistState & WatchlistActions>()(
             entries: {
               ...state.entries,
               [ticker]: { ...existing, priceHistory },
+            },
+          }
+        }),
+
+      toggleAlert: (ticker) =>
+        set((state) => {
+          const existing = state.entries[ticker]
+          if (!existing) return state
+          const enabled = existing.alertEnabled ?? true
+          return {
+            entries: {
+              ...state.entries,
+              [ticker]: { ...existing, alertEnabled: !enabled },
+            },
+          }
+        }),
+
+      recordAlertFired: (ticker, event) =>
+        set((state) => {
+          const existing = state.entries[ticker]
+          if (!existing) return state
+          const alertHistory = [event, ...(existing.alertHistory ?? [])].slice(0, 50)
+          return {
+            entries: {
+              ...state.entries,
+              [ticker]: { ...existing, alertHistory },
             },
           }
         }),

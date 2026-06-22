@@ -57,6 +57,8 @@ describe('Notes feature', () => {
     mockUseWatchlist.mockReturnValue({
       entries: { PETR4: makeEntry('PETR4', { notes: 'Boa empresa' }) },
       remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
       updateNotes: mockUpdateNotes,
       updateHistoryAnnotation: vi.fn(),
     } as ReturnType<typeof useWatchlistStore>)
@@ -69,6 +71,8 @@ describe('Notes feature', () => {
     mockUseWatchlist.mockReturnValue({
       entries: { PETR4: makeEntry('PETR4') },
       remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
       updateNotes: vi.fn(),
       updateHistoryAnnotation: vi.fn(),
     } as ReturnType<typeof useWatchlistStore>)
@@ -83,6 +87,8 @@ describe('WatchlistPage — empty state', () => {
     mockUseWatchlist.mockReturnValue({
       entries: {},
       remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
       save: vi.fn(),
       clear: vi.fn(),
       has: vi.fn(),
@@ -108,6 +114,8 @@ describe('WatchlistPage — data state', () => {
         VALE3: makeEntry('VALE3', { name: 'Vale SA', fairPrice: 80.0 }),
       },
       remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
       save: vi.fn(),
       clear: vi.fn(),
       has: vi.fn(),
@@ -142,6 +150,8 @@ describe('WatchlistPage — loading state', () => {
     mockUseWatchlist.mockReturnValue({
       entries: { PETR4: makeEntry('PETR4') },
       remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
       save: vi.fn(),
       clear: vi.fn(),
       has: vi.fn(),
@@ -166,6 +176,8 @@ describe('WatchlistPage — live data state', () => {
     mockUseWatchlist.mockReturnValue({
       entries: { PETR4: makeEntry('PETR4') },
       remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
       save: vi.fn(),
       clear: vi.fn(),
       has: vi.fn(),
@@ -201,12 +213,119 @@ describe('CSV export', () => {
     mockUseWatchlist.mockReturnValue({
       entries: { PETR4: makeEntry('PETR4') },
       remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
       updateNotes: vi.fn(),
       updateHistoryAnnotation: vi.fn(),
     } as ReturnType<typeof useWatchlistStore>)
 
     renderPage()
     expect(screen.getByRole('button', { name: /exportar csv/i })).toBeInTheDocument()
+  })
+})
+
+describe('Price alerts feature', () => {
+  it('shows buy-range banner when price is at or below fair price', () => {
+    mockUseWatchlist.mockReturnValue({
+      entries: { PETR4: makeEntry('PETR4', { fairPrice: 50 }) },
+      remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
+      updateNotes: vi.fn(),
+      updateHistoryAnnotation: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+    mockUseBatchQuotes.mockReturnValue({
+      data: [{ ticker: 'PETR4', price: 40, changePercent: 0, dividendYield: 0, error: false }],
+      isLoading: false,
+      dataUpdatedAt: Date.now(),
+    } as ReturnType<typeof useBatchQuotes>)
+
+    renderPage()
+    expect(screen.getByText(/na faixa de compra/i)).toBeInTheDocument()
+  })
+
+  it('does not show banner when price is above fair price', () => {
+    mockUseWatchlist.mockReturnValue({
+      entries: { PETR4: makeEntry('PETR4', { fairPrice: 50 }) },
+      remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
+      updateNotes: vi.fn(),
+      updateHistoryAnnotation: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+    mockUseBatchQuotes.mockReturnValue({
+      data: [{ ticker: 'PETR4', price: 60, changePercent: 0, dividendYield: 0, error: false }],
+      isLoading: false,
+      dataUpdatedAt: Date.now(),
+    } as ReturnType<typeof useBatchQuotes>)
+
+    renderPage()
+    expect(screen.queryByText(/na faixa de compra/i)).not.toBeInTheDocument()
+  })
+
+  it('does not show banner when alerts are disabled for the ticker', () => {
+    mockUseWatchlist.mockReturnValue({
+      entries: { PETR4: makeEntry('PETR4', { fairPrice: 50, alertEnabled: false }) },
+      remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
+      updateNotes: vi.fn(),
+      updateHistoryAnnotation: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+    mockUseBatchQuotes.mockReturnValue({
+      data: [{ ticker: 'PETR4', price: 40, changePercent: 0, dividendYield: 0, error: false }],
+      isLoading: false,
+      dataUpdatedAt: Date.now(),
+    } as ReturnType<typeof useBatchQuotes>)
+
+    renderPage()
+    expect(screen.queryByText(/na faixa de compra/i)).not.toBeInTheDocument()
+  })
+
+  it('toggles alert when bell icon clicked', async () => {
+    const user = userEvent.setup()
+    const mockToggleAlert = vi.fn()
+    mockUseWatchlist.mockReturnValue({
+      entries: { PETR4: makeEntry('PETR4', { fairPrice: 50 }) },
+      remove: vi.fn(),
+      toggleAlert: mockToggleAlert,
+      recordAlertFired: vi.fn(),
+      updateNotes: vi.fn(),
+      updateHistoryAnnotation: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+    mockUseBatchQuotes.mockReturnValue({
+      data: [{ ticker: 'PETR4', price: 60, changePercent: 0, dividendYield: 0, error: false }],
+      isLoading: false,
+      dataUpdatedAt: Date.now(),
+    } as ReturnType<typeof useBatchQuotes>)
+
+    renderPage()
+    await user.click(screen.getByTitle('Desativar alerta de preço'))
+    expect(mockToggleAlert).toHaveBeenCalledWith('PETR4')
+  })
+
+  it('shows alert history modal via context menu', async () => {
+    const user = userEvent.setup()
+    mockUseWatchlist.mockReturnValue({
+      entries: {
+        PETR4: makeEntry('PETR4', {
+          alertHistory: [{ firedAt: '2026-06-20T00:00:00.000Z', price: 38, fairPrice: 50 }],
+        }),
+      },
+      remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
+      updateNotes: vi.fn(),
+      updateHistoryAnnotation: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+
+    renderPage()
+    const row = screen.getByText('PETR4').closest('tr')!
+    await user.pointer({ target: row, keys: '[MouseRight]' })
+    await user.click(screen.getByText('Histórico de alertas'))
+
+    expect(screen.getByText(/Histórico de alertas/)).toBeInTheDocument()
+    expect(screen.getByText(/R\$\s*38/)).toBeInTheDocument()
   })
 })
 
@@ -222,6 +341,8 @@ describe('Price history feature', () => {
         }),
       },
       remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
       updateNotes: vi.fn(),
       updateHistoryAnnotation: vi.fn(),
     } as ReturnType<typeof useWatchlistStore>)
@@ -246,6 +367,8 @@ describe('Price history feature', () => {
     mockUseWatchlist.mockReturnValue({
       entries: { PETR4: makeEntry('PETR4', { priceHistory: [] }) },
       remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
       updateNotes: vi.fn(),
       updateHistoryAnnotation: vi.fn(),
     } as ReturnType<typeof useWatchlistStore>)

@@ -84,3 +84,46 @@ describe('watchlistStore.updateHistoryAnnotation()', () => {
     expect(stored.priceHistory![0].annotation).toBe('Mês de resultados')
   })
 })
+
+describe('watchlistStore.toggleAlert()', () => {
+  it('disables alert on first toggle (default is enabled)', () => {
+    const { save, toggleAlert } = useWatchlistStore.getState()
+    save(makeEntry('PETR4'))
+    toggleAlert('PETR4')
+    expect(useWatchlistStore.getState().entries['PETR4'].alertEnabled).toBe(false)
+  })
+
+  it('re-enables alert on second toggle', () => {
+    const { save, toggleAlert } = useWatchlistStore.getState()
+    save(makeEntry('PETR4'))
+    toggleAlert('PETR4')
+    toggleAlert('PETR4')
+    expect(useWatchlistStore.getState().entries['PETR4'].alertEnabled).toBe(true)
+  })
+
+  it('does nothing for a ticker not in the watchlist', () => {
+    const { toggleAlert } = useWatchlistStore.getState()
+    toggleAlert('UNKNOWN4')
+    expect(useWatchlistStore.getState().entries['UNKNOWN4']).toBeUndefined()
+  })
+})
+
+describe('watchlistStore.recordAlertFired()', () => {
+  it('prepends the event to alertHistory', () => {
+    const { save, recordAlertFired } = useWatchlistStore.getState()
+    save(makeEntry('PETR4'))
+    recordAlertFired('PETR4', { firedAt: '2026-06-22T10:00:00.000Z', price: 30, fairPrice: 50 })
+    const stored = useWatchlistStore.getState().entries['PETR4']
+    expect(stored.alertHistory).toHaveLength(1)
+    expect(stored.alertHistory![0].price).toBe(30)
+  })
+
+  it('caps alertHistory at 50 entries', () => {
+    const { save, recordAlertFired } = useWatchlistStore.getState()
+    save(makeEntry('PETR4'))
+    for (let i = 1; i <= 52; i++) {
+      recordAlertFired('PETR4', { firedAt: `2026-01-${String((i % 28) + 1).padStart(2, '0')}T00:00:00.000Z`, price: i, fairPrice: 50 })
+    }
+    expect(useWatchlistStore.getState().entries['PETR4'].alertHistory!.length).toBe(50)
+  })
+})

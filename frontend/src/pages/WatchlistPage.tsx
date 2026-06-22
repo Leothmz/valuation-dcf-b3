@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { StickyNote, History, X, Download } from 'lucide-react'
+import { StickyNote, History, X, Download, Bell, BellOff, BellRing } from 'lucide-react'
 import { useWatchlistStore } from '../stores'
 import { useBatchQuotes } from '../api/stocks'
 import { fBRL, fPct } from '../engines/formatters'
 import { Skeleton } from '../components'
+import { isPriceInBuyRange, shouldRecordAlert } from '../engines/alert-engine'
 
 // ── Ticker logo helpers ───────────────────────────────────────────────────────
 const PALETTE: [string, string][] = [
@@ -71,7 +72,7 @@ interface ContextMenuState {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export function WatchlistPage() {
-  const { entries, remove, updateNotes, updateHistoryAnnotation } = useWatchlistStore()
+  const { entries, remove, updateNotes, updateHistoryAnnotation, toggleAlert, recordAlertFired } = useWatchlistStore()
   const navigate = useNavigate()
 
   const tickers = Object.keys(entries)
@@ -81,12 +82,34 @@ export function WatchlistPage() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [notesModal, setNotesModal] = useState<{ ticker: string; draft: string } | null>(null)
   const [historyModal, setHistoryModal] = useState<string | null>(null) // ticker
+  const [alertHistoryModal, setAlertHistoryModal] = useState<string | null>(null) // ticker
+  const [bannerDismissed, setBannerDismissed] = useState(false)
   const contextMenuRef = useRef<HTMLDivElement>(null)
 
   // Build live price map: ticker → LiveQuote
   const liveMap = Object.fromEntries(
     (liveQuotes ?? []).map((q) => [q.ticker, q])
   )
+
+  // Detect tickers currently in the buy range (price <= fair price) with alerts enabled
+  const triggeredTickers = tickers.filter((ticker) => {
+    const entry = entries[ticker]
+    if ((entry.alertEnabled ?? true) === false) return false
+    return isPriceInBuyRange(liveMap[ticker]?.price, entry.fairPrice)
+  })
+
+  // Record one alert event per ticker per day when it enters the buy range
+  useEffect(() => {
+    const now = new Date().toISOString()
+    for (const ticker of triggeredTickers) {
+      const entry = entries[ticker]
+      const live = liveMap[ticker]
+      if (live?.price == null) continue
+      if (shouldRecordAlert(entry.alertHistory ?? [], now)) {
+        recordAlertFired(ticker, { firedAt: now, price: live.price, fairPrice: entry.fairPrice })
+      }
+    }
+  }, [triggeredTickers.join(','), dataUpdatedAt]) // eslint: deps narrowed on purpose — entries/liveMap/recordAlertFired are stable per render
 
   // Close context menu on outside click or Escape
   useEffect(() => {
@@ -249,6 +272,28 @@ export function WatchlistPage() {
 
   return (
     <div className="max-w-[1340px] mx-auto px-6 py-7 pb-16">
+      {/* Buy-range alert banner */}
+      {!bannerDismissed && triggeredTickers.length > 0 && (
+        <div
+          className="flex items-center gap-3 rounded-[12px] border px-4 py-3 mb-5"
+          style={{ background: 'var(--color-green-dim)', borderColor: 'rgba(16,185,129,.25)' }}
+        >
+          <BellRing size={16} style={{ color: 'var(--color-green)' }} className="shrink-0" />
+          <p className="text-[13px] text-text-base flex-1" title={triggeredTickers.join(', ')}>
+            <strong style={{ color: 'var(--color-green)' }}>{triggeredTickers.length}</strong>{' '}
+            ativo{triggeredTickers.length > 1 ? 's' : ''} {triggeredTickers.length > 1 ? 'estão' : 'está'} na faixa de compra (preço ≤ preço teto) — veja o sino na tabela.
+          </p>
+          <button
+            onClick={() => setBannerDismissed(true)}
+            className="text-text-muted cursor-pointer shrink-0"
+            style={{ background: 'none', border: 'none', padding: 0 }}
+            title="Dispensar"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Page header */}
       <div className="flex items-end justify-between mb-6 gap-4 flex-wrap">
         <div>
@@ -333,6 +378,10 @@ export function WatchlistPage() {
               <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-right whitespace-nowrap">
                 Salvo em
               </th>
+              <th
+                className="bg-bg-2 border-b border-border py-3 px-4 text-center"
+                style={{ width: 40 }}
+              />
               <th
                 className="bg-bg-2 border-b border-border py-3 px-4 text-center"
                 style={{ width: 48 }}
@@ -471,6 +520,32 @@ export function WatchlistPage() {
                   {/* Saved at */}
                   <td className="font-ui text-[12px] text-text-muted py-[14px] px-4 text-right align-middle">
                     {fDate(entry.savedAt)}
+                  </td>
+
+                  {/* Alert toggle */}
+                  <td
+                    className="py-[14px] px-4 text-center align-middle"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {(() => {
+                      const alertEnabled = entry.alertEnabled ?? true
+                      const isTriggered = triggeredTickers.includes(ticker)
+                      const Icon = !alertEnabled ? BellOff : isTriggered ? BellRing : Bell
+                      const color = !alertEnabled
+                        ? 'var(--color-text-muted)'
+                        : isTriggered
+                          ? 'var(--color-green)'
+                          : 'var(--color-text-sec)'
+                      return (
+                        <button
+                          onClick={() => toggleAlert(ticker)}
+                          title={alertEnabled ? 'Desativar alerta de preço' : 'Ativar alerta de preço'}
+                          style={{ color, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                        >
+                          <Icon size={14} />
+                        </button>
+                      )
+                    })()}
                   </td>
 
                   {/* Delete */}
@@ -649,6 +724,75 @@ export function WatchlistPage() {
         )
       })()}
 
+      {/* Alert history modal */}
+      {alertHistoryModal && (() => {
+        const entry = entries[alertHistoryModal]
+        const hist = entry?.alertHistory ?? []
+        return (
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center"
+            onClick={(e) => { if (e.target === e.currentTarget) setAlertHistoryModal(null) }}
+          >
+            <div
+              className="bg-bg-2 border border-border rounded-[16px] p-6 w-[480px] max-w-[94vw]"
+              style={{ boxShadow: '0 8px 32px rgba(0,0,0,.6)' }}
+            >
+              <div className="flex items-center justify-between mb-5">
+                <div className="text-[16px] font-semibold">
+                  Histórico de alertas · <span style={{ color: 'var(--color-cyan)' }}>{alertHistoryModal}</span>
+                </div>
+                <button
+                  className="text-text-muted hover:text-text-base transition-colors"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                  onClick={() => setAlertHistoryModal(null)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {hist.length === 0 ? (
+                <p className="text-[13px] text-text-muted text-center py-6">
+                  Nenhum alerta disparado ainda — você é avisado quando o preço atual cair para o preço teto ou abaixo.
+                </p>
+              ) : (
+                <div className="overflow-auto max-h-[400px]">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr>
+                        {['Data', 'Preço', 'Preço Teto'].map((h) => (
+                          <th
+                            key={h}
+                            className="text-[11px] text-text-muted uppercase tracking-[.08em] font-semibold
+                                       py-2 px-3 text-left border-b border-border bg-bg-3"
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {hist.map((h) => (
+                        <tr key={h.firedAt} className="border-b border-border-muted last:border-b-0">
+                          <td className="font-mono text-[13px] py-3 px-3 text-text-sec whitespace-nowrap">
+                            {fDate(h.firedAt)}
+                          </td>
+                          <td className="font-mono text-[13px] py-3 px-3" style={{ color: 'var(--color-green)' }}>
+                            {fBRL.format(h.price)}
+                          </td>
+                          <td className="font-mono text-[13px] py-3 px-3 text-cyan">
+                            {fBRL.format(h.fairPrice)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Context menu */}
       {contextMenu && (
         <div
@@ -693,6 +837,17 @@ export function WatchlistPage() {
           >
             <History size={13} />
             Histórico de preço teto
+          </button>
+          <button
+            className="w-full flex items-center gap-2 px-4 py-[10px] text-[13px] text-text-sec text-left cursor-pointer hover:bg-bg-4 hover:text-text-base"
+            style={{ background: 'none', border: 'none', transition: 'background .12s ease, color .12s ease' }}
+            onClick={() => {
+              setAlertHistoryModal(contextMenu!.ticker)
+              setContextMenu(null)
+            }}
+          >
+            <Bell size={13} />
+            Histórico de alertas
           </button>
           <button
             className="w-full flex items-center gap-2 px-4 py-[10px] text-[13px] text-text-sec text-left cursor-pointer"
