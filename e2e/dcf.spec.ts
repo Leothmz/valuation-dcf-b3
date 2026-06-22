@@ -58,7 +58,10 @@ test.describe('Flow 2: adjust premises → save to watchlist', () => {
     await mockApiWithOverride(page, { '/api/quote/PETR4': MOCK_QUOTE_PETR4 })
 
     await page.goto('/dcf', { waitUntil: 'networkidle' })
-    await page.evaluate(() => localStorage.clear())
+    await page.evaluate(() => {
+      localStorage.clear()
+      localStorage.setItem('onboarding_done', '1') // skip welcome modal so it doesn't block the form
+    })
     await page.reload({ waitUntil: 'networkidle' })
 
     await page.locator('input[placeholder*="WEGE3"]').fill('PETR4')

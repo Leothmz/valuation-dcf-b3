@@ -11,10 +11,12 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? 'list' : 'html',
+  globalSetup: './e2e/global-setup.ts',
 
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
+    storageState: './e2e/.auth/state.json',
   },
 
   projects: [
