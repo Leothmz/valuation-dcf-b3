@@ -10,6 +10,7 @@ const CLASS_LABELS: Record<string, string> = {
   fii: 'FII',
   etf: 'ETF',
   stock_intl: 'Stock Intl',
+  cripto: 'Criptoativo',
 }
 
 type OpFilter = 'all' | 'buy' | 'sell'
@@ -209,6 +210,7 @@ export function CarteiraOperacoes({
                   <option value="fii">FII</option>
                   <option value="etf">ETF</option>
                   <option value="stock_intl">Stock Internacional</option>
+                  <option value="cripto">Criptoativo</option>
                 </select>
               </FormField>
               <FormField label="Data">

@@ -2,17 +2,24 @@ import { useState, useMemo } from 'react'
 import { Briefcase } from 'lucide-react'
 import { usePortfolioStore } from '../../stores/portfolioStore'
 import { useWatchlistStore } from '../../stores/watchlistStore'
-import { useBatchQuotes } from '../../api/stocks'
-import { buildHoldingSummaries, aggregateTitle } from '../../engines/portfolio-engine'
+import { useBatchQuotes, usePortfolioHistory, useBatchDividendHistory, useDpaMap } from '../../api/stocks'
+import {
+  buildHoldingSummaries,
+  aggregateTitle,
+  buildHistoricalPriceMap,
+  buildAssetTWRRMap,
+} from '../../engines/portfolio-engine'
 import { CarteiraKPIs } from './CarteiraKPIs'
 import { CarteiraVisaoGeral } from './CarteiraVisaoGeral'
 import { CarteiraAtivos } from './CarteiraAtivos'
 import { CarteiraOperacoes } from './CarteiraOperacoes'
 import { CarteiraProventos } from './CarteiraProventos'
 import { CarteiraRF } from './CarteiraRF'
-import type { Operation, Provento, RFTitle } from '../../stores/portfolioStore'
+import { CarteiraMetas } from './CarteiraMetas'
+import { CarteiraIR } from './CarteiraIR'
+import type { Operation, Provento, RFTitle, SplitEvent } from '../../stores/portfolioStore'
 
-type Tab = 'visao' | 'ativos' | 'operacoes' | 'proventos' | 'rf'
+type Tab = 'visao' | 'ativos' | 'operacoes' | 'proventos' | 'rf' | 'metas' | 'ir'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'visao', label: 'Visão Geral' },
@@ -20,6 +27,8 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'operacoes', label: 'Operações' },
   { key: 'proventos', label: 'Proventos' },
   { key: 'rf', label: 'Renda Fixa' },
+  { key: 'metas', label: 'Metas' },
+  { key: 'ir', label: 'IR/DARF' },
 ]
 
 const CDI_DEFAULT = 0.1415 // approx CDI accumulated 2024 — fetched from /api/cdi when available
@@ -32,6 +41,9 @@ export function CarteiraPage() {
     operations,
     fixedIncome,
     proventos,
+    cashBalance,
+    allocationTargets,
+    splitEvents,
     addOperation,
     deleteOperation,
     addFixedIncomeTitle,
@@ -39,6 +51,11 @@ export function CarteiraPage() {
     deleteDeposit,
     addProvento,
     deleteProvento,
+    importProventos,
+    setCashBalance,
+    setAllocationTarget,
+    addSplitEvent,
+    deleteSplitEvent,
   } = usePortfolioStore()
 
   const watchlistEntries = useWatchlistStore((s) => s.entries)
@@ -55,6 +72,35 @@ export function CarteiraPage() {
     () => Object.fromEntries(quotes.map((q) => [q.ticker, q])),
     [quotes]
   )
+
+  const operationDates = useMemo(
+    () => [...new Set(operations.map((o) => o.date))],
+    [operations]
+  )
+
+  const { data: historyResponse, isLoading: historyLoading } = usePortfolioHistory(
+    tickers,
+    operationDates
+  )
+
+  const currentPriceMap = useMemo(
+    () =>
+      Object.fromEntries(
+        quotes.filter((q) => q.price != null).map((q) => [q.ticker, q.price as number])
+      ),
+    [quotes]
+  )
+
+  const twrrMap = useMemo(() => {
+    if (!historyResponse) return {}
+    const historicalPrices = buildHistoricalPriceMap(historyResponse)
+    return buildAssetTWRRMap(operations, historicalPrices, currentPriceMap)
+  }, [historyResponse, operations, currentPriceMap])
+
+  const { data: dividendHistoryByTicker = {}, isLoading: dividendHistoryLoading } =
+    useBatchDividendHistory(tickers)
+
+  const { data: dpaMap = {}, isLoading: dpaLoading } = useDpaMap(tickers)
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -94,8 +140,16 @@ export function CarteiraPage() {
     addProvento({ ...p, id: crypto.randomUUID() })
   }
 
+  function handleImportProventos(provs: Provento[]) {
+    importProventos(provs)
+  }
+
   function handleAddRFTitle(title: Omit<RFTitle, 'id'>) {
     addFixedIncomeTitle({ ...title, id: crypto.randomUUID() })
+  }
+
+  function handleAddSplitEvent(event: Omit<SplitEvent, 'id'>) {
+    addSplitEvent({ ...event, id: crypto.randomUUID() })
   }
 
   return (
@@ -155,6 +209,8 @@ export function CarteiraPage() {
             quotes={quotes}
             watchlistEntries={watchlistEntries}
             quotesLoading={quotesLoading}
+            twrrMap={twrrMap}
+            twrrLoading={historyLoading}
           />
         )}
         {tab === 'operacoes' && (
@@ -169,6 +225,12 @@ export function CarteiraPage() {
             proventos={proventos}
             onAdd={handleAddProvento}
             onDelete={deleteProvento}
+            onImport={handleImportProventos}
+            holdings={holdings}
+            operations={operations}
+            dividendHistoryByTicker={dividendHistoryByTicker}
+            dpaMap={dpaMap}
+            dividendDataLoading={dividendHistoryLoading || dpaLoading}
           />
         )}
         {tab === 'rf' && (
@@ -178,6 +240,25 @@ export function CarteiraPage() {
             onAdd={handleAddRFTitle}
             onDelete={deleteFixedIncomeTitle}
             onDeleteDeposit={deleteDeposit}
+          />
+        )}
+        {tab === 'metas' && (
+          <CarteiraMetas
+            holdings={holdings}
+            priceMap={currentPriceMap}
+            rfValue={rfValue}
+            cashBalance={cashBalance}
+            allocationTargets={allocationTargets}
+            onSetCashBalance={setCashBalance}
+            onSetTarget={setAllocationTarget}
+          />
+        )}
+        {tab === 'ir' && (
+          <CarteiraIR
+            operations={operations}
+            splitEvents={splitEvents}
+            onAddSplitEvent={handleAddSplitEvent}
+            onDeleteSplitEvent={deleteSplitEvent}
           />
         )}
       </div>

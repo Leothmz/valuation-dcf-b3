@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import type { ApiDividendEntry, PortfolioHistoryResponse } from '../engines/portfolio-engine'
 
 export interface FundamentalsData {
   ticker: string
@@ -124,8 +125,8 @@ export function useFundamentals(ticker: string | null) {
 
 export function usePortfolioHistory(tickers: string[], dates: string[]) {
   return useQuery({
-    queryKey: ['portfolio-history', tickers.sort().join(',')],
-    queryFn: async () => {
+    queryKey: ['portfolio-history', [...tickers].sort().join(',')],
+    queryFn: async (): Promise<PortfolioHistoryResponse> => {
       const res = await fetch('/api/portfolio/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -154,5 +155,54 @@ export function useBatchFundamentals(tickers: string[]) {
     enabled: tickers.length > 0,
     staleTime: 30 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+  })
+}
+
+export function useBatchDividendHistory(tickers: string[]) {
+  const sortedKey = [...tickers].sort().join(',')
+  return useQuery({
+    queryKey: ['batch-dividend-history', sortedKey],
+    queryFn: async (): Promise<Record<string, ApiDividendEntry[]>> => {
+      if (!tickers.length) return {}
+      const results = await Promise.allSettled(
+        tickers.map(async (t) => {
+          const res = await fetch(`/api/dividends/${encodeURIComponent(t.toUpperCase())}`)
+          if (!res.ok) throw new Error('HTTP ' + res.status)
+          return (await res.json()) as ApiDividendEntry[]
+        })
+      )
+      const map: Record<string, ApiDividendEntry[]> = {}
+      results.forEach((r, i) => {
+        map[tickers[i]] = r.status === 'fulfilled' ? r.value : []
+      })
+      return map
+    },
+    enabled: tickers.length > 0,
+    staleTime: 60 * 60 * 1000,
+  })
+}
+
+export function useDpaMap(tickers: string[]) {
+  const sortedKey = [...tickers].sort().join(',')
+  return useQuery({
+    queryKey: ['dpa-map', sortedKey],
+    queryFn: async (): Promise<Record<string, number | null>> => {
+      if (!tickers.length) return {}
+      const results = await Promise.allSettled(
+        tickers.map(async (t) => {
+          const res = await fetch(`/api/fundamentals/${encodeURIComponent(t.toUpperCase())}`)
+          if (!res.ok) throw new Error('HTTP ' + res.status)
+          const data = await res.json()
+          return (data.dpa ?? null) as number | null
+        })
+      )
+      const map: Record<string, number | null> = {}
+      results.forEach((r, i) => {
+        map[tickers[i]] = r.status === 'fulfilled' ? r.value : null
+      })
+      return map
+    },
+    enabled: tickers.length > 0,
+    staleTime: 6 * 60 * 60 * 1000,
   })
 }

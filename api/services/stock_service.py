@@ -1,5 +1,5 @@
 from __future__ import annotations
-from api.models import StockQuote, FundamentalsData
+from api.models import StockQuote, FundamentalsData, DividendEntry
 from api.cache import cache_get, cache_set, QUOTES_TTL, FUNDAMENTALS_TTL
 import api.adapters.yfinance_adapter as yf_adapter
 import api.adapters.investidor10 as i10_adapter
@@ -46,4 +46,16 @@ def get_fundamentals(ticker: str) -> FundamentalsData:
 
     data = yf_adapter.fetch_fundamentals(ticker)
     cache_set(key, data.model_dump(), FUNDAMENTALS_TTL)
+    return data
+
+
+def get_dividend_history(ticker: str) -> list[DividendEntry]:
+    """Fetch full dividend history: try cache first, then yfinance."""
+    key = f"dividends:{ticker.upper()}"
+    cached = cache_get(key)
+    if cached is not None:
+        return [DividendEntry(**d) for d in cached]
+
+    data = yf_adapter.fetch_dividend_history(ticker)
+    cache_set(key, [d.model_dump() for d in data], FUNDAMENTALS_TTL)
     return data

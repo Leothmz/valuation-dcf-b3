@@ -1,8 +1,8 @@
 from __future__ import annotations
 import asyncio
 from fastapi import APIRouter, HTTPException
-from api.models import StockQuote, FundamentalsData
-from api.services.stock_service import get_stock_quote, get_fundamentals
+from api.models import StockQuote, FundamentalsData, DividendEntry
+from api.services.stock_service import get_stock_quote, get_fundamentals, get_dividend_history
 
 router = APIRouter(prefix="/api", tags=["stocks"])
 
@@ -25,6 +25,14 @@ async def fundamentals(ticker: str) -> FundamentalsData:
         raise HTTPException(status_code=503, detail={"code": "NO_YFINANCE"})
     except ValueError:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
+
+
+@router.get("/dividends/{ticker}", response_model=list[DividendEntry])
+async def dividends(ticker: str) -> list[DividendEntry]:
+    try:
+        return await asyncio.to_thread(get_dividend_history, ticker)
+    except ImportError:
+        raise HTTPException(status_code=503, detail={"code": "NO_YFINANCE"})
 
 
 @router.get("/batch/quotes", response_model=list[StockQuote])

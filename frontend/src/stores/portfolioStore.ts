@@ -1,7 +1,17 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
-export type AssetClass = 'acao_br' | 'fii' | 'etf' | 'stock_intl'
+export type AssetClass = 'acao_br' | 'fii' | 'etf' | 'stock_intl' | 'cripto'
+export type Category = 'acoes_br' | 'fiis' | 'renda_fixa' | 'internacional' | 'criptoativos' | 'caixa'
+export const CATEGORIES: Category[] = [
+  'acoes_br',
+  'fiis',
+  'renda_fixa',
+  'internacional',
+  'criptoativos',
+  'caixa',
+]
+
 export type OperationType = 'buy' | 'sell'
 export type RFRateType = 'cdi_pct' | 'ipca_plus' | 'prefixado' | 'manual'
 export type RFType = 'cdb' | 'lci' | 'lca' | 'cri' | 'cra' | 'debenture' | 'tesouro' | 'outro'
@@ -36,19 +46,49 @@ export interface RFTitle {
   deposits: RFDeposit[]
 }
 
+export type ProventoType =
+  | 'dividendo'
+  | 'jcp'
+  | 'rendimento'
+  | 'reembolso'
+  | 'fracao'
+  | 'bonificacao'
+  | 'outro'
+
 export interface Provento {
   id: string
   date: string
   ticker: string
-  type: 'dividendo' | 'jcp' | 'rendimento'
+  type: ProventoType
   qty: number
   valuePerShare: number
+}
+
+export interface SplitEvent {
+  id: string
+  ticker: string
+  date: string // YYYY-MM-DD
+  ratio: number // e.g. 2 for a 2-for-1 split, 0.5 for a 1-for-2 inplit
+}
+
+function emptyAllocationTargets(): Record<Category, number> {
+  return {
+    acoes_br: 0,
+    fiis: 0,
+    renda_fixa: 0,
+    internacional: 0,
+    criptoativos: 0,
+    caixa: 0,
+  }
 }
 
 export interface PortfolioState {
   operations: Operation[]
   fixedIncome: RFTitle[]
   proventos: Provento[]
+  cashBalance: number
+  allocationTargets: Record<Category, number>
+  splitEvents: SplitEvent[]
 }
 
 export interface PortfolioActions {
@@ -62,6 +102,10 @@ export interface PortfolioActions {
   deleteProvento: (id: string) => void
   importOperations: (ops: Operation[]) => void
   importProventos: (provs: Provento[]) => void
+  setCashBalance: (amount: number) => void
+  setAllocationTarget: (category: Category, pct: number) => void
+  addSplitEvent: (event: SplitEvent) => void
+  deleteSplitEvent: (id: string) => void
 }
 
 export const usePortfolioStore = create<PortfolioState & PortfolioActions>()(
@@ -70,6 +114,9 @@ export const usePortfolioStore = create<PortfolioState & PortfolioActions>()(
       operations: [],
       fixedIncome: [],
       proventos: [],
+      cashBalance: 0,
+      allocationTargets: emptyAllocationTargets(),
+      splitEvents: [],
 
       addOperation: (op) =>
         set((s) => ({ operations: [...s.operations, op] })),
@@ -118,6 +165,19 @@ export const usePortfolioStore = create<PortfolioState & PortfolioActions>()(
           const newProvs = provs.filter((p) => !existingIds.has(p.id))
           return { proventos: [...s.proventos, ...newProvs] }
         }),
+
+      setCashBalance: (amount) => set(() => ({ cashBalance: amount })),
+
+      setAllocationTarget: (category, pct) =>
+        set((s) => ({
+          allocationTargets: { ...s.allocationTargets, [category]: pct },
+        })),
+
+      addSplitEvent: (event) =>
+        set((s) => ({ splitEvents: [...s.splitEvents, event] })),
+
+      deleteSplitEvent: (id) =>
+        set((s) => ({ splitEvents: s.splitEvents.filter((e) => e.id !== id) })),
     }),
     {
       name: 'portfolio_v1',
