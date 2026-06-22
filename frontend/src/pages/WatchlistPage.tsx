@@ -279,9 +279,9 @@ export function WatchlistPage() {
           style={{ background: 'var(--color-green-dim)', borderColor: 'rgba(16,185,129,.25)' }}
         >
           <BellRing size={16} style={{ color: 'var(--color-green)' }} className="shrink-0" />
-          <p className="text-[13px] text-text-base flex-1">
-            <strong style={{ color: 'var(--color-green)' }}>{triggeredTickers.join(', ')}</strong>
-            {triggeredTickers.length > 1 ? ' estão' : ' está'} na faixa de compra (preço ≤ preço teto).
+          <p className="text-[13px] text-text-base flex-1" title={triggeredTickers.join(', ')}>
+            <strong style={{ color: 'var(--color-green)' }}>{triggeredTickers.length}</strong>{' '}
+            ativo{triggeredTickers.length > 1 ? 's' : ''} {triggeredTickers.length > 1 ? 'estão' : 'está'} na faixa de compra (preço ≤ preço teto) — veja o sino na tabela.
           </p>
           <button
             onClick={() => setBannerDismissed(true)}
