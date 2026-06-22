@@ -103,6 +103,23 @@ describe('RankingTable', () => {
     expect(screen.getByText('13,90%')).toBeInTheDocument()
   })
 
+  it('shows Custom badge for custom tickers', () => {
+    renderTable([makeRow({ isCustom: true })])
+    expect(screen.getByText('Custom')).toBeInTheDocument()
+  })
+
+  it('does not show Custom badge for default tickers', () => {
+    renderTable([makeRow({ isCustom: false })])
+    expect(screen.queryByText('Custom')).not.toBeInTheDocument()
+  })
+
+  it('calls onRemoveCustom when × clicked on custom badge', () => {
+    const onRemoveCustom = vi.fn()
+    renderTable([makeRow({ isCustom: true })], { onRemoveCustom })
+    screen.getByTitle('Remover PETR4 dos tickers customizados').click()
+    expect(onRemoveCustom).toHaveBeenCalledWith('PETR4')
+  })
+
   it('shows all table headers', () => {
     renderTable([makeRow()])
     expect(screen.getByText(/Ticker/i)).toBeInTheDocument()

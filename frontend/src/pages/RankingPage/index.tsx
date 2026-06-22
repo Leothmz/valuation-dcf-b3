@@ -28,6 +28,7 @@ export interface RankedRow extends StockData {
   joelVal: number | null
   setor?: string
   subsetor?: string
+  isCustom?: boolean
 }
 
 // Deduplicate tickers from the same company — keep the one with highest liquidity
@@ -49,20 +50,36 @@ export function RankingPage() {
     filterConfig,
     weights,
     favorites,
+    customTickers,
     sortCol,
     sortDir,
     setMethod,
     setFilterConfig,
     resetFilterConfig,
     toggleFavorite,
+    addCustomTicker,
+    removeCustomTicker,
     setSortCol,
     setSortDir,
   } = useRankingStore()
 
   const [sectorTab, setSectorTab] = useState<SectorTab>('')
   const [search, setSearch] = useState('')
+  const [newTicker, setNewTicker] = useState('')
 
-  const { data: rawStocks, isLoading } = useBatchFundamentals(B3_TICKERS)
+  const allTickers = useMemo(
+    () => [...B3_TICKERS, ...customTickers.filter((t) => !B3_TICKERS.includes(t))],
+    [customTickers]
+  )
+
+  const { data: rawStocks, isLoading } = useBatchFundamentals(allTickers)
+
+  function handleAddTicker() {
+    const t = newTicker.trim().toUpperCase()
+    if (!t) return
+    addCustomTicker(t)
+    setNewTicker('')
+  }
 
   // Apply full pipeline: filter → deduplicate → score all 4 methods → rank active method
   const rankedRows = useMemo((): RankedRow[] => {
@@ -103,6 +120,7 @@ export function RankingPage() {
       grahamFairPrice: grahamScored[i]?.fairPrice ?? null,
       lynchVal:        (lynchScored[i] as { _peg?: number | null })?._peg ?? null,
       joelVal:         (joelScored[i] as { _earningsYield?: number | null })?._earningsYield ?? null,
+      isCustom:        customTickers.includes(s.ticker),
     }))
 
     // 5. Score with active method
@@ -160,7 +178,7 @@ export function RankingPage() {
     }
 
     return result
-  }, [rawStocks, method, filterConfig, weights, sortCol, sortDir, sectorTab, favorites, search])
+  }, [rawStocks, method, filterConfig, weights, sortCol, sortDir, sectorTab, favorites, search, customTickers])
 
   function handleSort(col: string) {
     if (sortCol === col) {
@@ -188,19 +206,59 @@ export function RankingPage() {
             </h1>
             <p className="text-[13px] text-text-muted mt-1">
               {isLoading
-                ? `Carregando ${B3_TICKERS.length} tickers…`
+                ? `Carregando ${allTickers.length} tickers…`
                 : `${totalLoaded} tickers carregados · exibindo ${showing}`}
             </p>
           </div>
-          {/* Search */}
-          <input
-            type="text"
-            className="rounded-[10px] border border-border bg-bg-3 text-text-base text-[13px] px-[14px] py-[7px] outline-none w-56 placeholder-text-muted focus:border-cyan"
-            placeholder="Buscar ticker ou empresa…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="flex items-center gap-2">
+            {/* Add custom ticker */}
+            <input
+              type="text"
+              className="rounded-[10px] border border-border bg-bg-3 text-text-base text-[13px] px-[14px] py-[7px] outline-none w-36 placeholder-text-muted focus:border-cyan"
+              placeholder="Adicionar ticker…"
+              value={newTicker}
+              onChange={(e) => setNewTicker(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAddTicker() }}
+            />
+            <button
+              onClick={handleAddTicker}
+              className="rounded-[10px] border border-border bg-bg-3 text-text-sec text-[13px] px-3 py-[7px] cursor-pointer hover:border-cyan hover:text-cyan"
+            >
+              + Add
+            </button>
+            {/* Search */}
+            <input
+              type="text"
+              className="rounded-[10px] border border-border bg-bg-3 text-text-base text-[13px] px-[14px] py-[7px] outline-none w-56 placeholder-text-muted focus:border-cyan"
+              placeholder="Buscar ticker ou empresa…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
+
+        {/* Custom tickers chips */}
+        {customTickers.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {customTickers.map((t) => (
+              <span
+                key={t}
+                className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-[6px]"
+                style={{ background: 'var(--color-amber-dim)', color: 'var(--color-amber)', border: '1px solid rgba(245,158,11,.2)' }}
+              >
+                {t}
+                <button
+                  onClick={() => removeCustomTicker(t)}
+                  title={`Remover ${t}`}
+                  className="cursor-pointer leading-none"
+                  style={{ background: 'none', border: 'none', padding: 0, color: 'inherit' }}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Method pills */}
         <MethodPills active={method} onSelect={setMethod} />
@@ -230,6 +288,7 @@ export function RankingPage() {
             sortCol={sortCol}
             sortDir={sortDir}
             onSort={handleSort}
+            onRemoveCustom={removeCustomTicker}
           />
         </div>
       </div>

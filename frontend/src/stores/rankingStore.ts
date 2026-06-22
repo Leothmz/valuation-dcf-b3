@@ -71,6 +71,7 @@ export interface RankingState {
   weights: WeightConfig
   favorites: string[]
   savedFilters: SavedFilter[]
+  customTickers: string[]
   sortCol: string
   sortDir: 'asc' | 'desc'
   // lastFetch: timestamp of last successful load (for TTL check)
@@ -88,6 +89,8 @@ export interface RankingActions {
   setSavedFilters: (filters: SavedFilter[]) => void
   saveFilter: (name: string) => void
   deleteFilter: (name: string) => void
+  addCustomTicker: (ticker: string) => void
+  removeCustomTicker: (ticker: string) => void
   setSortCol: (col: string) => void
   setSortDir: (dir: 'asc' | 'desc') => void
   setLastFetch: (ts: number | null) => void
@@ -100,6 +103,7 @@ const INITIAL_STATE: RankingState = {
   weights: { ...DEFAULT_WEIGHTS },
   favorites: [],
   savedFilters: [],
+  customTickers: [],
   sortCol: 'score',
   sortDir: 'desc',
   lastFetch: null,
@@ -162,6 +166,18 @@ export const useRankingStore = create<RankingState & RankingActions>()(
       deleteFilter: (name) =>
         set((state) => ({
           savedFilters: state.savedFilters.filter((f) => f.name !== name),
+        })),
+
+      addCustomTicker: (ticker) =>
+        set((state) => {
+          const t = ticker.trim().toUpperCase()
+          if (!t || state.customTickers.includes(t)) return state
+          return { customTickers: [...state.customTickers, t] }
+        }),
+
+      removeCustomTicker: (ticker) =>
+        set((state) => ({
+          customTickers: state.customTickers.filter((t) => t !== ticker),
         })),
 
       setSortCol: (col) => set({ sortCol: col }),
