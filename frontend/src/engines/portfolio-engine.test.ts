@@ -13,6 +13,7 @@ import {
   buildRebalancingSuggestions,
   adjustOperationsForSplits,
   buildAvgCostTimeline,
+  classifySaleGains,
 } from './portfolio-engine'
 import type { Operation, Provento, Category, SplitEvent } from '../stores/portfolioStore'
 
@@ -541,5 +542,94 @@ describe('buildAvgCostTimeline', () => {
     const timeline = buildAvgCostTimeline(ops)
     expect(timeline[0].operation.id).toBe('1') // earlier date processed first
     expect(timeline[1].avgCostAfter).toBeCloseTo(15)
+  })
+})
+
+describe('classifySaleGains', () => {
+  it('classifies a pure swing trade sale using the pre-existing average cost', () => {
+    const ops = [
+      { id: '1', date: '2024-01-10', ticker: 'PETR4', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 30, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-03-15', ticker: 'PETR4', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 40, price: 35, currency: 'BRL', fees: 0 },
+    ]
+    const gains = classifySaleGains(ops)
+    expect(gains).toHaveLength(1)
+    expect(gains[0]).toMatchObject({
+      date: '2024-03-15', ticker: 'PETR4', category: 'swing_acoes', qty: 40, proceeds: 1400,
+    })
+    expect(gains[0].gain).toBeCloseTo(200) // 40 * (35 - 30)
+  })
+
+  it('classifies a pure day trade using same-day weighted average prices, independent of running cost basis', () => {
+    const ops = [
+      { id: '1', date: '2024-04-02', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 200, price: 60, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-04-02', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 200, price: 65, currency: 'BRL', fees: 0 },
+    ]
+    const gains = classifySaleGains(ops)
+    expect(gains).toHaveLength(1)
+    expect(gains[0]).toMatchObject({
+      date: '2024-04-02', ticker: 'VALE3', category: 'day_trade', qty: 200, proceeds: 13000,
+    })
+    expect(gains[0].gain).toBeCloseTo(1000) // 200 * (65 - 60)
+  })
+
+  it('splits a same-day sell that exceeds the same-day buy into a day-trade portion and a swing-trade portion using prior cost basis', () => {
+    // Hand-verified scenario: prior holding 100 @ R$20. Same day: buy 50 @ R$25, sell 120 @ R$28.
+    // Day trade matches min(50,120)=50 @ (sell avg 28 - buy avg 25) = R$150 gain, proceeds 50*28=1400.
+    // Remaining 70 sold come from the PRE-EXISTING 100 @ R$20 (not today's R$25 buy): gain = 70*(28-20)=R$560, proceeds 70*28=1960.
+    // The day's buy (50) is entirely consumed by the day-trade match, so none of it joins the running position;
+    // the running position after this day = 100 - 70 = 30 shares, still @ R$20 average (unaffected by the day's buy or sell).
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 20, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-05-10', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 50, price: 25, currency: 'BRL', fees: 0 },
+      { id: '3', date: '2024-05-10', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 120, price: 28, currency: 'BRL', fees: 0 },
+      { id: '4', date: '2024-06-01', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 10, price: 22, currency: 'BRL', fees: 0 },
+    ]
+    const gains = classifySaleGains(ops)
+    expect(gains).toHaveLength(3)
+
+    const dayTrade = gains.find((g) => g.category === 'day_trade')!
+    expect(dayTrade.qty).toBe(50)
+    expect(dayTrade.proceeds).toBeCloseTo(1400)
+    expect(dayTrade.gain).toBeCloseTo(150)
+
+    const swingOnSameDay = gains.find((g) => g.date === '2024-05-10' && g.category === 'swing_acoes')!
+    expect(swingOnSameDay.qty).toBe(70)
+    expect(swingOnSameDay.proceeds).toBeCloseTo(1960)
+    expect(swingOnSameDay.gain).toBeCloseTo(560) // 70 * (28 - 20), using the PRIOR R$20 cost basis, not the day's R$25 buy
+
+    const laterSale = gains.find((g) => g.date === '2024-06-01')!
+    expect(laterSale.qty).toBe(10)
+    expect(laterSale.gain).toBeCloseTo(20) // 10 * (22 - 20): confirms the running position stayed at R$20 average after the day-trade day
+  })
+
+  it('classifies a FII swing-trade sale as swing_fii, independent of the stock swing-trade bucket', () => {
+    const ops = [
+      { id: '1', date: '2024-02-01', ticker: 'XPLG11', assetClass: 'fii' as const, type: 'buy' as const, qty: 100, price: 100, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-05-01', ticker: 'XPLG11', assetClass: 'fii' as const, type: 'sell' as const, qty: 50, price: 120, currency: 'BRL', fees: 0 },
+    ]
+    const gains = classifySaleGains(ops)
+    expect(gains).toHaveLength(1)
+    expect(gains[0]).toMatchObject({ category: 'swing_fii', qty: 50, proceeds: 6000 })
+    expect(gains[0].gain).toBeCloseTo(1000) // 50 * (120 - 100)
+  })
+
+  it('produces no entries when there are no sells', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 30, currency: 'BRL', fees: 0 },
+    ]
+    expect(classifySaleGains(ops)).toEqual([])
+  })
+
+  it('keeps tickers fully independent', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 30, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-02-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 50, price: 40, currency: 'BRL', fees: 0 },
+      { id: '3', date: '2024-01-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 200, price: 60, currency: 'BRL', fees: 0 },
+      { id: '4', date: '2024-02-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 100, price: 50, currency: 'BRL', fees: 0 },
+    ]
+    const gains = classifySaleGains(ops)
+    expect(gains).toHaveLength(2)
+    expect(gains.find((g) => g.ticker === 'WEGE3')!.gain).toBeCloseTo(500) // 50*(40-30)
+    expect(gains.find((g) => g.ticker === 'VALE3')!.gain).toBeCloseTo(-1000) // 100*(50-60), a loss
   })
 })

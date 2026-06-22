@@ -443,3 +443,85 @@ export function buildAvgCostTimeline(tickerOperations: Operation[]): AvgCostPoin
   }
   return timeline
 }
+
+export type GainCategory = 'swing_acoes' | 'day_trade' | 'swing_fii'
+
+export interface SaleGain {
+  date: string
+  ticker: string
+  category: GainCategory
+  qty: number
+  proceeds: number
+  gain: number
+}
+
+export function classifySaleGains(operations: Operation[]): SaleGain[] {
+  const tickers = [...new Set(operations.map((o) => o.ticker))]
+  const result: SaleGain[] = []
+
+  for (const ticker of tickers) {
+    const tickerOps = operations.filter((o) => o.ticker === ticker)
+    const assetClass = tickerOps[tickerOps.length - 1].assetClass
+    const sorted = [...tickerOps].sort((a, b) => a.date.localeCompare(b.date))
+    const dates = [...new Set(sorted.map((o) => o.date))].sort()
+
+    let runningQty = 0
+    let runningAvgCost = 0
+
+    for (const date of dates) {
+      const opsToday = sorted.filter((o) => o.date === date)
+      const buysToday = opsToday.filter((o) => o.type === 'buy')
+      const sellsToday = opsToday.filter((o) => o.type === 'sell')
+      const dayBuyQty = buysToday.reduce((s, o) => s + o.qty, 0)
+      const dayBuyCost = buysToday.reduce((s, o) => s + o.qty * o.price, 0)
+      const daySellQty = sellsToday.reduce((s, o) => s + o.qty, 0)
+      const daySellRevenue = sellsToday.reduce((s, o) => s + o.qty * o.price, 0)
+      const dayTradeQty = Math.min(dayBuyQty, daySellQty)
+      const daySellAvgPrice = daySellQty > 0 ? daySellRevenue / daySellQty : 0
+
+      if (dayTradeQty > 0) {
+        const dayBuyAvgPrice = dayBuyQty > 0 ? dayBuyCost / dayBuyQty : 0
+        result.push({
+          date,
+          ticker,
+          category: 'day_trade',
+          qty: dayTradeQty,
+          proceeds: dayTradeQty * daySellAvgPrice,
+          gain: dayTradeQty * (daySellAvgPrice - dayBuyAvgPrice),
+        })
+      }
+
+      const swingSellQty = daySellQty - dayTradeQty
+      if (swingSellQty > 0) {
+        result.push({
+          date,
+          ticker,
+          category: assetClass === 'fii' ? 'swing_fii' : 'swing_acoes',
+          qty: swingSellQty,
+          proceeds: swingSellQty * daySellAvgPrice,
+          gain: swingSellQty * (daySellAvgPrice - runningAvgCost),
+        })
+      }
+
+      const buyQtyAddedToPosition = dayBuyQty - dayTradeQty
+      if (buyQtyAddedToPosition > 0) {
+        const dayBuyAvgPrice = dayBuyCost / dayBuyQty
+        const newQty = runningQty + buyQtyAddedToPosition
+        runningAvgCost =
+          newQty > 0
+            ? (runningQty * runningAvgCost + buyQtyAddedToPosition * dayBuyAvgPrice) / newQty
+            : 0
+        runningQty = newQty
+      }
+      if (swingSellQty > 0) {
+        runningQty -= swingSellQty
+        if (runningQty <= 0) {
+          runningQty = 0
+          runningAvgCost = 0
+        }
+      }
+    }
+  }
+
+  return result.sort((a, b) => a.date.localeCompare(b.date))
+}
