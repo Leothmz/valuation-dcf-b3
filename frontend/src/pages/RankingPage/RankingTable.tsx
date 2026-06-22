@@ -12,6 +12,7 @@ interface RankingTableProps {
   sortCol: string
   sortDir: 'asc' | 'desc'
   onSort: (col: string) => void
+  onRemoveCustom?: (ticker: string) => void
 }
 
 function fNum(v: number | null | undefined, dec = 1): string {
@@ -55,6 +56,7 @@ export function RankingTable({
   sortCol,
   sortDir,
   onSort,
+  onRemoveCustom,
 }: RankingTableProps) {
   const navigate = useNavigate()
 
@@ -160,6 +162,24 @@ export function RankingTable({
                       >
                         {s.ticker}
                       </button>
+                      {s.isCustom && (
+                        <span
+                          className="flex items-center gap-1 text-[10px] font-medium px-[6px] py-[2px] rounded-[5px]"
+                          style={{ background: 'var(--color-amber-dim)', color: 'var(--color-amber)', border: '1px solid rgba(245,158,11,.2)' }}
+                        >
+                          Custom
+                          {onRemoveCustom && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onRemoveCustom(s.ticker) }}
+                              title={`Remover ${s.ticker} dos tickers customizados`}
+                              className="cursor-pointer leading-none"
+                              style={{ background: 'none', border: 'none', padding: 0, color: 'inherit' }}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </span>
+                      )}
                       {sectorLabel && (
                         <span
                           className="text-[10px] font-medium px-[6px] py-[2px] rounded-[5px] hidden md:inline"
