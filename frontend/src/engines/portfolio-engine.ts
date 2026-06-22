@@ -606,3 +606,52 @@ export function buildMonthlyIRSummary(saleGains: SaleGain[]): MonthlyIRSummary[]
 
   return result
 }
+
+export interface IRPFPosition {
+  ticker: string
+  qty: number
+  avgCost: number
+  totalCost: number
+}
+
+export interface IRPFAnnualSummary {
+  year: number
+  positions: IRPFPosition[]
+  exemptIncome: number
+  taxableGainsByMonth: MonthlyIRSummary[]
+}
+
+export function buildIRPFAnnualSummary(
+  splitAdjustedOperations: Operation[],
+  monthlySummaries: MonthlyIRSummary[],
+  year: number
+): IRPFAnnualSummary {
+  const yearEndDate = `${year}-12-31`
+  const tickers = [...new Set(splitAdjustedOperations.map((o) => o.ticker))]
+  const positions: IRPFPosition[] = []
+
+  for (const ticker of tickers) {
+    const tickerOps = splitAdjustedOperations.filter(
+      (o) => o.ticker === ticker && o.date <= yearEndDate
+    )
+    if (!tickerOps.length) continue
+    const timeline = buildAvgCostTimeline(tickerOps)
+    const last = timeline[timeline.length - 1]
+    if (last.qtyAfter > 0) {
+      positions.push({
+        ticker,
+        qty: last.qtyAfter,
+        avgCost: last.avgCostAfter,
+        totalCost: last.qtyAfter * last.avgCostAfter,
+      })
+    }
+  }
+
+  const monthsInYear = monthlySummaries.filter((m) => m.month.startsWith(`${year}-`))
+  const exemptIncome = monthsInYear
+    .filter((m) => m.exempt)
+    .reduce((sum, m) => sum + m.grossGain, 0)
+  const taxableGainsByMonth = monthsInYear.filter((m) => m.taxableAmount > 0)
+
+  return { year, positions, exemptIncome, taxableGainsByMonth }
+}

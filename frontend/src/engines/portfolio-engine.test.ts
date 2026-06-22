@@ -15,7 +15,9 @@ import {
   buildAvgCostTimeline,
   classifySaleGains,
   buildMonthlyIRSummary,
+  buildIRPFAnnualSummary,
 } from './portfolio-engine'
+import type { MonthlyIRSummary } from './portfolio-engine'
 import type { Operation, Provento, Category, SplitEvent } from '../stores/portfolioStore'
 
 describe('buildHistoricalPriceMap', () => {
@@ -746,5 +748,57 @@ describe('buildMonthlyIRSummary', () => {
 
   it('returns an empty array for no sale gains', () => {
     expect(buildMonthlyIRSummary([])).toEqual([])
+  })
+})
+
+describe('buildIRPFAnnualSummary', () => {
+  it('reports a year-end position with the average cost as of 31/12', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 10, currency: 'BRL', fees: 0 },
+    ]
+    const result = buildIRPFAnnualSummary(ops, [], 2024)
+    expect(result.year).toBe(2024)
+    expect(result.positions).toEqual([{ ticker: 'WEGE3', qty: 100, avgCost: 10, totalCost: 1000 }])
+  })
+
+  it('excludes a ticker that was fully liquidated by year end', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 50, price: 20, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-06-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 50, price: 25, currency: 'BRL', fees: 0 },
+    ]
+    const result = buildIRPFAnnualSummary(ops, [], 2024)
+    expect(result.positions).toEqual([])
+  })
+
+  it('excludes operations dated after the requested year', () => {
+    const ops = [
+      { id: '1', date: '2025-01-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 10, currency: 'BRL', fees: 0 },
+    ]
+    const result = buildIRPFAnnualSummary(ops, [], 2024)
+    expect(result.positions).toEqual([])
+  })
+
+  it('sums exempt months in the requested year into exemptIncome, ignoring non-exempt months', () => {
+    const monthlySummaries: MonthlyIRSummary[] = [
+      { month: '2024-01', category: 'swing_acoes', grossGain: 800, proceeds: 15000, exempt: true, lossCarriedIn: 0, taxableAmount: 0, rate: 0.15, darfAmount: 0, lossCarriedOut: 0, dueDate: '2024-02-29' },
+      { month: '2024-02', category: 'swing_acoes', grossGain: 2000, proceeds: 25000, exempt: false, lossCarriedIn: 0, taxableAmount: 2000, rate: 0.15, darfAmount: 300, lossCarriedOut: 0, dueDate: '2024-03-31' },
+      { month: '2024-03', category: 'swing_fii', grossGain: 1200, proceeds: 18000, exempt: true, lossCarriedIn: 0, taxableAmount: 0, rate: 0.20, darfAmount: 0, lossCarriedOut: 0, dueDate: '2024-04-30' },
+    ]
+    const result = buildIRPFAnnualSummary([], monthlySummaries, 2024)
+    // only the 2024-01 entry is exempt:true in this fixture (the 2024-03 entry's grossGain is included
+    // only because this test fixture marks it exempt — included to confirm exemptIncome sums ALL exempt
+    // months regardless of category, not just swing_acoes)
+    expect(result.exemptIncome).toBeCloseTo(800 + 1200)
+  })
+
+  it('includes only months with a positive taxable amount in taxableGainsByMonth, for the requested year only', () => {
+    const monthlySummaries: MonthlyIRSummary[] = [
+      { month: '2023-12', category: 'swing_acoes', grossGain: 5000, proceeds: 30000, exempt: false, lossCarriedIn: 0, taxableAmount: 5000, rate: 0.15, darfAmount: 750, lossCarriedOut: 0, dueDate: '2024-01-31' },
+      { month: '2024-02', category: 'swing_acoes', grossGain: 2000, proceeds: 25000, exempt: false, lossCarriedIn: 0, taxableAmount: 2000, rate: 0.15, darfAmount: 300, lossCarriedOut: 0, dueDate: '2024-03-31' },
+      { month: '2024-03', category: 'swing_acoes', grossGain: -500, proceeds: 30000, exempt: false, lossCarriedIn: 0, taxableAmount: 0, rate: 0.15, darfAmount: 0, lossCarriedOut: 500, dueDate: '2024-04-30' },
+    ]
+    const result = buildIRPFAnnualSummary([], monthlySummaries, 2024)
+    expect(result.taxableGainsByMonth).toHaveLength(1)
+    expect(result.taxableGainsByMonth[0].month).toBe('2024-02')
   })
 })
