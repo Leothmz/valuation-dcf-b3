@@ -12,6 +12,11 @@ function renderLayout() {
   )
 }
 
+beforeEach(() => {
+  localStorage.clear()
+  localStorage.setItem('onboarding_done', '1') // skip welcome modal unless a test opts in
+})
+
 describe('Layout keyboard shortcuts', () => {
   it('does not show the shortcuts panel by default', () => {
     renderLayout()
@@ -39,5 +44,34 @@ describe('Layout keyboard shortcuts', () => {
     fireEvent.keyDown(input, { key: '?' })
     expect(screen.queryByText('Atalhos de Teclado')).not.toBeInTheDocument()
     document.body.removeChild(input)
+  })
+})
+
+describe('Layout welcome modal', () => {
+  it('shows the welcome modal on first visit', () => {
+    localStorage.clear()
+    renderLayout()
+    expect(screen.getByText('Bem-vindo!')).toBeInTheDocument()
+  })
+
+  it('does not show the welcome modal once onboarding_done is set', () => {
+    renderLayout()
+    expect(screen.queryByText('Bem-vindo!')).not.toBeInTheDocument()
+  })
+
+  it('dismisses and persists onboarding_done on "Pular"', () => {
+    localStorage.clear()
+    renderLayout()
+    fireEvent.click(screen.getByText('Pular'))
+    expect(screen.queryByText('Bem-vindo!')).not.toBeInTheDocument()
+    expect(localStorage.getItem('onboarding_done')).toBe('1')
+  })
+
+  it('closes on Escape and persists onboarding_done', () => {
+    localStorage.clear()
+    renderLayout()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByText('Bem-vindo!')).not.toBeInTheDocument()
+    expect(localStorage.getItem('onboarding_done')).toBe('1')
   })
 })
