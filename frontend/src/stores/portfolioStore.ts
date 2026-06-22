@@ -64,6 +64,13 @@ export interface Provento {
   valuePerShare: number
 }
 
+export interface SplitEvent {
+  id: string
+  ticker: string
+  date: string // YYYY-MM-DD
+  ratio: number // e.g. 2 for a 2-for-1 split, 0.5 for a 1-for-2 inplit
+}
+
 function emptyAllocationTargets(): Record<Category, number> {
   return {
     acoes_br: 0,
@@ -81,6 +88,7 @@ export interface PortfolioState {
   proventos: Provento[]
   cashBalance: number
   allocationTargets: Record<Category, number>
+  splitEvents: SplitEvent[]
 }
 
 export interface PortfolioActions {
@@ -96,6 +104,8 @@ export interface PortfolioActions {
   importProventos: (provs: Provento[]) => void
   setCashBalance: (amount: number) => void
   setAllocationTarget: (category: Category, pct: number) => void
+  addSplitEvent: (event: SplitEvent) => void
+  deleteSplitEvent: (id: string) => void
 }
 
 export const usePortfolioStore = create<PortfolioState & PortfolioActions>()(
@@ -106,6 +116,7 @@ export const usePortfolioStore = create<PortfolioState & PortfolioActions>()(
       proventos: [],
       cashBalance: 0,
       allocationTargets: emptyAllocationTargets(),
+      splitEvents: [],
 
       addOperation: (op) =>
         set((s) => ({ operations: [...s.operations, op] })),
@@ -161,6 +172,12 @@ export const usePortfolioStore = create<PortfolioState & PortfolioActions>()(
         set((s) => ({
           allocationTargets: { ...s.allocationTargets, [category]: pct },
         })),
+
+      addSplitEvent: (event) =>
+        set((s) => ({ splitEvents: [...s.splitEvents, event] })),
+
+      deleteSplitEvent: (id) =>
+        set((s) => ({ splitEvents: s.splitEvents.filter((e) => e.id !== id) })),
     }),
     {
       name: 'portfolio_v1',

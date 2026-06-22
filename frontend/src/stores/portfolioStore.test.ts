@@ -55,3 +55,32 @@ describe('CATEGORIES', () => {
     ])
   })
 })
+
+describe('splitEvents', () => {
+  it('starts empty', () => {
+    expect(usePortfolioStore.getState().splitEvents).toEqual([])
+  })
+
+  it('addSplitEvent appends a new event', () => {
+    usePortfolioStore.setState({ splitEvents: [] })
+    usePortfolioStore.getState().addSplitEvent({
+      id: '1', ticker: 'VALE3', date: '2024-06-01', ratio: 2,
+    })
+    expect(usePortfolioStore.getState().splitEvents).toEqual([
+      { id: '1', ticker: 'VALE3', date: '2024-06-01', ratio: 2 },
+    ])
+  })
+
+  it('deleteSplitEvent removes only the matching event', () => {
+    usePortfolioStore.setState({
+      splitEvents: [
+        { id: '1', ticker: 'VALE3', date: '2024-06-01', ratio: 2 },
+        { id: '2', ticker: 'PETR4', date: '2024-08-01', ratio: 0.5 },
+      ],
+    })
+    usePortfolioStore.getState().deleteSplitEvent('1')
+    expect(usePortfolioStore.getState().splitEvents).toEqual([
+      { id: '2', ticker: 'PETR4', date: '2024-08-01', ratio: 0.5 },
+    ])
+  })
+})
