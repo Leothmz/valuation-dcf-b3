@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Sidebar } from './Sidebar'
 import { BottomNav } from './BottomNav'
 import { NotificationProvider } from './Notification'
 import { GlobalSearch } from './GlobalSearch'
+import { ShortcutsPanel } from './ShortcutsPanel'
+import { useKeyBinding } from '../hooks/useKeyBinding'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -10,17 +12,12 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false)
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setIsSearchOpen(open => !open)
-      }
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [])
+  useKeyBinding({
+    'mod+k': (e) => { e.preventDefault(); setIsSearchOpen((open) => !open) },
+    '?': () => setIsShortcutsOpen((open) => !open),
+  })
 
   return (
     <div className="flex min-h-screen bg-bg-1">
@@ -31,6 +28,7 @@ export function Layout({ children }: LayoutProps) {
       <BottomNav />
       <NotificationProvider />
       <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      <ShortcutsPanel isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
     </div>
   )
 }
