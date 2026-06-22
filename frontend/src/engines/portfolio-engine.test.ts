@@ -11,8 +11,14 @@ import {
   buildCategoryAllocation,
   calcAllocationDeviation,
   buildRebalancingSuggestions,
+  adjustOperationsForSplits,
+  buildAvgCostTimeline,
+  classifySaleGains,
+  buildMonthlyIRSummary,
+  buildIRPFAnnualSummary,
 } from './portfolio-engine'
-import type { Operation, Provento, Category } from '../stores/portfolioStore'
+import type { MonthlyIRSummary, SaleGain } from './portfolio-engine'
+import type { Operation, Provento, Category, SplitEvent } from '../stores/portfolioStore'
 
 describe('buildHistoricalPriceMap', () => {
   it('maps parallel price arrays to a nested ticker/date lookup', () => {
@@ -423,5 +429,376 @@ describe('buildRebalancingSuggestions', () => {
     const suggestions = buildRebalancingSuggestions(deviations)
     expect(suggestions.acoes_br.action).toBe('manter')
     expect(suggestions.acoes_br.amount).toBe(0)
+  })
+})
+
+describe('adjustOperationsForSplits', () => {
+  it('leaves operations unchanged when there are no split events', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 30, currency: 'BRL', fees: 0 },
+    ]
+    const result = adjustOperationsForSplits(ops, [])
+    expect(result).toEqual(ops)
+  })
+
+  it('applies a single split ratio to an operation dated before the split', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 10, price: 100, currency: 'BRL', fees: 0 },
+    ]
+    const splits: SplitEvent[] = [{ id: 's1', ticker: 'VALE3', date: '2024-06-01', ratio: 2 }]
+    const result = adjustOperationsForSplits(ops, splits)
+    expect(result[0].qty).toBeCloseTo(20)
+    expect(result[0].price).toBeCloseTo(50)
+  })
+
+  it('does not apply a split to an operation dated after it', () => {
+    const ops = [
+      { id: '1', date: '2024-09-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 10, price: 50, currency: 'BRL', fees: 0 },
+    ]
+    const splits: SplitEvent[] = [{ id: 's1', ticker: 'VALE3', date: '2024-06-01', ratio: 2 }]
+    const result = adjustOperationsForSplits(ops, splits)
+    expect(result[0].qty).toBe(10)
+    expect(result[0].price).toBe(50)
+  })
+
+  it('compounds two splits for an operation before both, and applies only the later one for an operation between them', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 10, price: 100, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-04-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 5, price: 50, currency: 'BRL', fees: 0 },
+      { id: '3', date: '2024-10-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 3, price: 50 / 3, currency: 'BRL', fees: 0 },
+    ]
+    const splits: SplitEvent[] = [
+      { id: 's1', ticker: 'VALE3', date: '2024-03-01', ratio: 2 },
+      { id: 's2', ticker: 'VALE3', date: '2024-09-01', ratio: 3 },
+    ]
+    const result = adjustOperationsForSplits(ops, splits)
+    // op1 (before both): cumulative ratio 2*3=6
+    expect(result[0].qty).toBeCloseTo(60)
+    expect(result[0].price).toBeCloseTo(100 / 6)
+    // op2 (after split 1, before split 2): only split 2's ratio (3) applies
+    expect(result[1].qty).toBeCloseTo(15)
+    expect(result[1].price).toBeCloseTo(50 / 3)
+    // op3 (after both): no future split applies, unchanged
+    expect(result[2].qty).toBeCloseTo(3)
+    expect(result[2].price).toBeCloseTo(50 / 3)
+  })
+
+  it('only applies a split to the matching ticker', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 10, price: 100, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-01-01', ticker: 'PETR4', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 10, price: 100, currency: 'BRL', fees: 0 },
+    ]
+    const splits: SplitEvent[] = [{ id: 's1', ticker: 'VALE3', date: '2024-06-01', ratio: 2 }]
+    const result = adjustOperationsForSplits(ops, splits)
+    expect(result[0].qty).toBeCloseTo(20) // VALE3 adjusted
+    expect(result[1].qty).toBe(10) // PETR4 untouched
+  })
+
+  it('does not mutate the input array or its operations', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 10, price: 100, currency: 'BRL', fees: 0 },
+    ]
+    const splits: SplitEvent[] = [{ id: 's1', ticker: 'VALE3', date: '2024-06-01', ratio: 2 }]
+    adjustOperationsForSplits(ops, splits)
+    expect(ops[0].qty).toBe(10)
+    expect(ops[0].price).toBe(100)
+  })
+})
+
+describe('buildAvgCostTimeline', () => {
+  it('computes a simple weighted average across two buys, unaffected by a later sell', () => {
+    const ops = [
+      { id: '1', date: '2024-01-05', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 10, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-01-15', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 20, currency: 'BRL', fees: 0 },
+      { id: '3', date: '2024-02-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 50, price: 25, currency: 'BRL', fees: 0 },
+    ]
+    const timeline = buildAvgCostTimeline(ops)
+    expect(timeline[1].avgCostAfter).toBeCloseTo(15) // (100*10 + 100*20) / 200
+    expect(timeline[2].avgCostBefore).toBeCloseTo(15) // sell uses the pre-existing average
+    expect(timeline[2].qtyBefore).toBe(200)
+    expect(timeline[2].avgCostAfter).toBeCloseTo(15) // selling never changes average cost
+    expect(timeline[2].qtyAfter).toBe(150)
+  })
+
+  it('resets average cost to zero when a position is fully liquidated, then starts fresh on reopening', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 10, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-02-01', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 100, price: 30, currency: 'BRL', fees: 0 },
+      { id: '3', date: '2024-03-01', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 50, price: 8, currency: 'BRL', fees: 0 },
+      { id: '4', date: '2024-04-01', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 20, price: 12, currency: 'BRL', fees: 0 },
+    ]
+    const timeline = buildAvgCostTimeline(ops)
+    expect(timeline[1].qtyAfter).toBe(0)
+    expect(timeline[1].avgCostAfter).toBe(0) // reset after full liquidation
+    expect(timeline[2].avgCostBefore).toBe(0) // confirms the reset carried into the next operation
+    expect(timeline[2].avgCostAfter).toBeCloseTo(8) // fresh average, NOT blended with the old position's R$10 cost
+    expect(timeline[3].avgCostBefore).toBeCloseTo(8)
+    expect(timeline[3].avgCostAfter).toBeCloseTo(8)
+    expect(timeline[3].qtyAfter).toBe(30)
+  })
+
+  it('handles operations passed out of date order by sorting internally', () => {
+    const ops = [
+      { id: '2', date: '2024-01-15', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 20, currency: 'BRL', fees: 0 },
+      { id: '1', date: '2024-01-05', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 10, currency: 'BRL', fees: 0 },
+    ]
+    const timeline = buildAvgCostTimeline(ops)
+    expect(timeline[0].operation.id).toBe('1') // earlier date processed first
+    expect(timeline[1].avgCostAfter).toBeCloseTo(15)
+  })
+})
+
+describe('classifySaleGains', () => {
+  it('classifies a pure swing trade sale using the pre-existing average cost', () => {
+    const ops = [
+      { id: '1', date: '2024-01-10', ticker: 'PETR4', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 30, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-03-15', ticker: 'PETR4', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 40, price: 35, currency: 'BRL', fees: 0 },
+    ]
+    const gains = classifySaleGains(ops)
+    expect(gains).toHaveLength(1)
+    expect(gains[0]).toMatchObject({
+      date: '2024-03-15', ticker: 'PETR4', category: 'swing_acoes', qty: 40, proceeds: 1400,
+    })
+    expect(gains[0].gain).toBeCloseTo(200) // 40 * (35 - 30)
+  })
+
+  it('classifies a pure day trade using same-day weighted average prices, independent of running cost basis', () => {
+    const ops = [
+      { id: '1', date: '2024-04-02', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 200, price: 60, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-04-02', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 200, price: 65, currency: 'BRL', fees: 0 },
+    ]
+    const gains = classifySaleGains(ops)
+    expect(gains).toHaveLength(1)
+    expect(gains[0]).toMatchObject({
+      date: '2024-04-02', ticker: 'VALE3', category: 'day_trade', qty: 200, proceeds: 13000,
+    })
+    expect(gains[0].gain).toBeCloseTo(1000) // 200 * (65 - 60)
+  })
+
+  it('splits a same-day sell that exceeds the same-day buy into a day-trade portion and a swing-trade portion using prior cost basis', () => {
+    // Hand-verified scenario: prior holding 100 @ R$20. Same day: buy 50 @ R$25, sell 120 @ R$28.
+    // Day trade matches min(50,120)=50 @ (sell avg 28 - buy avg 25) = R$150 gain, proceeds 50*28=1400.
+    // Remaining 70 sold come from the PRE-EXISTING 100 @ R$20 (not today's R$25 buy): gain = 70*(28-20)=R$560, proceeds 70*28=1960.
+    // The day's buy (50) is entirely consumed by the day-trade match, so none of it joins the running position;
+    // the running position after this day = 100 - 70 = 30 shares, still @ R$20 average (unaffected by the day's buy or sell).
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 20, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-05-10', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 50, price: 25, currency: 'BRL', fees: 0 },
+      { id: '3', date: '2024-05-10', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 120, price: 28, currency: 'BRL', fees: 0 },
+      { id: '4', date: '2024-06-01', ticker: 'ITUB4', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 10, price: 22, currency: 'BRL', fees: 0 },
+    ]
+    const gains = classifySaleGains(ops)
+    expect(gains).toHaveLength(3)
+
+    const dayTrade = gains.find((g) => g.category === 'day_trade')!
+    expect(dayTrade.qty).toBe(50)
+    expect(dayTrade.proceeds).toBeCloseTo(1400)
+    expect(dayTrade.gain).toBeCloseTo(150)
+
+    const swingOnSameDay = gains.find((g) => g.date === '2024-05-10' && g.category === 'swing_acoes')!
+    expect(swingOnSameDay.qty).toBe(70)
+    expect(swingOnSameDay.proceeds).toBeCloseTo(1960)
+    expect(swingOnSameDay.gain).toBeCloseTo(560) // 70 * (28 - 20), using the PRIOR R$20 cost basis, not the day's R$25 buy
+
+    const laterSale = gains.find((g) => g.date === '2024-06-01')!
+    expect(laterSale.qty).toBe(10)
+    expect(laterSale.gain).toBeCloseTo(20) // 10 * (22 - 20): confirms the running position stayed at R$20 average after the day-trade day
+  })
+
+  it('classifies a FII swing-trade sale as swing_fii, independent of the stock swing-trade bucket', () => {
+    const ops = [
+      { id: '1', date: '2024-02-01', ticker: 'XPLG11', assetClass: 'fii' as const, type: 'buy' as const, qty: 100, price: 100, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-05-01', ticker: 'XPLG11', assetClass: 'fii' as const, type: 'sell' as const, qty: 50, price: 120, currency: 'BRL', fees: 0 },
+    ]
+    const gains = classifySaleGains(ops)
+    expect(gains).toHaveLength(1)
+    expect(gains[0]).toMatchObject({ category: 'swing_fii', qty: 50, proceeds: 6000 })
+    expect(gains[0].gain).toBeCloseTo(1000) // 50 * (120 - 100)
+  })
+
+  it('produces no entries when there are no sells', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 30, currency: 'BRL', fees: 0 },
+    ]
+    expect(classifySaleGains(ops)).toEqual([])
+  })
+
+  it('keeps tickers fully independent', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 30, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-02-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 50, price: 40, currency: 'BRL', fees: 0 },
+      { id: '3', date: '2024-01-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 200, price: 60, currency: 'BRL', fees: 0 },
+      { id: '4', date: '2024-02-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 100, price: 50, currency: 'BRL', fees: 0 },
+    ]
+    const gains = classifySaleGains(ops)
+    expect(gains).toHaveLength(2)
+    expect(gains.find((g) => g.ticker === 'WEGE3')!.gain).toBeCloseTo(500) // 50*(40-30)
+    expect(gains.find((g) => g.ticker === 'VALE3')!.gain).toBeCloseTo(-1000) // 100*(50-60), a loss
+  })
+})
+
+describe('buildMonthlyIRSummary', () => {
+  it('applies the R$20k exemption to a small swing-trade-stock month (based on proceeds, not gain)', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-03-10', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 15000, gain: 1000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary).toHaveLength(1)
+    expect(summary[0]).toMatchObject({
+      month: '2024-03', category: 'swing_acoes', grossGain: 1000, proceeds: 15000,
+      exempt: true, taxableAmount: 0, darfAmount: 0, lossCarriedIn: 0, lossCarriedOut: 0,
+    })
+  })
+
+  it('taxes a swing-trade-stock month at 15% when proceeds exceed R$20k', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-03-10', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 25000, gain: 2000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary[0].exempt).toBe(false)
+    expect(summary[0].taxableAmount).toBeCloseTo(2000)
+    expect(summary[0].rate).toBeCloseTo(0.15)
+    expect(summary[0].darfAmount).toBeCloseTo(300)
+  })
+
+  it('never exempts a FII swing-trade month regardless of proceeds', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-03-10', ticker: 'XPLG11', category: 'swing_fii', qty: 100, proceeds: 5000, gain: 500 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary[0].exempt).toBe(false)
+    expect(summary[0].taxableAmount).toBeCloseTo(500)
+    expect(summary[0].rate).toBeCloseTo(0.20)
+    expect(summary[0].darfAmount).toBeCloseTo(100)
+  })
+
+  it('never exempts a day-trade month regardless of proceeds', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-03-10', ticker: 'VALE3', category: 'day_trade', qty: 50, proceeds: 1000, gain: 200 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary[0].exempt).toBe(false)
+    expect(summary[0].taxableAmount).toBeCloseTo(200)
+    expect(summary[0].rate).toBeCloseTo(0.20)
+    expect(summary[0].darfAmount).toBeCloseTo(40)
+  })
+
+  it('carries a loss forward, partially offsets a later gain, then a later month is exempt without disturbing a zero loss balance', () => {
+    // Hand-verified 3-month scenario for the swing_acoes bucket:
+    // Jan: loss of R$500 (proceeds irrelevant to a loss) -> lossCarriedOut = 500, no tax.
+    // Feb: gain R$2000, proceeds R$25000 (not exempt, > 20k) -> taxable = 2000 - 500(carried) = 1500, darf = 1500*0.15 = 225, lossCarriedOut = 0.
+    // Mar: gain R$1000, proceeds R$10000 (<= 20k -> exempt) -> exempt, taxable 0, darf 0, lossCarriedOut stays 0 (exemption never touches the loss balance).
+    const gains: SaleGain[] = [
+      { date: '2024-01-15', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 30000, gain: -500 },
+      { date: '2024-02-15', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 25000, gain: 2000 },
+      { date: '2024-03-15', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 10000, gain: 1000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary).toHaveLength(3)
+
+    const jan = summary.find((s) => s.month === '2024-01')!
+    expect(jan.grossGain).toBeCloseTo(-500)
+    expect(jan.taxableAmount).toBe(0)
+    expect(jan.darfAmount).toBe(0)
+    expect(jan.lossCarriedIn).toBe(0)
+    expect(jan.lossCarriedOut).toBeCloseTo(500)
+
+    const feb = summary.find((s) => s.month === '2024-02')!
+    expect(feb.lossCarriedIn).toBeCloseTo(500)
+    expect(feb.exempt).toBe(false)
+    expect(feb.taxableAmount).toBeCloseTo(1500)
+    expect(feb.darfAmount).toBeCloseTo(225)
+    expect(feb.lossCarriedOut).toBe(0)
+
+    const mar = summary.find((s) => s.month === '2024-03')!
+    expect(mar.lossCarriedIn).toBe(0)
+    expect(mar.exempt).toBe(true)
+    expect(mar.taxableAmount).toBe(0)
+    expect(mar.darfAmount).toBe(0)
+    expect(mar.lossCarriedOut).toBe(0) // exemption does not touch the (already-zero) loss balance
+  })
+
+  it('keeps the three category buckets fully independent — a swing-stock loss does not offset a FII gain', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-01-15', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 30000, gain: -1000 },
+      { date: '2024-02-15', ticker: 'XPLG11', category: 'swing_fii', qty: 100, proceeds: 6000, gain: 1000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    const fiiMonth = summary.find((s) => s.category === 'swing_fii')!
+    expect(fiiMonth.lossCarriedIn).toBe(0) // unaffected by the swing_acoes loss
+    expect(fiiMonth.taxableAmount).toBeCloseTo(1000)
+    expect(fiiMonth.darfAmount).toBeCloseTo(200)
+  })
+
+  it('computes the DARF due date as the last calendar day of the following month, including a leap-year case', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-01-15', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 25000, gain: 1000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary[0].dueDate).toBe('2024-02-29') // 2024 is a leap year
+  })
+
+  it('rolls the due date over into the next year for a December reference month', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-12-10', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 25000, gain: 1000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary[0].dueDate).toBe('2025-01-31')
+  })
+
+  it('returns an empty array for no sale gains', () => {
+    expect(buildMonthlyIRSummary([])).toEqual([])
+  })
+})
+
+describe('buildIRPFAnnualSummary', () => {
+  it('reports a year-end position with the average cost as of 31/12', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 10, currency: 'BRL', fees: 0 },
+    ]
+    const result = buildIRPFAnnualSummary(ops, [], 2024)
+    expect(result.year).toBe(2024)
+    expect(result.positions).toEqual([{ ticker: 'WEGE3', qty: 100, avgCost: 10, totalCost: 1000 }])
+  })
+
+  it('excludes a ticker that was fully liquidated by year end', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 50, price: 20, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-06-01', ticker: 'VALE3', assetClass: 'acao_br' as const, type: 'sell' as const, qty: 50, price: 25, currency: 'BRL', fees: 0 },
+    ]
+    const result = buildIRPFAnnualSummary(ops, [], 2024)
+    expect(result.positions).toEqual([])
+  })
+
+  it('excludes operations dated after the requested year', () => {
+    const ops = [
+      { id: '1', date: '2025-01-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 10, currency: 'BRL', fees: 0 },
+    ]
+    const result = buildIRPFAnnualSummary(ops, [], 2024)
+    expect(result.positions).toEqual([])
+  })
+
+  it('sums exempt months in the requested year into exemptIncome, ignoring non-exempt months', () => {
+    const monthlySummaries: MonthlyIRSummary[] = [
+      { month: '2024-01', category: 'swing_acoes', grossGain: 800, proceeds: 15000, exempt: true, lossCarriedIn: 0, taxableAmount: 0, rate: 0.15, darfAmount: 0, lossCarriedOut: 0, dueDate: '2024-02-29' },
+      { month: '2024-02', category: 'swing_acoes', grossGain: 2000, proceeds: 25000, exempt: false, lossCarriedIn: 0, taxableAmount: 2000, rate: 0.15, darfAmount: 300, lossCarriedOut: 0, dueDate: '2024-03-31' },
+      { month: '2024-03', category: 'swing_fii', grossGain: 1200, proceeds: 18000, exempt: true, lossCarriedIn: 0, taxableAmount: 0, rate: 0.20, darfAmount: 0, lossCarriedOut: 0, dueDate: '2024-04-30' },
+    ]
+    const result = buildIRPFAnnualSummary([], monthlySummaries, 2024)
+    // only the 2024-01 entry is exempt:true in this fixture (the 2024-03 entry's grossGain is included
+    // only because this test fixture marks it exempt — included to confirm exemptIncome sums ALL exempt
+    // months regardless of category, not just swing_acoes)
+    expect(result.exemptIncome).toBeCloseTo(800 + 1200)
+  })
+
+  it('includes only months with a positive taxable amount in taxableGainsByMonth, for the requested year only', () => {
+    const monthlySummaries: MonthlyIRSummary[] = [
+      { month: '2023-12', category: 'swing_acoes', grossGain: 5000, proceeds: 30000, exempt: false, lossCarriedIn: 0, taxableAmount: 5000, rate: 0.15, darfAmount: 750, lossCarriedOut: 0, dueDate: '2024-01-31' },
+      { month: '2024-02', category: 'swing_acoes', grossGain: 2000, proceeds: 25000, exempt: false, lossCarriedIn: 0, taxableAmount: 2000, rate: 0.15, darfAmount: 300, lossCarriedOut: 0, dueDate: '2024-03-31' },
+      { month: '2024-03', category: 'swing_acoes', grossGain: -500, proceeds: 30000, exempt: false, lossCarriedIn: 0, taxableAmount: 0, rate: 0.15, darfAmount: 0, lossCarriedOut: 500, dueDate: '2024-04-30' },
+    ]
+    const result = buildIRPFAnnualSummary([], monthlySummaries, 2024)
+    expect(result.taxableGainsByMonth).toHaveLength(1)
+    expect(result.taxableGainsByMonth[0].month).toBe('2024-02')
   })
 })
