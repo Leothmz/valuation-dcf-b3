@@ -13,6 +13,7 @@ const SEGMENTS = [
   { key: 'Híbrido', label: 'Híbrido' },
   { key: 'Agro', label: 'Agro' },
   { key: 'Hotel', label: 'Hotel' },
+  { key: 'Fiagro', label: 'Fiagro' },
 ]
 
 export function FIISegmentTabs({ active, onChange }: Props) {

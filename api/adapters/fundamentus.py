@@ -8,9 +8,14 @@ Fails silently, always returning {} on any error.
 from __future__ import annotations
 
 import re
+import ssl
 import threading
 import time
 import urllib.request
+
+import certifi
+
+from api.adapters.statusinvest import _normalize_segmento
 
 # Module-level cache (shared within process lifetime)
 _cache: dict | None = None
@@ -18,12 +23,17 @@ _cache_ts: float = 0.0
 _CACHE_TTL = 1800  # 30 minutes
 _cache_lock = threading.Lock()
 
+# fundamentus.com.br's cert chain fails verification against some OS trust
+# stores (observed: stale root on Windows) even though it's valid — certifi's
+# independently-maintained bundle verifies it correctly.
+_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+
 
 def _parse_table(html: str) -> dict:
     """Parse the fundamentus FII results table.
 
     Returns a dict keyed by ticker (uppercase, no .SA):
-    ``{TICKER: {ffoYield, vacancia, numImoveis, pvp}}``.
+    ``{TICKER: {segmento, ffoYield, vacancia, numImoveis, pvp}}``.
     Any missing/unparseable field is simply omitted from the per-ticker dict.
     """
     result: dict = {}
@@ -76,6 +86,12 @@ def _parse_table(html: str) -> dict:
         ticker = cells[0].upper()
         entry: dict = {}
 
+        seg_idx = col.get('Segmento', -1)
+        if 0 <= seg_idx < len(cells) and cells[seg_idx]:
+            seg = _normalize_segmento(cells[seg_idx])
+            if seg:
+                entry['segmento'] = seg
+
         ffo = _pct(cells, 'FFO Yield')
         if ffo is not None:
             entry['ffoYield'] = ffo
@@ -122,7 +138,7 @@ def fetch_fii_extras(ticker: str) -> dict:
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                     "Accept": "text/html,application/xhtml+xml",
                 })
-                with urllib.request.urlopen(req, timeout=8) as r:
+                with urllib.request.urlopen(req, timeout=8, context=_SSL_CONTEXT) as r:
                     html = r.read().decode("latin-1", errors="replace")
                 _cache = _parse_table(html)
                 _cache_ts = now
