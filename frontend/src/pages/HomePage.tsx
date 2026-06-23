@@ -10,6 +10,7 @@ import {
   Database,
   ShieldCheck,
   Briefcase,
+  Heart,
 } from 'lucide-react'
 
 const FEATURES = [
@@ -336,6 +337,33 @@ export function HomePage() {
               </span>
             ))}
           </div>
+        </section>
+
+        <hr style={{ border: 'none', borderTop: '1px solid #1e2d42', margin: '52px 0' }} />
+
+        {/* Support CTA */}
+        <section
+          className="rounded-[14px] p-6 flex items-center justify-between gap-4 flex-wrap"
+          style={{ background: '#111827', border: '1px solid #1e2d42' }}
+        >
+          <div>
+            <div className="text-[15px] font-semibold mb-1 text-text-base">Gostou do projeto?</div>
+            <div className="text-sm text-text-sec">
+              É 100% gratuito e sempre será. Se quiser apoiar o desenvolvimento, é totalmente opcional.
+            </div>
+          </div>
+          <Link
+            to="/apoiar"
+            className="inline-flex items-center gap-1.5 px-[18px] py-2.5 rounded-[12px]
+                       text-sm font-semibold text-[#060910] no-underline shrink-0"
+            style={{
+              background: 'linear-gradient(135deg,#06b6d4 0%,#0891b2 100%)',
+              boxShadow: '0 4px 12px rgba(6,182,212,.3)',
+            }}
+          >
+            <Heart size={15} strokeWidth={2} />
+            Apoiar o Projeto
+          </Link>
         </section>
       </div>
     </div>

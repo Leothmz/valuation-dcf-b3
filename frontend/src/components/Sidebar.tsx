@@ -11,6 +11,7 @@ import {
   Briefcase,
   Search,
   GitCompare,
+  Heart,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { to: '/fiis', icon: Building2, label: 'FIIs' },
   { to: '/analise-fii', icon: BarChart2, label: 'Análise FII' },
   { to: '/carteira', icon: Briefcase, label: 'Carteira' },
+  { to: '/apoiar', icon: Heart, label: 'Apoiar o Projeto' },
 ]
 
 interface SidebarProps {
