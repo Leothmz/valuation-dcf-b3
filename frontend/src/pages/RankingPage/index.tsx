@@ -104,27 +104,43 @@ export function RankingPage() {
     if (!rawStocks || rawStocks.length === 0) return []
 
     const fc = filterConfig
+    const isSectorTab = sectorTab === 'insurance' || sectorTab === 'banks'
 
     // Cast FundamentalsData → StockData (they are structurally compatible)
     let stocks = (rawStocks as StockData[])
 
-    // 1. Liquidity pre-filter
-    stocks = stocks.filter((s) => (s.liquidezMedia ?? 0) >= (fc.liquidezMin ?? 0))
+    if (isSectorTab) {
+      // Bancos/Seguradoras: show every ticker of the sector, ranked by the same
+      // method as "Todos" — the generic pre-filters below target non-financial
+      // companies (DY/P-L/DL-EBITDA/margem/ROE conventions don't hold for banks
+      // and insurers) and would otherwise hide most or all of the sector.
+      const keyword = sectorTab === 'insurance' ? 'insurance' : 'bank'
+      stocks = stocks.filter((s) => String(s.subsetor ?? '').toLowerCase().includes(keyword))
+    } else {
+      // 1. Liquidity pre-filter
+      stocks = stocks.filter((s) => (s.liquidezMedia ?? 0) >= (fc.liquidezMin ?? 0))
+    }
 
     // 2. Deduplication (same company, multiple tickers)
     stocks = deduplicateByCompany(stocks)
 
-    // 3. Pre-filters
-    stocks = stocks.filter((s) => {
-      if (fc.plMin != null && (s.pl == null || s.pl < fc.plMin)) return false
-      if (fc.plMax != null && (s.pl == null || s.pl > fc.plMax)) return false
-      if (fc.deMin != null && (s.dividaLiquidaEbit == null || s.dividaLiquidaEbit < fc.deMin)) return false
-      if (fc.deMax != null && (s.dividaLiquidaEbit == null || s.dividaLiquidaEbit > fc.deMax)) return false
-      if (fc.dyMin != null && fc.dyMin > 0 && (s.dy == null || s.dy < fc.dyMin)) return false
-      if (fc.margemMin != null && fc.margemMin > 0 && (s.margemLiquida == null || s.margemLiquida < fc.margemMin)) return false
-      if (fc.roeMin != null && fc.roeMin > 0 && (s.roe == null || s.roe < fc.roeMin)) return false
-      return true
-    })
+    // 3. Pre-filters (skipped entirely for Bancos/Seguradoras tabs)
+    if (!isSectorTab) {
+      stocks = stocks.filter((s) => {
+        const isFinancial = /bank|insurance/.test(String(s.subsetor ?? '').toLowerCase())
+        if (fc.plMin != null && (s.pl == null || s.pl < fc.plMin)) return false
+        if (fc.plMax != null && (s.pl == null || s.pl > fc.plMax)) return false
+        // DL/EBITDA doesn't apply to banks/insurers — they don't report EBITDA
+        if (!isFinancial) {
+          if (fc.deMin != null && (s.dividaLiquidaEbit == null || s.dividaLiquidaEbit < fc.deMin)) return false
+          if (fc.deMax != null && (s.dividaLiquidaEbit == null || s.dividaLiquidaEbit > fc.deMax)) return false
+        }
+        if (fc.dyMin != null && fc.dyMin > 0 && (s.dy == null || s.dy < fc.dyMin)) return false
+        if (fc.margemMin != null && fc.margemMin > 0 && (s.margemLiquida == null || s.margemLiquida < fc.margemMin)) return false
+        if (fc.roeMin != null && fc.roeMin > 0 && (s.roe == null || s.roe < fc.roeMin)) return false
+        return true
+      })
+    }
 
     // 4. Calculate valuation fields for ALL methods (for table columns)
     const bazinScored  = calcBazinScore(stocks, fc.taxaBazin)
@@ -177,13 +193,8 @@ export function RankingPage() {
     // 7. Assign rank
     const withRank = sorted.map((s, i) => ({ ...s, rank: i + 1 })) as RankedRow[]
 
-    // 8. Display filters (sector, favorites, search)
+    // 8. Display filters (sector already applied above; favorites, search)
     let result = withRank
-    if (sectorTab === 'insurance') {
-      result = result.filter((s) => (s.subsetor ?? '').toLowerCase().includes('insurance'))
-    } else if (sectorTab === 'banks') {
-      result = result.filter((s) => (s.subsetor ?? '').toLowerCase().includes('bank'))
-    }
     if (fc.show === 'favoritos') {
       result = result.filter((s) => favorites.includes(s.ticker))
     }
