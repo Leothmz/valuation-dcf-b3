@@ -140,17 +140,16 @@ export function usePortfolioHistory(tickers: string[], dates: string[]) {
   })
 }
 
-// Batch fundamentals — returns dict { ticker: FundamentalsData }, normalized to array
+// Batch fundamentals — backend returns a list, already filtered of failed lookups
 export function useBatchFundamentals(tickers: string[]) {
   const sortedKey = [...tickers].sort().join(',')
   return useQuery({
     queryKey: ['batch-fundamentals', sortedKey],
     queryFn: async (): Promise<FundamentalsData[]> => {
       if (!tickers.length) return []
-      const res = await fetch(`/api/batch-fundamentals?tickers=${tickers.join(',')}`)
+      const res = await fetch(`/api/batch/fundamentals?tickers=${tickers.join(',')}`)
       if (!res.ok) throw new Error('FETCH_ERROR')
-      const dict = await res.json() as Record<string, FundamentalsData>
-      return Object.values(dict).filter((d) => d && !('code' in d))
+      return await res.json() as FundamentalsData[]
     },
     enabled: tickers.length > 0,
     staleTime: 30 * 60 * 1000,

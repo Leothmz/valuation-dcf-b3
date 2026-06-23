@@ -157,7 +157,9 @@ export function RankingTable({
                         disabled={compareDisabled}
                         onChange={() => onToggleCompare(s.ticker)}
                         title={compareDisabled ? `Máximo de ${maxCompare} tickers para comparar` : 'Selecionar para comparar'}
-                        className="cursor-pointer disabled:cursor-not-allowed"
+                        className="appearance-none w-[15px] h-[15px] rounded-[3px] border border-border bg-bg-3
+                                   checked:bg-cyan checked:border-cyan accent-cyan
+                                   cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                       />
                     </td>
                   )}

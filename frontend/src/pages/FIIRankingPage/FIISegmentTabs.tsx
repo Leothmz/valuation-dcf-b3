@@ -11,8 +11,9 @@ const SEGMENTS = [
   { key: 'Papel/CRI', label: 'Papel/CRI' },
   { key: 'Residencial', label: 'Residencial' },
   { key: 'Híbrido', label: 'Híbrido' },
-  { key: 'Agro', label: 'Agro' },
+  { key: 'Renda Urbana', label: 'Renda Urbana' },
   { key: 'Hotel', label: 'Hotel' },
+  { key: 'Fiagro', label: 'Fiagro' },
 ]
 
 export function FIISegmentTabs({ active, onChange }: Props) {

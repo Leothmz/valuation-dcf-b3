@@ -5,9 +5,7 @@ interface PositionBadgeProps {
 export function PositionBadge({ rank }: PositionBadgeProps) {
   if (rank === 1) {
     return (
-      <div
-        className="inline-flex items-center gap-1"
-      >
+      <span className="relative inline-flex items-center justify-center w-8 h-8" title="TOP">
         <span
           className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] text-[13px] font-bold font-mono"
           style={{
@@ -19,16 +17,16 @@ export function PositionBadge({ rank }: PositionBadgeProps) {
           {rank}
         </span>
         <span
-          className="text-[10px] font-bold tracking-[.1em] px-[5px] py-[2px] rounded-[4px]"
+          className="absolute -top-2 -right-2 text-[8px] font-bold tracking-[.05em] px-[4px] py-[1px] rounded-[4px] leading-tight"
           style={{
-            background: 'rgba(16,185,129,.15)',
-            color: '#10b981',
-            border: '1px solid rgba(16,185,129,.3)',
+            background: '#10b981',
+            color: '#fff',
+            boxShadow: '0 0 6px rgba(16,185,129,.5)',
           }}
         >
           TOP
         </span>
-      </div>
+      </span>
     )
   }
 

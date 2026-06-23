@@ -42,12 +42,10 @@ export function useBatchFIIs(tickers: string[]) {
     queryKey: ['batch-fiis', sortedKey],
     queryFn: async (): Promise<FIIData[]> => {
       if (!tickers.length) return []
-      const res = await fetch(`/api/batch-fii?tickers=${tickers.join(',')}`)
+      const res = await fetch(`/api/batch/fii?tickers=${tickers.join(',')}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const dict = await res.json() as Record<string, FIIData>
-      return tickers
-        .map((t) => dict[t])
-        .filter((d): d is FIIData => !!d && !d.code && !!d.price)
+      const list = await res.json() as FIIData[]
+      return list.filter((d): d is FIIData => !!d && !d.code && !!d.price)
     },
     enabled: tickers.length > 0,
     staleTime: 30 * 60 * 1000,

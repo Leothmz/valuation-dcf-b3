@@ -22,16 +22,18 @@ def _normalize_segmento(raw: str) -> str | None:
         return 'Shoppings'
     if 'laje' in s or 'corporativ' in s or 'escritório' in s:
         return 'Lajes Corp.'
-    if 'papel' in s or 'recebív' in s or 'recebi' in s or 'cri' in s:
+    if 'papel' in s or 'recebív' in s or 'recebi' in s or 'cri' in s or 'títulos' in s or 'titulos' in s or 'val. mob' in s:
         return 'Papel/CRI'
     if 'resid' in s or 'habitac' in s or 'living' in s:
         return 'Residencial'
-    if 'agro' in s or 'agríc' in s or 'rural' in s:
-        return 'Agro'
+    if 'fiagro' in s or 'agro' in s or 'agríc' in s or 'rural' in s:
+        return 'Fiagro'
     if 'hotel' in s or 'hoteleiro' in s or 'hospedagem' in s:
         return 'Hotel'
-    if 'híbrid' in s or 'hibrid' in s or 'fof' in s or 'fundo de fund' in s:
+    if 'híbrid' in s or 'hibrid' in s or 'fof' in s or 'fundo de fund' in s or 'multicategoria' in s:
         return 'Híbrido'
+    if 'renda urbana' in s or 'urbano' in s:
+        return 'Renda Urbana'
     return None  # unknown — do not return garbage
 
 
