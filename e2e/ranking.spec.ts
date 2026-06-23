@@ -10,10 +10,10 @@ async function mockRankingApi(page: Page) {
   })
   // Specific route LAST (higher priority, matched first)
   await page.route(
-    (url) => url.pathname === '/api/batch-fundamentals',
+    (url) => url.pathname === '/api/batch/fundamentals',
     async (route) => {
       await route.fulfill({
-        json: { WEGE3: MOCK_FUNDAMENTALS_WEGE3, PETR4: MOCK_FUNDAMENTALS_PETR4 },
+        json: [MOCK_FUNDAMENTALS_WEGE3, MOCK_FUNDAMENTALS_PETR4],
         status: 200,
       })
     }
