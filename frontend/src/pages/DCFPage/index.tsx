@@ -303,18 +303,11 @@ export function DCFPage() {
   function handleSave() {
     if (!store.ticker || !store.results) return
     const r = store.results
-    const rc = store.resultsClassico
-    const rb = store.resultsBuffett
-
-    const fpC = rc ? rc.fairPrice : null
-    const fpB = rb ? rb.fairPrice : null
-    const valid = [fpC, fpB].filter((p): p is number => p != null && isFinite(p))
-    const fpMin = valid.length ? Math.min(...valid) : r.fairPrice
 
     watchlist.save({
       ticker: store.ticker,
       name: store.companyName || store.ticker,
-      fairPrice: fpMin,
+      fairPrice: r.fairPrice,
       savedAt: new Date().toISOString(),
       projYears: store.projYears,
       dcfMethod: store.dcfMethod,
