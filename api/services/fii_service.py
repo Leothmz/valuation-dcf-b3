@@ -9,6 +9,18 @@ from api.adapters.statusinvest import _normalize_segmento
 
 FII_TTL = QUOTES_TTL  # 5 minutes
 
+# Funds whose ANBIMA/scraper segmento is wrong or too generic for their real
+# strategy (urban income-generating real estate outside the other buckets) —
+# hardcoded until a source classifies "Renda Urbana" reliably on its own.
+_HARDCODED_SEGMENTO: dict[str, str] = {
+    "RBVA11": "Renda Urbana",
+    "GARE11": "Renda Urbana",
+    "TRXF11": "Renda Urbana",
+    "HSRE11": "Renda Urbana",
+    "HGRU11": "Renda Urbana",
+    "CPUR11": "Renda Urbana",
+}
+
 
 def _classify_segmento(ticker: str) -> str | None:
     """
@@ -40,8 +52,10 @@ def get_fii(ticker: str) -> FIIData:
 
     fii = yf_adapter.fetch_fii(ticker)
 
-    # Segmento: investidor10's Tipo de Fundo classification (most reliable source)
-    if fii.segmento is None:
+    # Segmento: hardcoded override first, then investidor10's Tipo de Fundo
+    if hardcoded := _HARDCODED_SEGMENTO.get(ticker.upper()):
+        fii = fii.model_copy(update={"segmento": hardcoded})
+    elif fii.segmento is None:
         segmento = _classify_segmento(ticker)
         if segmento:
             fii = fii.model_copy(update={"segmento": segmento})
