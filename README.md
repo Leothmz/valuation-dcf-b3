@@ -130,9 +130,8 @@ valuation-dcf-b3/
 │   │   ├── pages/           — DCF, Watchlist, Ranking, Análise, FII, Carteira, Home
 │   │   └── api/             — TanStack Query hooks (stocks, FIIs, market, portfolio)
 │   └── dist/                — Build de produção (Netlify aponta aqui)
-├── tests/
-│   ├── js/                  — Vitest vanilla (136 testes)
-│   └── python/              — pytest FastAPI TestClient (149 testes)
+├── e2e/                     — Playwright (testa o frontend via http://localhost:5173)
+├── tests/python/            — pytest FastAPI TestClient
 ├── requirements-api.txt     — fastapi, uvicorn, httpx, diskcache, yfinance
 ├── Dockerfile               — CMD: uvicorn api.main:app
 └── netlify.toml             — base: frontend/, publish: dist
@@ -164,18 +163,20 @@ Todos os endpoints de `/api/*` têm rate limit de 60 req/60s por IP.
 # Python — FastAPI TestClient (pytest)
 python -m pytest tests/python/ -v
 
-# JS vanilla — engines DCF, formatadores, parsers, scores (Vitest)
-npm test
-
-# Frontend React — componentes RTL (Vitest + RTL)
+# Frontend React — engines + componentes RTL (Vitest + RTL)
 cd frontend && npm test
+
+# E2E — fluxos completos no browser (Playwright)
+npm install                      # uma vez, na raiz
+cd frontend && npm run dev &     # precisa do frontend rodando em localhost:5173
+npx playwright test
 ```
 
-| Suite | Ferramenta | Testes |
-|-------|-----------|--------|
-| `tests/python/` | pytest | 149 |
-| `tests/js/` | Vitest | 136 |
-| `frontend/src/` | Vitest + RTL | 36 |
+| Suite | Ferramenta |
+|-------|-----------|
+| `tests/python/` | pytest |
+| `frontend/src/` | Vitest + RTL |
+| `e2e/` | Playwright |
 
 ---
 
