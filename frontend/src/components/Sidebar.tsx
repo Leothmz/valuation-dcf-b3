@@ -20,7 +20,7 @@ const NAV_ITEMS = [
   { to: '/watchlist', icon: Bookmark, label: 'Meus Valuations' },
   { to: '/ranking', icon: Trophy, label: 'Ranking de Ações' },
   { to: '/compare', icon: GitCompare, label: 'Comparar Ações' },
-  { to: '/analise', icon: Activity, label: 'Análise' },
+  { to: '/analise', icon: Activity, label: 'Análise Ações' },
   { to: '/fiis', icon: Building2, label: 'FIIs' },
   { to: '/analise-fii', icon: BarChart2, label: 'Análise FII' },
   { to: '/carteira', icon: Briefcase, label: 'Carteira' },
@@ -34,7 +34,7 @@ interface SidebarProps {
 export function Sidebar({ onOpenSearch }: SidebarProps) {
   return (
     <nav
-      className="group fixed left-0 top-0 h-screen z-40 hidden md:flex flex-col
+      className="group fixed left-0 top-0 h-screen z-50 hidden md:flex flex-col
                  border-r border-border overflow-hidden
                  transition-[width] duration-[220ms] ease-in-out
                  w-[58px] hover:w-56"
