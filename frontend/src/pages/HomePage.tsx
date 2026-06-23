@@ -7,102 +7,115 @@ import {
   Activity,
   Bookmark,
   BarChart2,
-  Database,
-  ShieldCheck,
   Briefcase,
   Heart,
+  GitCompare,
+  BarChart3,
+  BookOpenCheck,
+  Plus,
+  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react'
 
 const FEATURES = [
   {
     icon: Calculator,
     title: 'Calculadora DCF',
-    desc: 'Valuation por Fluxo de Caixa Descontado. Dados preenchidos via yfinance — ajuste ROE, Payout e taxa de desconto e veja o preço teto por ação calculado em tempo real.',
+    desc: 'Valuation por Fluxo de Caixa Descontado, métodos Clássico e Buffett lado a lado, cenários bull/base/bear e exportação em HTML.',
     to: '/dcf',
+    accent: 'cyan',
   },
   {
     icon: Trophy,
     title: 'Ranking de Ações',
-    desc: 'Screening fundamentalista com 5 métodos: Thomaz/GD, Bazin, Graham, Lynch e Joel (Magic Formula). Filter chips configuráveis para DY, P/L, ROE, margem e liquidez.',
+    desc: 'Screening fundamentalista com 5 métodos: Thomaz, Bazin, Graham, Lynch e Joel (Magic Formula). Filtros configuráveis de DY, P/L, ROE, margem, DL/EBITDA e liquidez.',
     to: '/ranking',
+    accent: 'cyan',
+  },
+  {
+    icon: GitCompare,
+    title: 'Comparar Ações',
+    desc: 'Coloque até 3 tickers lado a lado com os 4 métodos de preço teto e destaque automático do melhor indicador em cada linha.',
+    to: '/compare',
+    accent: 'cyan',
   },
   {
     icon: Activity,
-    title: 'Análise Individual',
-    desc: 'Hero com KPIs, indicadores fundamentais com tooltips, 4 valuations teóricos (Bazin, Graham, Lynch, Joel), histórico de lucros e gráfico TradingView interativo.',
+    title: 'Análise de Ações',
+    desc: 'Indicadores fundamentais com tooltip explicativo, os 4 valuations teóricos, histórico de lucros e gráfico de cotação interativo.',
     to: '/analise',
+    accent: 'cyan',
   },
   {
     icon: Bookmark,
-    title: 'Watchlist Ao Vivo',
-    desc: 'Salve o preço teto calculado e acompanhe upside/downside em tempo real com atualização automática a cada 3 minutos.',
+    title: 'Meus Valuations',
+    desc: 'Salve o preço teto calculado, acompanhe upside em tempo real e receba aviso quando o preço entrar na faixa de compra.',
     to: '/watchlist',
-  },
-  {
-    icon: Database,
-    title: 'Dados Automáticos',
-    desc: 'Preço, ROE, payout e lucros via yfinance. Net income de 2021+ vem de scraping silencioso do investidor10.com.br, com fallback automático para yfinance.',
-    to: '/dcf',
+    accent: 'cyan',
   },
   {
     icon: Building2,
     title: 'Ranking de FIIs',
-    desc: 'Screening de ~40 FIIs pelo Método 2em1 (rank DY + rank P/VP). Filtros por segmento, vacância, liquidez e FFO Yield. Badges de perfil por P/VP.',
+    desc: 'Screening pelo método 2em1 (rank DY + rank P/VP), segmentado por Logística, Papel/CRI, Híbrido, Fiagro e mais.',
     to: '/fiis',
+    accent: 'purple',
   },
   {
     icon: BarChart2,
-    title: 'Análise Individual FII',
-    desc: 'Hero com KPIs (DY, P/VP, Vacância, Segmento), indicadores com tooltips, histórico de proventos TTM e gráfico TradingView interativo.',
+    title: 'Análise de FIIs',
+    desc: 'KPIs de DY, P/VP, vacância e segmento, histórico de proventos (yield on cost) e gráfico de cotação.',
     to: '/analise-fii',
+    accent: 'purple',
   },
   {
     icon: Briefcase,
     title: 'Carteira',
-    desc: 'Registre operações de compra e venda, acompanhe P&L por ativo, gerencie renda fixa e importe extratos da B3.',
+    desc: 'Operações, performance por ativo (TWRR), metas de alocação com rebalanceamento, IR/DARF, proventos e criptoativos — tudo num lugar.',
     to: '/carteira',
-  },
-  {
-    icon: ShieldCheck,
-    title: '100% Local',
-    desc: 'Nenhum dado sai do computador. Sem cadastro, sem API key. Um servidor Python leve e um browser moderno é tudo que você precisa.',
-    to: '/dcf',
+    accent: 'green',
   },
 ]
 
 const STEPS = [
   {
     num: '1',
-    title: 'Inicie o servidor local',
-    desc: 'Execute start.bat (Windows) ou python server.py. O servidor sobe na porta 8000 e serve dados via yfinance e investidor10.com.br.',
+    title: 'Busque um ticker',
+    desc: 'Digite o código de uma ação ou FII — preço, histórico de lucros, ROE, payout e proventos são carregados automaticamente.',
   },
   {
     num: '2',
-    title: 'Escolha uma ferramenta',
-    desc: 'Calculadora DCF para valuation individual, Ranking para screening de ações com 5 métodos, FIIs para screening de fundos imobiliários, ou Análise para indicadores aprofundados de um ticker.',
+    title: 'Calcule o preço teto',
+    desc: 'Na Calculadora, ajuste as premissas (ROE, payout, taxa de desconto) e acompanhe o valor intrínseco recalcular em tempo real.',
   },
   {
     num: '3',
-    title: 'Busque um ticker',
-    desc: 'Digite o código da ação — o sistema preenche preço, ROE, payout, lucros históricos e número de ações automaticamente.',
+    title: 'Use o ranking pra triagem',
+    desc: 'Filtre por DY, P/L, ROE, margem e liquidez nos rankings de Ações e FIIs pra reduzir um universo grande a poucos candidatos.',
   },
   {
     num: '4',
-    title: 'Analise e ajuste',
-    desc: 'Na Calculadora, edite as premissas e veja o preço teto. No Ranking, use os filter chips para afinar o screening. Na Análise, explore indicadores e o gráfico TradingView.',
+    title: 'Leia antes de decidir',
+    desc: 'Releases, fatos relevantes e relatórios trimestrais contam a parte que os números isolados não mostram. Essa etapa não é opcional.',
   },
   {
     num: '5',
-    title: 'Salve na Watchlist',
-    desc: 'Clique "Salvar Preço Teto" para adicionar à Watchlist e acompanhar upside/downside com preços atualizados automaticamente a cada 3 minutos.',
+    title: 'Acompanhe na Watchlist',
+    desc: 'Salve o preço teto calculado em Meus Valuations e seja avisado quando o preço entrar na faixa de compra.',
   },
 ]
 
 const TECH_TAGS = [
-  'Python 3', 'yfinance', 'http.server', 'investidor10.com.br',
-  'TradingView', 'React 19', 'TypeScript', 'TanStack Query',
-  'Zustand', 'Lucide Icons', 'Tailwind CSS', 'Vitest', 'pytest',
+  'Python', 'FastAPI', 'yfinance', 'diskcache',
+  'investidor10.com.br', 'statusinvest.com.br', 'fundamentus.com.br',
+  'React 19', 'TypeScript', 'Vite', 'TanStack Query',
+  'Zustand', 'Tailwind CSS', 'Playwright', 'Vitest', 'pytest',
 ]
+
+const ACCENT_STYLES: Record<string, { icon: string; hoverBorder: string }> = {
+  cyan:   { icon: 'text-cyan',   hoverBorder: '#06b6d4' },
+  purple: { icon: 'text-purple', hoverBorder: '#8b5cf6' },
+  green:  { icon: 'text-green',  hoverBorder: '#10b981' },
+}
 
 export function HomePage() {
   return (
@@ -110,7 +123,8 @@ export function HomePage() {
       className="min-h-screen overflow-y-auto"
       style={{
         background:
-          'radial-gradient(ellipse at 30% -20%, rgba(6,182,212,.08) 0%, transparent 60%), #0b0f17',
+          'radial-gradient(ellipse at 30% -20%, rgba(6,182,212,.08) 0%, transparent 60%), ' +
+          'radial-gradient(ellipse at 90% 10%, rgba(168,85,247,.06) 0%, transparent 50%), #0b0f17',
       }}
     >
       <div className="max-w-[860px] mx-auto px-10 py-14">
@@ -148,8 +162,9 @@ export function HomePage() {
           </h1>
 
           <p className="text-[17px] text-text-sec leading-[1.75] max-w-[580px] mb-8">
-            8 ferramentas integradas para análise fundamentalista de ações e FIIs listados na B3.
-            Roda 100% local, sem API key, sem cadastro — do DCF ao ranking por múltiplos métodos.
+            8 ferramentas integradas para análise fundamentalista de ações e FIIs — sem cadastro,
+            sem custo. Do cálculo do preço teto ao ranking por múltiplos métodos, sempre como
+            apoio à sua análise, nunca como substituto dela.
           </p>
 
           <div className="flex gap-3 flex-wrap">
@@ -239,6 +254,64 @@ export function HomePage() {
 
         <hr style={{ border: 'none', borderTop: '1px solid #1e2d42', margin: '52px 0' }} />
 
+        {/* Quantitative x Qualitative */}
+        <section className="mb-14">
+          <h2 className="text-[20px] font-bold mb-1.5">Quantitativo + qualitativo</h2>
+          <p className="text-sm text-text-sec leading-[1.7] mb-6">
+            A Calculadora e os Rankings fazem a parte <strong>quantitativa</strong> da análise —
+            números, fórmulas, comparação entre ativos. Eles filtram um universo grande até um
+            punhado de candidatos. O que vem depois não é opcional.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-stretch">
+            <div
+              className="rounded-[14px] p-5"
+              style={{ background: '#111827', border: '1px solid #1e2d42' }}
+            >
+              <div className="flex items-center gap-2 mb-2.5 text-cyan">
+                <BarChart3 size={20} strokeWidth={1.75} />
+                <span className="text-[14px] font-semibold text-text-base">Quantitativo</span>
+              </div>
+              <p className="text-[13px] text-text-sec leading-[1.65]">
+                Preço teto, múltiplos, DY, ROE, P/L, screening por filtros. Diz <em>o quanto</em>{' '}
+                — preço caro, barato ou justo frente aos números reportados.
+              </p>
+            </div>
+
+            <div className="flex md:flex-col items-center justify-center text-text-muted">
+              <Plus size={18} strokeWidth={2.5} />
+            </div>
+
+            <div
+              className="rounded-[14px] p-5"
+              style={{ background: '#111827', border: '1px solid #1e2d42' }}
+            >
+              <div className="flex items-center gap-2 mb-2.5 text-purple">
+                <BookOpenCheck size={20} strokeWidth={1.75} />
+                <span className="text-[14px] font-semibold text-text-base">Qualitativo</span>
+              </div>
+              <p className="text-[13px] text-text-sec leading-[1.65]">
+                Relatórios trimestrais, fatos relevantes, comunicados, governança, tese do
+                negócio. Diz <em>o porquê</em> — se os números vão se sustentar.
+              </p>
+            </div>
+          </div>
+
+          <div
+            className="flex items-start gap-3 rounded-[14px] p-4 mt-4"
+            style={{ background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.2)' }}
+          >
+            <CheckCircle2 size={18} className="text-green shrink-0 mt-0.5" strokeWidth={1.75} />
+            <p className="text-[13px] text-text-sec leading-[1.6]">
+              Use o ranking pra reduzir centenas de ativos a uma lista curta — e então leia o
+              relatório, o release de resultados e qualquer comunicação relevante de cada um
+              antes de decidir. Pular essa etapa transforma uma ferramenta de análise em aposta.
+            </p>
+          </div>
+        </section>
+
+        <hr style={{ border: 'none', borderTop: '1px solid #1e2d42', margin: '52px 0' }} />
+
         {/* Features grid */}
         <section className="mb-14">
           <h2 className="text-[20px] font-bold mb-1.5">Ferramentas</h2>
@@ -247,33 +320,36 @@ export function HomePage() {
           </p>
 
           <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px,1fr))' }}>
-            {FEATURES.map(({ icon: Icon, title, desc, to }) => (
-              <Link
-                key={title}
-                to={to}
-                className="block rounded-[14px] p-[22px] no-underline
-                           transition-transform hover:-translate-y-0.5"
-                style={{
-                  background: '#111827',
-                  border: '1px solid #1e2d42',
-                }}
-                onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.borderColor = '#06b6d4'
-                  ;(e.currentTarget as HTMLElement).style.boxShadow =
-                    '0 4px 16px rgba(0,0,0,.5)'
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.borderColor = '#1e2d42'
-                  ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
-                }}
-              >
-                <div className="mb-3 text-cyan">
-                  <Icon size={26} strokeWidth={1.5} />
-                </div>
-                <div className="text-[15px] font-semibold mb-1.5 text-text-base">{title}</div>
-                <div className="text-sm text-text-sec leading-[1.65]">{desc}</div>
-              </Link>
-            ))}
+            {FEATURES.map(({ icon: Icon, title, desc, to, accent }) => {
+              const a = ACCENT_STYLES[accent]
+              return (
+                <Link
+                  key={title}
+                  to={to}
+                  className="block rounded-[14px] p-[22px] no-underline
+                             transition-transform hover:-translate-y-0.5"
+                  style={{
+                    background: '#111827',
+                    border: '1px solid #1e2d42',
+                  }}
+                  onMouseEnter={(e) => {
+                    ;(e.currentTarget as HTMLElement).style.borderColor = a.hoverBorder
+                    ;(e.currentTarget as HTMLElement).style.boxShadow =
+                      '0 4px 16px rgba(0,0,0,.5)'
+                  }}
+                  onMouseLeave={(e) => {
+                    ;(e.currentTarget as HTMLElement).style.borderColor = '#1e2d42'
+                    ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
+                  }}
+                >
+                  <div className={`mb-3 ${a.icon}`}>
+                    <Icon size={26} strokeWidth={1.5} />
+                  </div>
+                  <div className="text-[15px] font-semibold mb-1.5 text-text-base">{title}</div>
+                  <div className="text-sm text-text-sec leading-[1.65]">{desc}</div>
+                </Link>
+              )
+            })}
           </div>
         </section>
 
@@ -283,7 +359,7 @@ export function HomePage() {
         <section className="mb-14">
           <h2 className="text-[20px] font-bold mb-1.5">Como usar</h2>
           <p className="text-sm text-text-sec leading-[1.7] mb-6">
-            Em poucos minutos você tem valuation, ranking e análise de qualquer ação da B3.
+            Em poucos minutos você tem valuation, ranking e análise de qualquer ação ou FII da B3.
           </p>
 
           <div className="flex flex-col gap-3">
@@ -315,11 +391,39 @@ export function HomePage() {
 
         <hr style={{ border: 'none', borderTop: '1px solid #1e2d42', margin: '52px 0' }} />
 
+        {/* Data reliability disclaimer */}
+        <section className="mb-14">
+          <div
+            className="rounded-[14px] p-6"
+            style={{ background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.25)' }}
+          >
+            <div className="flex items-center gap-2.5 mb-3">
+              <AlertTriangle size={20} className="text-amber" strokeWidth={1.75} />
+              <h2 className="text-[16px] font-bold text-text-base m-0">Sobre os dados</h2>
+            </div>
+            <p className="text-[13px] text-text-sec leading-[1.7] mb-2.5">
+              Pra continuar gratuito, este site depende de dados de terceiros (yfinance e
+              scrapers de fontes públicas como investidor10, statusinvest e fundamentus) — não há
+              um provedor pago e auditado por trás. O valor base usado na Calculadora (lucro
+              líquido histórico) costuma vir correto, mas campos derivados como{' '}
+              <strong>payout, ROE e número de ações</strong> ocasionalmente apresentam diferenças
+              entre fontes.
+            </p>
+            <p className="text-[13px] text-text-sec leading-[1.7] m-0">
+              <strong>Valide os números antes de usar</strong> — compare com o RI da própria
+              empresa ou outro terminal antes de decidir com base neles. Isto não é recomendação
+              de investimento.
+            </p>
+          </div>
+        </section>
+
+        <hr style={{ border: 'none', borderTop: '1px solid #1e2d42', margin: '52px 0' }} />
+
         {/* Tech stack */}
         <section className="mb-14">
           <h2 className="text-[20px] font-bold mb-1.5">Tecnologias</h2>
           <p className="text-sm text-text-sec leading-[1.7] mb-4">
-            Stack moderno com React 19, TypeScript e Python — sem dependências desnecessárias.
+            Stack moderno com React 19, TypeScript e FastAPI — sem dependências desnecessárias.
           </p>
           <div className="flex gap-2.5 flex-wrap">
             {TECH_TAGS.map((tag) => (
