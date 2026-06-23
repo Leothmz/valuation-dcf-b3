@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { DCFMethod } from '../../stores/dcfStore'
+import { useEscapeToClose } from '../../hooks/useKeyBinding'
 
 interface DCFMethodModalProps {
   open: boolean
@@ -27,6 +28,8 @@ export function DCFMethodModal({ open, currentMethod, onApply, onClose }: DCFMet
   useEffect(() => {
     if (open) setSelected(currentMethod)
   }, [open, currentMethod])
+
+  useEscapeToClose(open, onClose)
 
   if (!open) return null
 

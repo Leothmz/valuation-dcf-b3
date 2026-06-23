@@ -14,6 +14,7 @@ import { DCFResultPanel } from './DCFResultPanel'
 import { DCFTable } from './DCFTable'
 import { DCFMethodModal } from './DCFMethodModal'
 import { buildExportHTML } from '../../utils/exportHTML'
+import { useKeyBinding, useEscapeToClose } from '../../hooks/useKeyBinding'
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)
@@ -364,6 +365,13 @@ export function DCFPage() {
       setIsExporting(false)
     }
   }
+
+  // methodModalOpen's Escape handling lives inside DCFMethodModal itself
+  useEscapeToClose(settingsOpen, () => setSettingsOpen(false))
+
+  useKeyBinding({
+    s: () => { if (store.results) handleSave() },
+  })
 
   const llHint = store.history.length
     ? `Fonte: ${store.history[0].year} · ${store.history[0].value.toLocaleString('pt-BR')}`

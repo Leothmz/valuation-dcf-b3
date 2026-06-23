@@ -616,6 +616,18 @@ describe('classifySaleGains', () => {
     expect(gains[0].gain).toBeCloseTo(1000) // 50 * (120 - 100)
   })
 
+  it('classifies a crypto sale as a single cripto bucket, with no day-trade split even when bought and sold same-day', () => {
+    const ops = [
+      { id: '1', date: '2024-01-01', ticker: 'bitcoin', assetClass: 'cripto' as const, type: 'buy' as const, qty: 1, price: 200000, currency: 'BRL', fees: 0 },
+      { id: '2', date: '2024-06-01', ticker: 'bitcoin', assetClass: 'cripto' as const, type: 'buy' as const, qty: 1, price: 250000, currency: 'BRL', fees: 0 },
+      { id: '3', date: '2024-06-01', ticker: 'bitcoin', assetClass: 'cripto' as const, type: 'sell' as const, qty: 1.5, price: 300000, currency: 'BRL', fees: 0 },
+    ]
+    const gains = classifySaleGains(ops)
+    expect(gains).toHaveLength(1)
+    expect(gains[0]).toMatchObject({ category: 'cripto', qty: 1.5, proceeds: 450000 })
+    expect(gains[0].gain).toBeCloseTo(150000) // 1.5 * (300000 - 200000), using the pre-existing average cost
+  })
+
   it('produces no entries when there are no sells', () => {
     const ops = [
       { id: '1', date: '2024-01-01', ticker: 'WEGE3', assetClass: 'acao_br' as const, type: 'buy' as const, qty: 100, price: 30, currency: 'BRL', fees: 0 },
@@ -681,6 +693,37 @@ describe('buildMonthlyIRSummary', () => {
     expect(summary[0].taxableAmount).toBeCloseTo(200)
     expect(summary[0].rate).toBeCloseTo(0.20)
     expect(summary[0].darfAmount).toBeCloseTo(40)
+  })
+
+  it('applies the R$35k exemption to crypto (not R$20k like swing_acoes)', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-03-10', ticker: 'bitcoin', category: 'cripto', qty: 1, proceeds: 30000, gain: 5000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary[0].exempt).toBe(true)
+    expect(summary[0].taxableAmount).toBe(0)
+  })
+
+  it('taxes crypto at 15% with no partial exemption once proceeds exceed R$35k', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-03-10', ticker: 'bitcoin', category: 'cripto', qty: 1, proceeds: 40000, gain: 5000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    expect(summary[0].exempt).toBe(false)
+    expect(summary[0].taxableAmount).toBeCloseTo(5000)
+    expect(summary[0].rate).toBeCloseTo(0.15)
+    expect(summary[0].darfAmount).toBeCloseTo(750)
+  })
+
+  it('keeps the crypto loss-carry bucket independent of swing_acoes', () => {
+    const gains: SaleGain[] = [
+      { date: '2024-01-15', ticker: 'WEGE3', category: 'swing_acoes', qty: 100, proceeds: 30000, gain: -1000 },
+      { date: '2024-02-15', ticker: 'bitcoin', category: 'cripto', qty: 1, proceeds: 40000, gain: 1000 },
+    ]
+    const summary = buildMonthlyIRSummary(gains)
+    const cryptoMonth = summary.find((s) => s.category === 'cripto')!
+    expect(cryptoMonth.lossCarriedIn).toBe(0)
+    expect(cryptoMonth.taxableAmount).toBeCloseTo(1000)
   })
 
   it('carries a loss forward, partially offsets a later gain, then a later month is exempt without disturbing a zero loss balance', () => {

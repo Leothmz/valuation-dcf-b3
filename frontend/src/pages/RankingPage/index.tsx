@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useRankingStore } from '../../stores'
 import { useBatchFundamentals } from '../../api/stocks'
 import type { FundamentalsData } from '../../api/stocks'
@@ -17,6 +18,8 @@ import type { SectorTab } from './SectorTabs'
 import { FilterChips } from './FilterChips'
 import { RankingTable } from './RankingTable'
 
+const MAX_COMPARE = 3
+
 // Enriched ranked row — includes valuation columns from all 4 methods
 export interface RankedRow extends StockData {
   rank: number
@@ -28,6 +31,7 @@ export interface RankedRow extends StockData {
   joelVal: number | null
   setor?: string
   subsetor?: string
+  isCustom?: boolean
 }
 
 // Deduplicate tickers from the same company — keep the one with highest liquidity
@@ -49,20 +53,51 @@ export function RankingPage() {
     filterConfig,
     weights,
     favorites,
+    customTickers,
     sortCol,
     sortDir,
     setMethod,
     setFilterConfig,
     resetFilterConfig,
     toggleFavorite,
+    addCustomTicker,
+    removeCustomTicker,
     setSortCol,
     setSortDir,
   } = useRankingStore()
 
+  const navigate = useNavigate()
   const [sectorTab, setSectorTab] = useState<SectorTab>('')
   const [search, setSearch] = useState('')
+  const [newTicker, setNewTicker] = useState('')
+  const [compareSelection, setCompareSelection] = useState<string[]>([])
 
-  const { data: rawStocks, isLoading } = useBatchFundamentals(B3_TICKERS)
+  function toggleCompareSelection(ticker: string) {
+    setCompareSelection((prev) =>
+      prev.includes(ticker)
+        ? prev.filter((t) => t !== ticker)
+        : prev.length < MAX_COMPARE ? [...prev, ticker] : prev
+    )
+  }
+
+  function handleCompareGo() {
+    if (compareSelection.length < 2) return
+    navigate(`/compare?tickers=${compareSelection.join(',')}`)
+  }
+
+  const allTickers = useMemo(
+    () => [...B3_TICKERS, ...customTickers.filter((t) => !B3_TICKERS.includes(t))],
+    [customTickers]
+  )
+
+  const { data: rawStocks, isLoading } = useBatchFundamentals(allTickers)
+
+  function handleAddTicker() {
+    const t = newTicker.trim().toUpperCase()
+    if (!t) return
+    addCustomTicker(t)
+    setNewTicker('')
+  }
 
   // Apply full pipeline: filter → deduplicate → score all 4 methods → rank active method
   const rankedRows = useMemo((): RankedRow[] => {
@@ -103,6 +138,7 @@ export function RankingPage() {
       grahamFairPrice: grahamScored[i]?.fairPrice ?? null,
       lynchVal:        (lynchScored[i] as { _peg?: number | null })?._peg ?? null,
       joelVal:         (joelScored[i] as { _earningsYield?: number | null })?._earningsYield ?? null,
+      isCustom:        customTickers.includes(s.ticker),
     }))
 
     // 5. Score with active method
@@ -160,7 +196,7 @@ export function RankingPage() {
     }
 
     return result
-  }, [rawStocks, method, filterConfig, weights, sortCol, sortDir, sectorTab, favorites, search])
+  }, [rawStocks, method, filterConfig, weights, sortCol, sortDir, sectorTab, favorites, search, customTickers])
 
   function handleSort(col: string) {
     if (sortCol === col) {
@@ -188,19 +224,59 @@ export function RankingPage() {
             </h1>
             <p className="text-[13px] text-text-muted mt-1">
               {isLoading
-                ? `Carregando ${B3_TICKERS.length} tickers…`
+                ? `Carregando ${allTickers.length} tickers…`
                 : `${totalLoaded} tickers carregados · exibindo ${showing}`}
             </p>
           </div>
-          {/* Search */}
-          <input
-            type="text"
-            className="rounded-[10px] border border-border bg-bg-3 text-text-base text-[13px] px-[14px] py-[7px] outline-none w-56 placeholder-text-muted focus:border-cyan"
-            placeholder="Buscar ticker ou empresa…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="flex items-center gap-2">
+            {/* Add custom ticker */}
+            <input
+              type="text"
+              className="rounded-[10px] border border-border bg-bg-3 text-text-base text-[13px] px-[14px] py-[7px] outline-none w-36 placeholder-text-muted focus:border-cyan"
+              placeholder="Adicionar ticker…"
+              value={newTicker}
+              onChange={(e) => setNewTicker(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAddTicker() }}
+            />
+            <button
+              onClick={handleAddTicker}
+              className="rounded-[10px] border border-border bg-bg-3 text-text-sec text-[13px] px-3 py-[7px] cursor-pointer hover:border-cyan hover:text-cyan"
+            >
+              + Add
+            </button>
+            {/* Search */}
+            <input
+              type="text"
+              className="rounded-[10px] border border-border bg-bg-3 text-text-base text-[13px] px-[14px] py-[7px] outline-none w-56 placeholder-text-muted focus:border-cyan"
+              placeholder="Buscar ticker ou empresa…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
+
+        {/* Custom tickers chips */}
+        {customTickers.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {customTickers.map((t) => (
+              <span
+                key={t}
+                className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-[6px]"
+                style={{ background: 'var(--color-amber-dim)', color: 'var(--color-amber)', border: '1px solid rgba(245,158,11,.2)' }}
+              >
+                {t}
+                <button
+                  onClick={() => removeCustomTicker(t)}
+                  title={`Remover ${t}`}
+                  className="cursor-pointer leading-none"
+                  style={{ background: 'none', border: 'none', padding: 0, color: 'inherit' }}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Method pills */}
         <MethodPills active={method} onSelect={setMethod} />
@@ -230,9 +306,39 @@ export function RankingPage() {
             sortCol={sortCol}
             sortDir={sortDir}
             onSort={handleSort}
+            onRemoveCustom={removeCustomTicker}
+            compareSelection={compareSelection}
+            onToggleCompare={toggleCompareSelection}
+            maxCompare={MAX_COMPARE}
           />
         </div>
       </div>
+
+      {compareSelection.length > 0 && (
+        <div
+          className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 rounded-[12px] border border-border px-4 py-3"
+          style={{ background: 'var(--color-bg-2)', boxShadow: '0 4px 20px rgba(0,0,0,.6)' }}
+        >
+          <span className="text-[13px] text-text-sec">
+            {compareSelection.length} ticker{compareSelection.length > 1 ? 's' : ''} selecionado{compareSelection.length > 1 ? 's' : ''}
+          </span>
+          <button
+            onClick={handleCompareGo}
+            disabled={compareSelection.length < 2}
+            className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ background: 'var(--color-cyan-dim)', color: 'var(--color-cyan)', border: '1px solid var(--color-border-glow)' }}
+          >
+            Comparar
+          </button>
+          <button
+            onClick={() => setCompareSelection([])}
+            className="text-[13px] text-text-muted cursor-pointer"
+            style={{ background: 'none', border: 'none', padding: 0 }}
+          >
+            Limpar
+          </button>
+        </div>
+      )}
     </div>
   )
 }

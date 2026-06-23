@@ -12,6 +12,10 @@ interface RankingTableProps {
   sortCol: string
   sortDir: 'asc' | 'desc'
   onSort: (col: string) => void
+  onRemoveCustom?: (ticker: string) => void
+  compareSelection?: string[]
+  onToggleCompare?: (ticker: string) => void
+  maxCompare?: number
 }
 
 function fNum(v: number | null | undefined, dec = 1): string {
@@ -55,6 +59,10 @@ export function RankingTable({
   sortCol,
   sortDir,
   onSort,
+  onRemoveCustom,
+  compareSelection = [],
+  onToggleCompare,
+  maxCompare = 3,
 }: RankingTableProps) {
   const navigate = useNavigate()
 
@@ -80,6 +88,9 @@ export function RankingTable({
         <table className="w-full border-collapse" style={{ minWidth: 900 }}>
           <thead>
             <tr>
+              {onToggleCompare && (
+                <th className="bg-bg-2 border-b border-border py-3 px-3 w-8" />
+              )}
               <TH col="rank"    sortCol={sortCol} sortDir={sortDir} onSort={onSort} align="center">#</TH>
               <TH col="ticker"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} align="left">Ticker</TH>
               <TH col="price"   sortCol={sortCol} sortDir={sortDir} onSort={onSort}>Cotação</TH>
@@ -125,6 +136,9 @@ export function RankingTable({
                 : deVal < 0   ? 'var(--color-green)'
                 : 'var(--color-text-sec)'
 
+              const isSelectedForCompare = compareSelection.includes(s.ticker)
+              const compareDisabled = !isSelectedForCompare && compareSelection.length >= maxCompare
+
               return (
                 <tr
                   key={s.ticker}
@@ -134,6 +148,20 @@ export function RankingTable({
                   onMouseLeave={(e) => { e.currentTarget.style.background = '' }}
                   onClick={() => navigate(`/dcf?ticker=${encodeURIComponent(s.ticker)}`)}
                 >
+                  {/* Compare checkbox */}
+                  {onToggleCompare && (
+                    <td className="py-[10px] px-3 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isSelectedForCompare}
+                        disabled={compareDisabled}
+                        onChange={() => onToggleCompare(s.ticker)}
+                        title={compareDisabled ? `Máximo de ${maxCompare} tickers para comparar` : 'Selecionar para comparar'}
+                        className="cursor-pointer disabled:cursor-not-allowed"
+                      />
+                    </td>
+                  )}
+
                   {/* Rank badge */}
                   <td className="py-[10px] px-3 text-center align-middle whitespace-nowrap">
                     <PositionBadge rank={s.rank} />
@@ -160,6 +188,24 @@ export function RankingTable({
                       >
                         {s.ticker}
                       </button>
+                      {s.isCustom && (
+                        <span
+                          className="flex items-center gap-1 text-[10px] font-medium px-[6px] py-[2px] rounded-[5px]"
+                          style={{ background: 'var(--color-amber-dim)', color: 'var(--color-amber)', border: '1px solid rgba(245,158,11,.2)' }}
+                        >
+                          Custom
+                          {onRemoveCustom && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onRemoveCustom(s.ticker) }}
+                              title={`Remover ${s.ticker} dos tickers customizados`}
+                              className="cursor-pointer leading-none"
+                              style={{ background: 'none', border: 'none', padding: 0, color: 'inherit' }}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </span>
+                      )}
                       {sectorLabel && (
                         <span
                           className="text-[10px] font-medium px-[6px] py-[2px] rounded-[5px] hidden md:inline"

@@ -10,6 +10,8 @@ import {
   TrendingUp,
   Briefcase,
   Search,
+  GitCompare,
+  Heart,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -17,10 +19,12 @@ const NAV_ITEMS = [
   { to: '/dcf', icon: Calculator, label: 'Calculadora' },
   { to: '/watchlist', icon: Bookmark, label: 'Meus Valuations' },
   { to: '/ranking', icon: Trophy, label: 'Ranking de Ações' },
+  { to: '/compare', icon: GitCompare, label: 'Comparar Ações' },
   { to: '/analise', icon: Activity, label: 'Análise' },
   { to: '/fiis', icon: Building2, label: 'FIIs' },
   { to: '/analise-fii', icon: BarChart2, label: 'Análise FII' },
   { to: '/carteira', icon: Briefcase, label: 'Carteira' },
+  { to: '/apoiar', icon: Heart, label: 'Apoiar o Projeto' },
 ]
 
 interface SidebarProps {
