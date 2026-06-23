@@ -9,6 +9,7 @@ import { FIIRankingPage } from './pages/FIIRankingPage'
 import { AnaliseFIIPage } from './pages/AnaliseFIIPage'
 import { CarteiraPage } from './pages/CarteiraPage'
 import { ComparePage } from './pages/ComparePage'
+import { SupportPage } from './pages/SupportPage'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/fiis" element={<FIIRankingPage />} />
         <Route path="/analise-fii" element={<AnaliseFIIPage />} />
         <Route path="/carteira" element={<CarteiraPage />} />
+        <Route path="/apoiar" element={<SupportPage />} />
       </Routes>
     </Layout>
   )
