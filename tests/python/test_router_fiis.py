@@ -68,3 +68,30 @@ def test_fii_nullable_fields(client):
     data = resp.json()
     assert data["ffoYield"] is None
     assert data["segmento"] is None
+
+
+def test_batch_fii_returns_list(client, sample_fii):
+    with patch("api.routers.fiis.get_fii", return_value=sample_fii):
+        resp = client.get("/api/batch/fii?tickers=HGLG11,MXRF11")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+    assert len(data) == 2
+
+
+def test_batch_fii_empty_tickers(client):
+    resp = client.get("/api/batch/fii?tickers=")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+def test_batch_fii_skips_errors(client, sample_fii):
+    def side_effect(ticker):
+        if ticker == "HGLG11":
+            return sample_fii
+        raise ValueError("NOT_FOUND")
+
+    with patch("api.routers.fiis.get_fii", side_effect=side_effect):
+        resp = client.get("/api/batch/fii?tickers=HGLG11,INVALID")
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
