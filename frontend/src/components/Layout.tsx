@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Heart } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { BottomNav } from './BottomNav'
 import { NotificationProvider } from './Notification'
@@ -36,11 +38,43 @@ export function Layout({ children }: LayoutProps) {
       <main className="flex-1 ml-0 md:ml-[58px] min-h-screen pb-14 md:pb-0">
         {children}
       </main>
+      <SupportButton />
       <BottomNav />
       <NotificationProvider />
       <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <ShortcutsPanel isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
       <WelcomeModal isOpen={isWelcomeOpen} onDismiss={dismissWelcome} />
     </div>
+  )
+}
+
+function SupportButton() {
+  return (
+    <Link
+      to="/apoiar"
+      aria-label="Apoiar o Projeto"
+      title="Apoiar o Projeto"
+      className="group/support fixed top-4 right-4 md:top-5 md:right-6 z-40
+                 inline-flex items-center gap-2 rounded-full
+                 px-2.5 sm:px-3.5 py-2 text-[13px] font-semibold text-text-base
+                 border border-[rgba(244,63,94,0.35)] hover:border-[rgba(244,63,94,0.6)]
+                 backdrop-blur-md transition-[transform,box-shadow,border-color]
+                 duration-200 hover:-translate-y-px
+                 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f43f5e]"
+      style={{
+        background:
+          'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 40%), linear-gradient(120deg, rgba(244,63,94,0.16), rgba(139,92,246,0.16))',
+        boxShadow:
+          '0 0 0 1px rgba(0,0,0,0.2) inset, 0 8px 24px -12px rgba(244,63,94,0.55)',
+      }}
+    >
+      <Heart
+        size={15}
+        className="animate-heartbeat shrink-0 text-[#f43f5e]"
+        fill="currentColor"
+        style={{ filter: 'drop-shadow(0 0 6px rgba(244,63,94,0.6))' }}
+      />
+      <span className="hidden sm:inline whitespace-nowrap">Apoiar o Projeto</span>
+    </Link>
   )
 }
