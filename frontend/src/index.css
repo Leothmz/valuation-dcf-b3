@@ -69,4 +69,15 @@
     border-radius: 6px;
     color: transparent !important;
   }
+
+  /* Heartbeat pulse for the "Apoiar o Projeto" button */
+  @keyframes heartbeat {
+    0%, 88%, 100% { transform: scale(1); }
+    92% { transform: scale(1.22); }
+    96% { transform: scale(1.06); }
+  }
+  .animate-heartbeat { animation: heartbeat 2.4s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-heartbeat { animation: none; }
+  }
 }

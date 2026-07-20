@@ -1,6 +1,6 @@
 [build]
   base = "frontend"
-  command = "npm ci && npm run build"
+  command = "npm install --no-audit --no-fund && npm run build"
   publish = "dist"
 
 [build.environment]
