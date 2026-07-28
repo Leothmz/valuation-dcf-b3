@@ -114,6 +114,13 @@ describe('DCFResultPanel', () => {
     expect(onSave).toHaveBeenCalledTimes(1)
   })
 
+  it('calls onSave when the mobile "Salvar preço teto" button is clicked (Step 6)', () => {
+    const onSave = vi.fn()
+    renderPanel({ results: baseResult, ticker: 'PETR4', onSave })
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar preço teto' }))
+    expect(onSave).toHaveBeenCalledTimes(1)
+  })
+
   it('shows current price from assumptions', () => {
     renderPanel({ results: baseResult, assumptions: { ...baseAssumptions, price: 25.5 } })
     const matches = screen.getAllByText(/R\$\s*25/)

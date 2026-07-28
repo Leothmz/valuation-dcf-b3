@@ -395,6 +395,40 @@ export function DCFPage() {
     netIncomeHistory: [],
   } as StockQuote : null)
 
+  // Içados para fora do ternário de ordem mobile/desktop — evita duplicar o
+  // bloco de props em cada ramo. São elementos React (valores); guardá-los numa
+  // const não muda onde/quando eles montam.
+  const resultPanel = (
+    <DCFResultPanel
+      results={store.results}
+      resultsClassico={store.resultsClassico}
+      resultsBuffett={store.resultsBuffett}
+      dcfMethod={store.dcfMethod}
+      assumptions={store.assumptions}
+      ticker={store.ticker}
+      onSave={handleSave}
+      isSaved={isSaved}
+      onOpenMethodModal={() => setMethodModalOpen(true)}
+      scenarios={store.scenarios}
+      scenarioResults={scenarioResults}
+      onToggleScenarios={(g) => store.toggleScenarios(g)}
+      onSetScenario={(key, value) => store.setScenario(key, value)}
+      onExportHTML={handleExportHTML}
+      isExporting={isExporting}
+    />
+  )
+
+  const inputPanel = (
+    <DCFInputPanel
+      assumptions={store.assumptions}
+      overrides={store.overrides}
+      apiVals={store.apiVals}
+      llHint={llHint}
+      onAssumptionChange={handleAssumptionChange}
+      onRestore={handleRestore}
+    />
+  )
+
   return (
     <div className="flex flex-col min-h-screen md:h-screen md:overflow-hidden">
       {/* Header */}
@@ -440,8 +474,6 @@ export function DCFPage() {
               vem ANTES das premissas (que viram acordeão recolhido); no desktop a
               ordem original é preservada (inputs antes do resultado). */}
           <div className="bg-bg-2 border-b md:border-b-0 md:border-r border-border md:overflow-y-auto p-4 md:p-5">
-            <DCFCompanyHeader data={headerData} isLoading={isFetching} />
-
             <button
               onClick={() => setPremissasOpen((o) => !o)}
               className="md:hidden w-full flex items-center justify-between min-h-[44px]
@@ -472,61 +504,15 @@ export function DCFPage() {
 
             {isMobile ? (
               <>
-                <DCFResultPanel
-                  results={store.results}
-                  resultsClassico={store.resultsClassico}
-                  resultsBuffett={store.resultsBuffett}
-                  dcfMethod={store.dcfMethod}
-                  assumptions={store.assumptions}
-                  ticker={store.ticker}
-                  onSave={handleSave}
-                  isSaved={isSaved}
-                  onOpenMethodModal={() => setMethodModalOpen(true)}
-                  scenarios={store.scenarios}
-                  scenarioResults={scenarioResults}
-                  onToggleScenarios={(g) => store.toggleScenarios(g)}
-                  onSetScenario={(key, value) => store.setScenario(key, value)}
-                  onExportHTML={handleExportHTML}
-                  isExporting={isExporting}
-                />
-                {showPremissas && (
-                  <DCFInputPanel
-                    assumptions={store.assumptions}
-                    overrides={store.overrides}
-                    apiVals={store.apiVals}
-                    llHint={llHint}
-                    onAssumptionChange={handleAssumptionChange}
-                    onRestore={handleRestore}
-                  />
-                )}
+                <DCFCompanyHeader data={headerData} isLoading={isFetching} />
+                {resultPanel}
+                {showPremissas && inputPanel}
               </>
             ) : (
               <>
-                <DCFInputPanel
-                  assumptions={store.assumptions}
-                  overrides={store.overrides}
-                  apiVals={store.apiVals}
-                  llHint={llHint}
-                  onAssumptionChange={handleAssumptionChange}
-                  onRestore={handleRestore}
-                />
-                <DCFResultPanel
-                  results={store.results}
-                  resultsClassico={store.resultsClassico}
-                  resultsBuffett={store.resultsBuffett}
-                  dcfMethod={store.dcfMethod}
-                  assumptions={store.assumptions}
-                  ticker={store.ticker}
-                  onSave={handleSave}
-                  isSaved={isSaved}
-                  onOpenMethodModal={() => setMethodModalOpen(true)}
-                  scenarios={store.scenarios}
-                  scenarioResults={scenarioResults}
-                  onToggleScenarios={(g) => store.toggleScenarios(g)}
-                  onSetScenario={(key, value) => store.setScenario(key, value)}
-                  onExportHTML={handleExportHTML}
-                  isExporting={isExporting}
-                />
+                <DCFCompanyHeader data={headerData} isLoading={isFetching} />
+                {inputPanel}
+                {resultPanel}
               </>
             )}
           </div>
