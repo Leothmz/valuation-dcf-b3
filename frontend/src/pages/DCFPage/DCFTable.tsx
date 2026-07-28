@@ -101,8 +101,8 @@ export function DCFTable({
                   {['Ano', 'Lucro Líquido', 'Crescimento', 'VPL'].map((h, i) => (
                     <th
                       key={h}
-                      className={`bg-bg-2 border-b border-border text-text-muted text-[11px]
-                                  font-semibold tracking-[0.1em] px-4 py-[11px] uppercase
+                      className={`bg-bg-2 border-b border-border text-text-muted text-[9px] md:text-[11px]
+                                  font-semibold tracking-[0.1em] px-2 py-2 md:px-4 md:py-[11px] uppercase
                                   ${i === 0 ? 'text-left' : 'text-right'}`}
                     >
                       {h}
@@ -120,9 +120,9 @@ export function DCFTable({
                     return (
                       <tr key={h.year} className="border-b border-border-muted text-text-sec
                                                    hover:bg-[rgba(6,182,212,0.03)]">
-                        <td className="font-ui text-[13px] font-medium px-4 py-2.5">{h.year}</td>
-                        <td className="font-mono text-[13px] px-4 py-2.5 text-right">{fShort(h.value)}</td>
-                        <td className="font-mono text-[13px] px-4 py-2.5 text-right">
+                        <td className="font-ui text-[11px] md:text-[13px] font-medium px-2 py-2 md:px-4 md:py-2.5">{h.year}</td>
+                        <td className="font-mono text-[11px] md:text-[13px] px-2 py-2 md:px-4 md:py-2.5 text-right">{fShort(h.value)}</td>
+                        <td className="font-mono text-[11px] md:text-[13px] px-2 py-2 md:px-4 md:py-2.5 text-right">
                           {g != null
                             ? <span className={g >= 0 ? 'text-green' : 'text-red'}>
                                 {g >= 0 ? '+' : ''}{fPct(g)}
@@ -130,7 +130,7 @@ export function DCFTable({
                             : <span className="text-text-muted">—</span>
                           }
                         </td>
-                        <td className="font-mono text-[13px] px-4 py-2.5 text-right text-text-muted">–</td>
+                        <td className="font-mono text-[11px] md:text-[13px] px-2 py-2 md:px-4 md:py-2.5 text-right text-text-muted">–</td>
                       </tr>
                     )
                   })
@@ -146,14 +146,14 @@ export function DCFTable({
                     <tr key={`base-${base.year}`}
                         className="border-b border-border-muted bg-[rgba(6,182,212,0.05)]
                                    border-l-2 border-l-cyan hover:bg-[rgba(6,182,212,0.07)]">
-                      <td className="font-ui text-[13px] font-medium px-4 py-2.5 text-cyan">
+                      <td className="font-ui text-[11px] md:text-[13px] font-medium px-2 py-2 md:px-4 md:py-2.5 text-cyan">
                         {base.year}{' '}
                         <span className="text-[11px] text-text-muted">(base)</span>
                       </td>
-                      <td className="font-mono text-[13px] px-4 py-2.5 text-right text-cyan">
+                      <td className="font-mono text-[11px] md:text-[13px] px-2 py-2 md:px-4 md:py-2.5 text-right text-cyan">
                         {fShort(baseLL)}
                       </td>
-                      <td className="font-mono text-[13px] px-4 py-2.5 text-right">
+                      <td className="font-mono text-[11px] md:text-[13px] px-2 py-2 md:px-4 md:py-2.5 text-right">
                         {baseG != null
                           ? <span className={baseG >= 0 ? 'text-green' : 'text-red'}>
                               {baseG >= 0 ? '+' : ''}{fPct(baseG)}
@@ -161,7 +161,7 @@ export function DCFTable({
                           : <span className="text-text-muted">—</span>
                         }
                       </td>
-                      <td className="font-mono text-[13px] px-4 py-2.5 text-right text-text-muted">–</td>
+                      <td className="font-mono text-[11px] md:text-[13px] px-2 py-2 md:px-4 md:py-2.5 text-right text-text-muted">–</td>
                     </tr>
                   )
                 })()}
@@ -177,7 +177,7 @@ export function DCFTable({
                   return (
                     <tr key={pv.year}
                         className="border-b border-border-muted hover:bg-[rgba(6,182,212,0.03)]">
-                      <td className="font-ui text-[13px] font-medium px-4 py-2.5">{pv.year}</td>
+                      <td className="font-ui text-[11px] md:text-[13px] font-medium px-2 py-2 md:px-4 md:py-2.5">{pv.year}</td>
                       <td className="px-4 py-[5px] text-right">
                         <div className="flex items-center justify-end gap-1">
                           <span className="text-[12px] text-text-muted">R$</span>
@@ -210,7 +210,7 @@ export function DCFTable({
                           <span className="text-[12px] text-text-muted">%</span>
                         </div>
                       </td>
-                      <td className="font-mono text-[13px] px-4 py-2.5 text-right">
+                      <td className="font-mono text-[11px] md:text-[13px] px-2 py-2 md:px-4 md:py-2.5 text-right">
                         {fShort(pv.pv)}
                       </td>
                     </tr>
@@ -219,19 +219,19 @@ export function DCFTable({
 
                 {/* Terminal value row */}
                 <tr className="border-t border-border bg-bg-2">
-                  <td className="font-ui text-[13px] font-medium px-4 py-2.5">Perpetuidade</td>
-                  <td className="font-mono text-[13px] px-4 py-2.5 text-right">{fShort(r.tv)}</td>
-                  <td className="font-mono text-[13px] px-4 py-2.5 text-right text-green">
+                  <td className="font-ui text-[11px] md:text-[13px] font-medium px-2 py-2 md:px-4 md:py-2.5">Perpetuidade</td>
+                  <td className="font-mono text-[11px] md:text-[13px] px-2 py-2 md:px-4 md:py-2.5 text-right">{fShort(r.tv)}</td>
+                  <td className="font-mono text-[11px] md:text-[13px] px-2 py-2 md:px-4 md:py-2.5 text-right text-green">
                     {fPct(assumptions.perp, 1)}
                   </td>
-                  <td className="font-mono text-[13px] px-4 py-2.5 text-right">{fShort(r.pvTV)}</td>
+                  <td className="font-mono text-[11px] md:text-[13px] px-2 py-2 md:px-4 md:py-2.5 text-right">{fShort(r.pvTV)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           {/* Summary cards */}
-          <div className="grid grid-cols-3 gap-2.5 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-4">
             <SumCard label="VPL dos Fluxos" value={fShort(r.sumPV)} />
             <SumCard label="VPL da Perpetuidade" value={fShort(r.pvTV)} />
             <SumCard label="Valor Total da Empresa" value={fShort(r.ev)} highlight />
@@ -258,6 +258,7 @@ function EditableCell({ value, isOverridden, activeInputs, onChange, onCommit, c
     <input
       ref={ref}
       type="text"
+      inputMode="decimal"
       defaultValue={value}
       key={value}
       onFocus={() => { if (ref.current) activeInputs.current?.add(ref.current) }}
@@ -268,7 +269,7 @@ function EditableCell({ value, isOverridden, activeInputs, onChange, onCommit, c
         }
       }}
       onChange={(e) => onChange(e.target.value)}
-      className={`bg-transparent border rounded-[6px] font-mono text-[13px]
+      className={`bg-transparent border rounded-[6px] font-mono text-[16px] md:text-[13px]
                   px-[6px] py-1 text-right min-w-[4ch] outline-none
                   hover:border-border hover:bg-bg-3
                   focus:border-cyan focus:bg-bg-3

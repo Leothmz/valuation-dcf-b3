@@ -236,6 +236,22 @@ export function DCFResultPanel({
           )}
         </div>
       )}
+
+      {/* Botão de salvar mobile — reusa o mesmo handler `onSave` (o atalho `S`
+          em DCFPage/index.tsx chama esse mesmo handleSave via essa prop). */}
+      {showSave && (
+        <button
+          onClick={onSave}
+          className="md:hidden w-full min-h-[48px] mt-4 rounded-[12px] text-[14px] font-bold cursor-pointer"
+          style={{
+            background: 'rgba(6,182,212,.15)',
+            border: '1px solid rgba(6,182,212,.4)',
+            color: 'var(--color-cyan)',
+          }}
+        >
+          Salvar preço teto
+        </button>
+      )}
     </div>
   )
 }

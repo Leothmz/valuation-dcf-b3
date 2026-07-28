@@ -85,7 +85,9 @@ describe('DCFResultPanel', () => {
 
   it('shows save button when ticker + valid results', () => {
     renderPanel({ results: baseResult, ticker: 'PETR4' })
-    expect(screen.getByText(/Salvar Preço Teto/i)).toBeInTheDocument()
+    // getByRole com nome exato: distingue do botão "Salvar preço teto" (md:hidden,
+    // Step 6 mobile) que também consome onSave e reaproveita texto parecido.
+    expect(screen.getByRole('button', { name: '＋ Salvar Preço Teto' })).toBeInTheDocument()
   })
 
   it('shows "Atualizar" text when isSaved=true', () => {
@@ -108,7 +110,7 @@ describe('DCFResultPanel', () => {
   it('calls onSave when save button clicked', () => {
     const onSave = vi.fn()
     renderPanel({ results: baseResult, ticker: 'PETR4', onSave })
-    fireEvent.click(screen.getByText(/Salvar Preço Teto/i))
+    fireEvent.click(screen.getByRole('button', { name: '＋ Salvar Preço Teto' }))
     expect(onSave).toHaveBeenCalledTimes(1)
   })
 
