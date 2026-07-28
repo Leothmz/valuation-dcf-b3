@@ -16,16 +16,36 @@ interface ScrollableTabsProps<T extends string> {
 export function ScrollableTabs<T extends string>({
   tabs, active, onSelect, ariaLabel,
 }: ScrollableTabsProps<T>) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const activeRef = useRef<HTMLButtonElement>(null)
 
-  // Ao trocar de aba por swipe/teclado, a pill ativa pode estar fora de vista.
+  // Ao trocar de aba, garante que a pill ativa fica visível na horizontal.
+  // Usa scrollLeft em vez de scrollIntoView para não afetar o scroll vertical da página.
   useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    const container = containerRef.current
+    const activeButton = activeRef.current
+
+    if (container && activeButton) {
+      const containerWidth = container.clientWidth
+      const scrollLeft = container.scrollLeft
+      const buttonLeft = activeButton.offsetLeft
+      const buttonRight = buttonLeft + activeButton.clientWidth
+
+      // Se o botão está à esquerda da área visível, scroll para esquerda
+      if (buttonLeft < scrollLeft) {
+        container.scrollLeft = buttonLeft
+      }
+      // Se o botão está à direita da área visível, scroll para direita
+      else if (buttonRight > scrollLeft + containerWidth) {
+        container.scrollLeft = buttonRight - containerWidth
+      }
+    }
   }, [active])
 
   return (
     <div className="relative">
       <div
+        ref={containerRef}
         role="tablist"
         aria-label={ariaLabel}
         className="flex gap-2 overflow-x-auto snap-x snap-mandatory
@@ -41,7 +61,7 @@ export function ScrollableTabs<T extends string>({
               role="tab"
               aria-selected={isActive}
               onClick={() => onSelect(key)}
-              className="snap-start shrink-0 min-h-[44px] px-4 rounded-full
+              className="snap-start shrink-0 min-h-[44px] min-w-[44px] px-4 rounded-full
                          text-[13px] font-semibold cursor-pointer border transition-all
                          whitespace-nowrap"
               style={{
