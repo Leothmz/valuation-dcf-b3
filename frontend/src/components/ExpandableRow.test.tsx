@@ -40,4 +40,10 @@ describe('ExpandableRow', () => {
     fireEvent.keyDown(screen.getByRole('button', { name: 'PETR4' }), { key: 'Enter' })
     expect(screen.getByText('detalhe')).toBeInTheDocument()
   })
+
+  it('expande com Space no teclado', () => {
+    setup()
+    fireEvent.keyDown(screen.getByRole('button', { name: 'PETR4' }), { key: ' ' })
+    expect(screen.getByText('detalhe')).toBeInTheDocument()
+  })
 })
