@@ -235,14 +235,14 @@ export function HomePage() {
             ].map(([lbl, eq, val], i, arr) => (
               <div
                 key={lbl}
-                className="flex items-baseline gap-3 py-2.5"
+                className="flex flex-wrap items-baseline gap-3 py-2.5"
                 style={{
                   borderBottom: i < arr.length - 1 ? '1px solid #151e2d' : 'none',
                   fontFamily: 'JetBrains Mono, Cascadia Code, Fira Code, monospace',
                   fontSize: '13px',
                 }}
               >
-                <span className="text-text-sec min-w-[200px]" style={{ fontFamily: 'Inter, system-ui, sans-serif', fontSize: '14px' }}>
+                <span className="text-text-sec min-w-[140px] md:min-w-[200px]" style={{ fontFamily: 'Inter, system-ui, sans-serif', fontSize: '14px' }}>
                   {lbl}
                 </span>
                 <span className="text-cyan font-bold">{eq}</span>
@@ -459,6 +459,7 @@ export function HomePage() {
           <Link
             to="/apoiar"
             className="inline-flex items-center gap-1.5 px-[18px] py-2.5 rounded-[12px]
+                       min-h-[44px] md:min-h-0
                        text-sm font-semibold text-[#060910] no-underline shrink-0"
             style={{
               background: 'linear-gradient(135deg,#06b6d4 0%,#0891b2 100%)',
