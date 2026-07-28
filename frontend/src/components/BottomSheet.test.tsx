@@ -2,6 +2,10 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { BottomSheet } from './BottomSheet'
 
 describe('BottomSheet', () => {
+  afterEach(() => {
+    document.body.style.overflow = ''
+  })
+
   it('não renderiza nada quando fechado', () => {
     render(<BottomSheet isOpen={false} onClose={() => {}} title="Filtros">conteúdo</BottomSheet>)
     expect(screen.queryByText('conteúdo')).not.toBeInTheDocument()
@@ -34,5 +38,13 @@ describe('BottomSheet', () => {
       </BottomSheet>
     )
     expect(screen.getByRole('button', { name: 'Aplicar' })).toBeInTheDocument()
+  })
+
+  it('trava o scroll do body enquanto aberto e restaura ao fechar', () => {
+    document.body.style.overflow = 'auto'
+    const { rerender } = render(<BottomSheet isOpen onClose={() => {}} title="Filtros">c</BottomSheet>)
+    expect(document.body.style.overflow).toBe('hidden')
+    rerender(<BottomSheet isOpen={false} onClose={() => {}} title="Filtros">c</BottomSheet>)
+    expect(document.body.style.overflow).toBe('auto')
   })
 })
