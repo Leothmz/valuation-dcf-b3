@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Heart } from 'lucide-react'
 import { Sidebar } from './Sidebar'
@@ -52,6 +52,12 @@ export function Layout({ children }: LayoutProps) {
 
   useEscapeToClose(isWelcomeOpen, dismissWelcome)
   useEscapeToClose(isDrawerOpen, () => setIsDrawerOpen(false))
+
+  // Fecha a gaveta ao trocar de rota — cobre clique em NavLink e qualquer
+  // navegação futura que não venha de um clique direto no link.
+  useEffect(() => {
+    setIsDrawerOpen(false)
+  }, [pathname])
 
   return (
     <div className="flex min-h-screen bg-bg-1">

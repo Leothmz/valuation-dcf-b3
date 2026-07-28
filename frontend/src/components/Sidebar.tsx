@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useIsMobile } from '../hooks/useMediaQuery'
 import {
   Home,
   Calculator,
@@ -35,6 +36,12 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onOpenSearch, isDrawerOpen = false, onCloseDrawer }: SidebarProps) {
+  const isMobile = useIsMobile()
+  // No mobile, gaveta fechada = nav deslocada pra fora da viewport (-translate-x-full),
+  // mas continuava no DOM e no tab order antes desta correção: usuário de teclado/leitor
+  // de tela tabulava por 10 links invisíveis antes de chegar ao conteúdo da página.
+  const isHiddenDrawer = isMobile && !isDrawerOpen
+
   return (
     <>
       {/* Scrim da gaveta — só no mobile, só quando aberta */}
@@ -48,6 +55,8 @@ export function Sidebar({ onOpenSearch, isDrawerOpen = false, onCloseDrawer }: S
       )}
 
       <nav
+        aria-hidden={isHiddenDrawer || undefined}
+        inert={isHiddenDrawer || undefined}
         className={`group fixed left-0 top-0 h-screen z-50 flex flex-col
                     border-r border-border overflow-hidden
                     transition-[width,transform] duration-[220ms] ease-in-out

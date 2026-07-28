@@ -90,6 +90,22 @@ describe('Layout mobile drawer', () => {
     fireEvent.click(screen.getByTestId('sidebar-scrim'))
     expect(screen.queryByTestId('sidebar-scrim')).not.toBeInTheDocument()
   })
+
+  it('fecha a gaveta ao navegar para outra rota', () => {
+    renderLayout()
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
+    expect(screen.getByTestId('sidebar-scrim')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('link', { name: 'Calculadora' }))
+    expect(screen.queryByTestId('sidebar-scrim')).not.toBeInTheDocument()
+  })
+
+  it('fecha a gaveta ao pressionar Escape', () => {
+    renderLayout()
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
+    expect(screen.getByTestId('sidebar-scrim')).toBeInTheDocument()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByTestId('sidebar-scrim')).not.toBeInTheDocument()
+  })
 })
 
 describe('Layout route title', () => {
