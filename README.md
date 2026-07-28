@@ -24,7 +24,7 @@ Informe um ticker, ajuste as premissas e obtenha o **preço teto (valor intríns
 - **Calculadora DCF** — Engine DCF completa com projeção por 3 ou 5 anos + Gordon Growth Model; tabela editável ano a ano
 - **Watchlist** — acompanhe valuations salvos com cotações ao vivo e upside calculado
 - **Ranking de Ações** — screening de ~130 tickers com 5 métodos: Thomaz/GD, Bazin, Graham, Peter Lynch, Joel Greenblatt
-- **Ranking de FIIs** — Método 2em1 (rank DY + rank P/VP), filtros de segmento, vacância, liquidez, FFO Yield
+- **Ranking de FIIs** — Rank Thomaz FII (rank DY + rank P/VP), filtros de segmento, vacância, liquidez, FFO Yield
 - **Análise Individual** — hero com KPIs, indicadores com tooltips, valuations teóricos, histórico de LL, gráfico TradingView
 - **Análise de FII** — indicadores de rentabilidade/imóveis/mercado, histórico de proventos TTM
 - **Carteira** — rastreamento de posições com P&L ao vivo, histórico gráfico, log de operações, proventos e renda fixa

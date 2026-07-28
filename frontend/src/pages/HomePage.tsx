@@ -56,7 +56,7 @@ const FEATURES = [
   {
     icon: Building2,
     title: 'Ranking de FIIs',
-    desc: 'Screening pelo método 2em1 (rank DY + rank P/VP), segmentado por Logística, Papel/CRI, Híbrido, Fiagro e mais.',
+    desc: 'Screening pelo Rank Thomaz FII (rank DY + rank P/VP), segmentado por Logística, Papel/CRI, Híbrido, Fiagro e mais.',
     to: '/fiis',
     accent: 'purple',
   },

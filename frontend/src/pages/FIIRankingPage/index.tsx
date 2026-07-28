@@ -3,7 +3,7 @@ import { Building2 } from 'lucide-react'
 import { useBatchFIIs } from '../../api/fiis'
 import type { FIIData as ApiFIIData } from '../../api/fiis'
 import { B3_FII_TICKERS } from '../../data/b3Tickers'
-import { calc2em1Score } from '../../engines/fii-scores'
+import { calcThomazFIIScore } from '../../engines/fii-scores'
 import type { FIIData as EngineFIIData, RankedFII } from '../../engines/fii-scores'
 import { FIISegmentTabs } from './FIISegmentTabs'
 import { FIIFilterChips } from './FIIFilterChips'
@@ -65,7 +65,7 @@ export function FIIRankingPage() {
     if (!rawFIIs || rawFIIs.length === 0) return []
     const filtered = applyFilters(rawFIIs, filterConfig, segment)
     // Cast api FIIData to engine FIIData — structurally compatible via index signature
-    return calc2em1Score(filtered as unknown as EngineFIIData[])
+    return calcThomazFIIScore(filtered as unknown as EngineFIIData[])
   }, [rawFIIs, filterConfig, segment, refreshKey])
 
   // Hero stats
@@ -119,7 +119,7 @@ export function FIIRankingPage() {
           </div>
           <div>
             <div className="text-[24px] font-extrabold">Ranking de FIIs · B3</div>
-            <div className="text-[13px] text-text-sec mt-0.5">Método 2em1 — rank DY + rank P/VP</div>
+            <div className="text-[13px] text-text-sec mt-0.5">Rank Thomaz FII — rank DY + rank P/VP</div>
           </div>
         </div>
         <div className="flex gap-4 flex-wrap">

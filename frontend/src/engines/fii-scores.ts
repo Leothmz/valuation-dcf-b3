@@ -11,7 +11,7 @@ export interface FIIData {
 export interface RankedFII extends FIIData {
   _rankDY: number
   _rankPVP: number
-  _score2em1: number
+  _scoreThomazFII: number
 }
 
 function _rankOrdinal(fiis: FIIData[], key: string, dir: 'asc' | 'desc'): Record<string, number> {
@@ -26,7 +26,7 @@ function _rankOrdinal(fiis: FIIData[], key: string, dir: 'asc' | 'desc'): Record
   return map;
 }
 
-export function calc2em1Score(fiis: FIIData[]): RankedFII[] {
+export function calcThomazFIIScore(fiis: FIIData[]): RankedFII[] {
   if (fiis.length === 0) return [];
   const n   = fiis.length;
   const bad = n + 1;
@@ -37,11 +37,11 @@ export function calc2em1Score(fiis: FIIData[]): RankedFII[] {
   const scored = fiis.map(f => {
     const _rankDY    = rankDY[f.ticker]  ?? bad;
     const _rankPVP   = rankPVP[f.ticker] ?? bad;
-    const _score2em1 = _rankDY + _rankPVP;
-    return { ...f, _rankDY, _rankPVP, _score2em1 };
+    const _scoreThomazFII = _rankDY + _rankPVP;
+    return { ...f, _rankDY, _rankPVP, _scoreThomazFII };
   });
 
-  return scored.sort((a, b) => a._score2em1 - b._score2em1);
+  return scored.sort((a, b) => a._scoreThomazFII - b._scoreThomazFII);
 }
 
 export function classifyPerfil(pvp: number | null | undefined): FIIPerfil | null {
