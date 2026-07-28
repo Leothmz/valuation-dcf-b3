@@ -45,8 +45,8 @@ export function BottomNav() {
           <button
             onClick={() => setIsRankingOpen((open) => !open)}
             aria-label="Ranking"
-            aria-haspopup="menu"
             aria-expanded={isRankingOpen}
+            aria-controls="ranking-nav-popover"
             aria-current={isRankingActive ? 'page' : undefined}
             className={`${ITEM_CLASS} cursor-pointer ${
               isRankingActive || isRankingOpen ? 'text-cyan' : 'text-text-muted'

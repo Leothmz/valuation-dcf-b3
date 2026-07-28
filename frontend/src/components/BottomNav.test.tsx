@@ -45,6 +45,11 @@ describe('BottomNav', () => {
     expect(screen.getByRole('button', { name: 'Ranking' })).toHaveAttribute('aria-current', 'page')
   })
 
+  it('marca Ranking como ativo em /ranking', () => {
+    renderNav('/ranking')
+    expect(screen.getByRole('button', { name: 'Ranking' })).toHaveAttribute('aria-current', 'page')
+  })
+
   it('fecha o popover e navega ao escolher FIIs', () => {
     renderNav()
     fireEvent.click(screen.getByRole('button', { name: 'Ranking' }))

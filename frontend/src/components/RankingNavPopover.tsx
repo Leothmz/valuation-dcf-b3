@@ -28,7 +28,8 @@ export function RankingNavPopover({ isOpen, onClose, currentPath }: RankingNavPo
         style={{ background: 'rgba(6,9,16,.45)' }}
       />
       <div
-        role="menu"
+        id="ranking-nav-popover"
+        role="group"
         aria-label="Escolher ranking"
         className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50
                    w-[150px] rounded-[12px] border p-1"
