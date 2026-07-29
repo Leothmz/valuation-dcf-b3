@@ -1,35 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { StickyNote, History, X, Download, Bell, BellRing } from 'lucide-react'
+import { X, Download, BellRing } from 'lucide-react'
 import { useWatchlistStore } from '../../stores'
 import { useBatchQuotes } from '../../api/stocks'
-import { fBRL } from '../../engines/formatters'
 import { isPriceInBuyRange, shouldRecordAlert } from '../../engines/alert-engine'
 import { useEscapeToClose } from '../../hooks/useKeyBinding'
 import { WatchlistAlertModal } from './WatchlistAlertModal'
+import { WatchlistContextMenu, type ContextMenuState } from './WatchlistContextMenu'
+import { WatchlistHistoryModal } from './WatchlistHistoryModal'
 import { WatchlistNotesModal } from './WatchlistNotesModal'
 import { WatchlistRow } from './WatchlistRow'
-
-// ── Format date ───────────────────────────────────────────────────────────────
-function fDate(iso: string): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
-}
 
 // ── Format last-updated time ──────────────────────────────────────────────────
 function fTime(date: Date): string {
   return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-}
-
-// ── Context menu state ────────────────────────────────────────────────────────
-interface ContextMenuState {
-  x: number
-  y: number
-  ticker: string
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -136,6 +120,26 @@ export function WatchlistPage() {
     const x = Math.min(e.clientX, window.innerWidth - 220)
     const y = Math.min(e.clientY, window.innerHeight - 100)
     setContextMenu({ x, y, ticker })
+  }
+
+  function handleViewAnalysis(ticker: string) {
+    navigate(`/analise?ticker=${encodeURIComponent(ticker)}`)
+    setContextMenu(null)
+  }
+
+  function handleEditNote(ticker: string) {
+    setNotesModalTicker(ticker)
+    setContextMenu(null)
+  }
+
+  function handleViewHistory(ticker: string) {
+    setHistoryModal(ticker)
+    setContextMenu(null)
+  }
+
+  function handleViewAlerts(ticker: string) {
+    setAlertHistoryModal(ticker)
+    setContextMenu(null)
   }
 
   function exportCSV() {
@@ -380,95 +384,15 @@ export function WatchlistPage() {
       )}
 
       {/* History modal */}
-      {historyModal && (() => {
-        const entry = entries[historyModal]
-        const hist = entry?.priceHistory ?? []
-        return (
-          <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center"
-            onClick={(e) => { if (e.target === e.currentTarget) setHistoryModal(null) }}
-          >
-            <div
-              className="bg-bg-2 border border-border rounded-[16px] p-6 w-[640px] max-w-[94vw]"
-              style={{ boxShadow: '0 8px 32px rgba(0,0,0,.6)' }}
-            >
-              <div className="flex items-center justify-between mb-5">
-                <div className="text-[16px] font-semibold">
-                  Histórico · <span style={{ color: 'var(--color-cyan)' }}>{historyModal}</span>
-                </div>
-                <button
-                  className="text-text-muted hover:text-text-base transition-colors"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                  onClick={() => setHistoryModal(null)}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {hist.length === 0 ? (
-                <p className="text-[13px] text-text-muted text-center py-6">
-                  Nenhum histórico ainda — salve o preço teto mais de uma vez para registrar a evolução.
-                </p>
-              ) : (
-                <div className="overflow-auto max-h-[400px]">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr>
-                        {['Data', 'Preço Teto', 'Variação', 'Anotação'].map((h) => (
-                          <th
-                            key={h}
-                            className="text-[11px] text-text-muted uppercase tracking-[.08em] font-semibold
-                                       py-2 px-3 text-left border-b border-border bg-bg-3"
-                          >
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {hist.map((h, i) => {
-                        const prev = hist[i + 1]
-                        const diff = prev ? ((h.fairPrice - prev.fairPrice) / prev.fairPrice) : null
-                        return (
-                          <tr key={h.savedAt} className="border-b border-border-muted last:border-b-0">
-                            <td className="font-mono text-[13px] py-3 px-3 text-text-sec whitespace-nowrap">
-                              {fDate(h.savedAt)}
-                            </td>
-                            <td className="font-mono text-[13px] py-3 px-3 font-semibold"
-                                style={{ color: 'var(--color-cyan)' }}>
-                              {fBRL.format(h.fairPrice)}
-                            </td>
-                            <td className="font-mono text-[13px] py-3 px-3 whitespace-nowrap">
-                              {diff == null ? (
-                                <span className="text-text-muted">—</span>
-                              ) : (
-                                <span style={{ color: diff >= 0 ? 'var(--color-green)' : 'var(--color-red)' }}>
-                                  {diff >= 0 ? '+' : ''}{(diff * 100).toFixed(1)}%
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3">
-                              <input
-                                type="text"
-                                className="bg-bg-3 border border-border rounded-[6px] text-text-sec text-[12px]
-                                           px-2 py-1 outline-none w-full placeholder-text-muted
-                                           focus:border-cyan"
-                                defaultValue={h.annotation ?? ''}
-                                placeholder="Anotação…"
-                                onBlur={(e) => updateHistoryAnnotation(historyModal, h.savedAt, e.target.value)}
-                              />
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      })()}
+      <WatchlistHistoryModal
+        isOpen={!!historyModal}
+        onClose={() => setHistoryModal(null)}
+        ticker={historyModal}
+        history={historyModal ? entries[historyModal]?.priceHistory ?? [] : []}
+        onUpdateAnnotation={(savedAt, annotation) => {
+          if (historyModal) updateHistoryAnnotation(historyModal, savedAt, annotation)
+        }}
+      />
 
       {/* Alert history modal */}
       <WatchlistAlertModal
@@ -479,77 +403,15 @@ export function WatchlistPage() {
       />
 
       {/* Context menu */}
-      {contextMenu && (
-        <div
-          ref={contextMenuRef}
-          className="fixed z-[9999] bg-bg-2 border border-border rounded-[10px] overflow-hidden"
-          style={{
-            left: contextMenu.x,
-            top: contextMenu.y,
-            minWidth: 200,
-            boxShadow: '0 8px 32px rgba(0,0,0,.6)',
-          }}
-        >
-          <button
-            className="w-full flex items-center gap-2 px-4 py-[10px] text-[13px] text-text-sec text-left cursor-pointer hover:bg-bg-4 hover:text-text-base"
-            style={{ background: 'none', border: 'none', transition: 'background .12s ease, color .12s ease' }}
-            onClick={() => {
-              navigate(`/analise?ticker=${encodeURIComponent(contextMenu.ticker)}`)
-              setContextMenu(null)
-            }}
-          >
-            Ver Análise Avançada
-          </button>
-          <button
-            className="w-full flex items-center gap-2 px-4 py-[10px] text-[13px] text-text-sec text-left cursor-pointer hover:bg-bg-4 hover:text-text-base"
-            style={{ background: 'none', border: 'none', transition: 'background .12s ease, color .12s ease' }}
-            onClick={() => {
-              setNotesModalTicker(contextMenu!.ticker)
-              setContextMenu(null)
-            }}
-          >
-            <StickyNote size={13} />
-            Editar nota
-          </button>
-          <button
-            className="w-full flex items-center gap-2 px-4 py-[10px] text-[13px] text-text-sec text-left cursor-pointer hover:bg-bg-4 hover:text-text-base"
-            style={{ background: 'none', border: 'none', transition: 'background .12s ease, color .12s ease' }}
-            onClick={() => {
-              setHistoryModal(contextMenu!.ticker)
-              setContextMenu(null)
-            }}
-          >
-            <History size={13} />
-            Histórico de preço teto
-          </button>
-          <button
-            className="w-full flex items-center gap-2 px-4 py-[10px] text-[13px] text-text-sec text-left cursor-pointer hover:bg-bg-4 hover:text-text-base"
-            style={{ background: 'none', border: 'none', transition: 'background .12s ease, color .12s ease' }}
-            onClick={() => {
-              setAlertHistoryModal(contextMenu!.ticker)
-              setContextMenu(null)
-            }}
-          >
-            <Bell size={13} />
-            Histórico de alertas
-          </button>
-          <button
-            className="w-full flex items-center gap-2 px-4 py-[10px] text-[13px] text-text-sec text-left cursor-pointer"
-            style={{ background: 'none', border: 'none', transition: 'background .12s ease, color .12s ease' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--color-red-dim)'
-              e.currentTarget.style.color = 'var(--color-red)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = ''
-              e.currentTarget.style.color = ''
-            }}
-            onClick={(e) => handleDelete(contextMenu.ticker, e)}
-          >
-            Excluir da watchlist
-          </button>
-        </div>
-      )}
+      <WatchlistContextMenu
+        menu={contextMenu}
+        menuRef={contextMenuRef}
+        onViewAnalysis={handleViewAnalysis}
+        onEditNote={handleEditNote}
+        onViewHistory={handleViewHistory}
+        onViewAlerts={handleViewAlerts}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }
