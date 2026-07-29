@@ -19,6 +19,7 @@ import { CarteiraProventos } from './CarteiraProventos'
 import { CarteiraRF } from './CarteiraRF'
 import { CarteiraMetas } from './CarteiraMetas'
 import { CarteiraIR } from './CarteiraIR'
+import { CarteiraFab } from './CarteiraFab'
 import type { Operation, Provento, RFTitle, SplitEvent } from '../../stores/portfolioStore'
 import { useTabArrowNav } from '../../hooks/useKeyBinding'
 
@@ -40,6 +41,34 @@ export function CarteiraPage() {
   const [tab, setTab] = useState<Tab>('visao')
   const [cdiAccumulated] = useState(CDI_DEFAULT)
   const touchStartX = useRef(0)
+
+  // Estado dos modais de "adicionar" elevado do respectivo componente (Task 19 deixou o FAB
+  // pronto mas sem ação real, exatamente por causa disso). Cada componente ainda aceita abrir
+  // seu modal localmente (botão "+ Registrar..." existente) — os pares modalOpen/onModalOpenChange
+  // abaixo só dão ao FAB um jeito de controlar o mesmo estado de fora.
+  const [operacoesModalOpen, setOperacoesModalOpen] = useState(false)
+  const [proventosModalOpen, setProventosModalOpen] = useState(false)
+  const [rfModalOpen, setRfModalOpen] = useState(false)
+
+  function handleFabAction(fabTab: Tab) {
+    switch (fabTab) {
+      case 'operacoes':
+        setOperacoesModalOpen(true)
+        break
+      case 'ativos':
+        // Ativos não tem formulário próprio (Task 19) — "Adicionar operação" leva para a
+        // aba Operações já com o modal aberto.
+        setTab('operacoes')
+        setOperacoesModalOpen(true)
+        break
+      case 'proventos':
+        setProventosModalOpen(true)
+        break
+      case 'rf':
+        setRfModalOpen(true)
+        break
+    }
+  }
 
   useTabArrowNav(TABS.map((t) => t.key), tab, setTab)
 
@@ -235,6 +264,8 @@ export function CarteiraPage() {
               operations={operations}
               onAdd={handleAddOperation}
               onDelete={deleteOperation}
+              modalOpen={operacoesModalOpen}
+              onModalOpenChange={setOperacoesModalOpen}
             />
           )}
           {tab === 'proventos' && (
@@ -248,6 +279,8 @@ export function CarteiraPage() {
               dividendHistoryByTicker={dividendHistoryByTicker}
               dpaMap={dpaMap}
               dividendDataLoading={dividendHistoryLoading || dpaLoading}
+              modalOpen={proventosModalOpen}
+              onModalOpenChange={setProventosModalOpen}
             />
           )}
           {tab === 'rf' && (
@@ -257,6 +290,8 @@ export function CarteiraPage() {
               onAdd={handleAddRFTitle}
               onDelete={deleteFixedIncomeTitle}
               onDeleteDeposit={deleteDeposit}
+              modalOpen={rfModalOpen}
+              onModalOpenChange={setRfModalOpen}
             />
           )}
           {tab === 'metas' && (
@@ -281,11 +316,7 @@ export function CarteiraPage() {
         </div>
       </div>
 
-      {/* CarteiraFab existe e está coberto por testes (CarteiraFab.tsx / .test.tsx), mas não é
-          montado aqui ainda: os formulários de Operações/Proventos/Renda Fixa têm modal local
-          (useState próprio), e Ativos não tem formulário nenhum — abrir o modal certo a partir
-          daqui exige elevar esse estado, o que a Task 21 vai fazer junto da própria conversão
-          desses formulários. Até lá, um FAB sem ação real seria pior que nenhum FAB. */}
+      <CarteiraFab tab={tab} onAction={handleFabAction} />
     </div>
   )
 }

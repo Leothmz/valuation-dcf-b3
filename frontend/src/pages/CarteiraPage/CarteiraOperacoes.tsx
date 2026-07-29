@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Trash2 } from 'lucide-react'
 import { fBRL as fBRLFormatter } from '../../engines/formatters'
 import { useCryptoList } from '../../api/crypto'
+import { useIsMobile } from '../../hooks/useMediaQuery'
+import { DataCard } from '../../components/DataCard'
 import type { Operation, AssetClass, OperationType } from '../../stores/portfolioStore'
 
 const fBRL = (v: number) => fBRLFormatter.format(v)
@@ -20,6 +22,9 @@ interface CarteiraOperacoesProps {
   operations: Operation[]
   onAdd: (op: Omit<Operation, 'id'>) => void
   onDelete: (id: string) => void
+  /** Controlado pelo CarteiraPage (FAB) quando fornecido; cai para estado interno caso contrário. */
+  modalOpen?: boolean
+  onModalOpenChange?: (open: boolean) => void
 }
 
 const EMPTY_FORM = {
@@ -36,13 +41,27 @@ export function CarteiraOperacoes({
   operations,
   onAdd,
   onDelete,
+  modalOpen: modalOpenProp,
+  onModalOpenChange,
 }: CarteiraOperacoesProps) {
   const [filter, setFilter] = useState<OpFilter>('all')
-  const [showModal, setShowModal] = useState(false)
+  const [internalModalOpen, setInternalModalOpen] = useState(false)
+  const showModal = modalOpenProp ?? internalModalOpen
+  const setShowModal = onModalOpenChange ?? setInternalModalOpen
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const { data: cryptoList = [] } = useCryptoList()
+  const isMobile = useIsMobile()
   const cryptoLabel = (id: string) =>
     cryptoList.find((c) => c.id === id)?.symbol ?? id.toUpperCase()
+
+  // Sempre que o modal abre (seja pelo botão local ou pelo FAB via prop controlada),
+  // reseta o formulário com a data de hoje — mesmo comportamento do onClick original.
+  useEffect(() => {
+    if (showModal) {
+      setForm({ ...EMPTY_FORM, date: new Date().toISOString().slice(0, 10) })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showModal])
 
   const sorted = [...operations]
     .filter((o) => filter === 'all' || o.type === filter)
@@ -79,10 +98,7 @@ export function CarteiraOperacoes({
       {/* Toolbar */}
       <div className="flex items-center gap-2 mb-3.5 flex-wrap">
         <button
-          onClick={() => {
-            setForm({ ...EMPTY_FORM, date: new Date().toISOString().slice(0, 10) })
-            setShowModal(true)
-          }}
+          onClick={() => setShowModal(true)}
           className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold
                      bg-cyan text-black cursor-pointer border-0"
         >
@@ -109,6 +125,47 @@ export function CarteiraOperacoes({
         <p className="text-center text-text-muted py-10 text-sm">
           Nenhuma operação registrada.
         </p>
+      ) : isMobile ? (
+        <div>
+          {sorted.map((op) => (
+            <DataCard
+              key={op.id}
+              title={
+                <span className="font-mono">
+                  {op.assetClass === 'cripto' ? cryptoLabel(op.ticker) : op.ticker}
+                </span>
+              }
+              badge={
+                <span
+                  className="text-[10px] font-bold rounded-[5px] px-2 py-0.5"
+                  style={{
+                    background: op.type === 'buy' ? 'var(--color-green-dim)' : 'var(--color-red-dim)',
+                    color: op.type === 'buy' ? 'var(--color-green)' : 'var(--color-red)',
+                  }}
+                >
+                  {op.type === 'buy' ? 'COMPRA' : 'VENDA'}
+                </span>
+              }
+              fields={[
+                { label: 'Data', value: op.date },
+                { label: 'Classe', value: CLASS_LABELS[op.assetClass] ?? op.assetClass },
+                { label: 'Quantidade', value: op.qty },
+                { label: 'Preço', value: fBRL(op.price) },
+                { label: 'Total', value: fBRL(op.qty * op.price), emphasis: true },
+                { label: 'Corretagem', value: fBRL(op.fees) },
+              ]}
+              actions={
+                <button
+                  onClick={() => onDelete(op.id)}
+                  className="flex-1 min-h-[44px] rounded-[8px] border border-border text-[12px] font-semibold cursor-pointer"
+                  style={{ color: 'var(--color-red)' }}
+                >
+                  Remover
+                </button>
+              }
+            />
+          ))}
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -244,31 +301,34 @@ export function CarteiraOperacoes({
               <FormField label="Quantidade">
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="1"
                   value={form.qty}
                   onChange={(e) => setForm({ ...form, qty: e.target.value })}
-                  className="form-input-dark"
+                  className="form-input-dark text-[16px] md:text-[13px]"
                 />
               </FormField>
               <FormField label="Preço Unitário">
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="0.01"
                   value={form.price}
                   onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  className="form-input-dark"
+                  className="form-input-dark text-[16px] md:text-[13px]"
                 />
               </FormField>
               <FormField label="Corretagem (opcional)">
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="0.01"
                   value={form.fees}
                   onChange={(e) => setForm({ ...form, fees: e.target.value })}
-                  className="form-input-dark"
+                  className="form-input-dark text-[16px] md:text-[13px]"
                 />
               </FormField>
             </div>

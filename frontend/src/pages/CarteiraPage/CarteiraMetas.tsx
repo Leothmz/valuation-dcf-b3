@@ -4,6 +4,8 @@ import {
   calcAllocationDeviation,
   buildRebalancingSuggestions,
 } from '../../engines/portfolio-engine'
+import { useIsMobile } from '../../hooks/useMediaQuery'
+import { DataCard } from '../../components/DataCard'
 import type { HoldingSummary } from '../../engines/portfolio-engine'
 import { CATEGORIES } from '../../stores/portfolioStore'
 import type { Category } from '../../stores/portfolioStore'
@@ -62,6 +64,7 @@ export function CarteiraMetas({
   const actualValues = buildCategoryAllocation(holdings, priceMap, rfValue, cashBalance)
   const deviations = calcAllocationDeviation(actualValues, allocationTargets)
   const suggestions = buildRebalancingSuggestions(deviations)
+  const isMobile = useIsMobile()
 
   return (
     <div>
@@ -79,11 +82,12 @@ export function CarteiraMetas({
         <input
           id="metas-cash-balance"
           type="number"
+          inputMode="decimal"
           min="0"
           step="0.01"
           value={cashBalance}
           onChange={(e) => onSetCashBalance(parseFloat(e.target.value) || 0)}
-          className="form-input-dark w-[200px]"
+          className="form-input-dark w-[200px] text-[16px] md:text-[13px]"
         />
       </div>
 
@@ -130,12 +134,13 @@ export function CarteiraMetas({
                 id={`metas-target-${category}`}
                 aria-label={`Meta ${CATEGORY_LABELS[category]} (%)`}
                 type="number"
+                inputMode="decimal"
                 min="0"
                 max="100"
                 step="0.1"
                 value={allocationTargets[category]}
                 onChange={(e) => onSetTarget(category, parseFloat(e.target.value) || 0)}
-                className="form-input-dark w-[70px]"
+                className="form-input-dark w-[70px] text-[16px] md:text-[13px]"
               />
             </div>
           )
@@ -150,6 +155,53 @@ export function CarteiraMetas({
         <div className="text-[13px] font-semibold text-text-sec uppercase tracking-[0.5px] mb-3">
           Sugestão de Rebalanceamento
         </div>
+        {isMobile ? (
+          <div>
+            {CATEGORIES.map((category) => {
+              const dev = deviations[category]
+              const suggestion = suggestions[category]
+              return (
+                <DataCard
+                  key={category}
+                  title={
+                    <div>
+                      <div className="mb-1.5">{CATEGORY_LABELS[category]}</div>
+                      <div
+                        className="w-[160px] h-1.5 rounded-full overflow-hidden"
+                        style={{ background: '#1f2a3f' }}
+                      >
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.min(dev.actualPct, 100).toFixed(1)}%`,
+                            background: CATEGORY_COLORS[category],
+                          }}
+                        />
+                      </div>
+                    </div>
+                  }
+                  fields={[
+                    { label: 'Atual', value: `${dev.actualPct.toFixed(1)}%` },
+                    { label: 'Meta', value: `${dev.targetPct.toFixed(1)}%` },
+                    {
+                      label: 'Ação',
+                      value: (
+                        <span className={`font-semibold ${SUGGESTION_COLOR[suggestion.action]}`}>
+                          {SUGGESTION_LABELS[suggestion.action]}
+                        </span>
+                      ),
+                    },
+                    {
+                      label: 'Valor',
+                      value: suggestion.amount > 0 ? fBRL(suggestion.amount) : '—',
+                      emphasis: true,
+                    },
+                  ]}
+                />
+              )
+            })}
+          </div>
+        ) : (
         <table className="w-full text-xs">
           <thead>
             <tr>
@@ -193,6 +245,7 @@ export function CarteiraMetas({
             })}
           </tbody>
         </table>
+        )}
       </div>
     </div>
   )

@@ -6,6 +6,8 @@ import {
   buildMergedDividendHistory,
   calcYieldOnCost,
 } from '../../engines/portfolio-engine'
+import { useIsMobile } from '../../hooks/useMediaQuery'
+import { DataCard } from '../../components/DataCard'
 import type { HoldingSummary, ApiDividendEntry } from '../../engines/portfolio-engine'
 import type { Operation, Provento } from '../../stores/portfolioStore'
 
@@ -31,6 +33,7 @@ export function CarteiraProventosPorAtivo({
   onConfirm,
 }: CarteiraProventosPorAtivoProps) {
   const [expanded, setExpanded] = useState<string | null>(null)
+  const isMobile = useIsMobile()
 
   if (!holdings.length) {
     return <p className="text-center text-text-muted py-10 text-sm">Nenhum ativo em carteira.</p>
@@ -96,6 +99,49 @@ export function CarteiraProventosPorAtivo({
               <div className="px-4 py-3" style={{ borderTop: '1px solid #1e2d42' }}>
                 {!merged.length ? (
                   <p className="text-text-muted text-xs">Sem histórico de proventos para este ativo.</p>
+                ) : isMobile ? (
+                  <div>
+                    {merged.map((entry) => (
+                      <DataCard
+                        key={entry.date}
+                        title={<span className="font-mono">{entry.date}</span>}
+                        badge={
+                          <span
+                            className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                              entry.source === 'confirmed'
+                                ? 'bg-green-dim text-green'
+                                : 'bg-amber-dim text-amber'
+                            }`}
+                          >
+                            {entry.source === 'confirmed' ? 'Confirmado' : 'Estimado'}
+                          </span>
+                        }
+                        fields={[
+                          { label: 'Quantidade', value: entry.qty },
+                          { label: 'Valor/cota', value: fBRL(entry.valuePerShare) },
+                          { label: 'Total', value: fBRL(entry.total), emphasis: true },
+                        ]}
+                        actions={
+                          entry.source === 'estimated' ? (
+                            <button
+                              onClick={() =>
+                                onConfirm({
+                                  date: entry.date,
+                                  ticker: entry.ticker,
+                                  type: entry.type,
+                                  qty: entry.qty,
+                                  valuePerShare: entry.valuePerShare,
+                                })
+                              }
+                              className="flex-1 min-h-[44px] rounded-[8px] border border-border text-[12px] font-semibold cursor-pointer text-cyan"
+                            >
+                              Confirmar
+                            </button>
+                          ) : undefined
+                        }
+                      />
+                    ))}
+                  </div>
                 ) : (
                   <table className="w-full text-xs">
                     <thead>
