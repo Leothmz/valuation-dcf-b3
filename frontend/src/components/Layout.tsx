@@ -66,7 +66,15 @@ export function Layout({ children }: LayoutProps) {
         isDrawerOpen={isDrawerOpen}
         onCloseDrawer={() => setIsDrawerOpen(false)}
       />
-      <main className="flex-1 ml-0 md:ml-[58px] min-h-screen pb-14 md:pb-0">
+      {/* min-w-0 é essencial aqui: <main> é o único item em fluxo do flex row acima
+          (a Sidebar é position:fixed, fora do fluxo). Item de flex tem min-width:auto
+          por padrão — não encolhe abaixo do min-content dos descendentes. Páginas com
+          ScrollableTabs (pills shrink-0 de propósito) tinham um min-content maior que
+          a viewport; sem min-w-0, <main> nunca encolhia e o overflow-x-auto do tablist
+          nunca engatava (a faixa ficava do tamanho cheio em vez de rolar internamente),
+          vazando para document.documentElement.scrollWidth. Achado real da Task 23 —
+          afetava /carteira, /ranking e /fiis (até 1020px de largura em 375px de tela). */}
+      <main className="flex-1 min-w-0 ml-0 md:ml-[58px] min-h-screen pb-14 md:pb-0">
         {!ROUTES_WITH_OWN_HEADER.has(pathname) && (
           <MobileHeader
             title={title}

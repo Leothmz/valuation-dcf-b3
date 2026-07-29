@@ -257,86 +257,92 @@ export function RankingPage() {
   const activeFilterCount = countActiveFilters(filterConfig)
 
   // Mesmo elemento reaproveitado no BottomSheet (mobile) e no painel fixo (desktop) —
-  // evita duplicar o JSX de props idênticas nos dois lugares.
+  // evita duplicar o JSX de props idênticas nos dois lugares. Inclui também o
+  // "Adicionar ticker" + chips de customs (Finding 2 da Task 23: o Step 7 da Task 12
+  // já previa isso saindo do hero para dentro do sheet/painel de filtros — a Task 12
+  // criou o BottomSheet mas nunca esvaziou o hero, e isso deixava um input de largura
+  // fixa (w-36 + botão + w-56) sem variante mobile no hero, causando overflow horizontal
+  // real em 375px mesmo depois do fix do Layout.tsx).
   const filterChipsEl = (
-    <FilterChips
-      config={filterConfig}
-      onChange={setFilterConfig}
-      onReset={resetFilterConfig}
-    />
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          className="rounded-[10px] border border-border bg-bg-3 text-text-base text-[13px] px-[14px] py-[7px] outline-none flex-1 min-w-0 placeholder-text-muted focus:border-cyan"
+          placeholder="Adicionar ticker…"
+          value={newTicker}
+          onChange={(e) => setNewTicker(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleAddTicker() }}
+        />
+        <button
+          onClick={handleAddTicker}
+          className="shrink-0 rounded-[10px] border border-border bg-bg-3 text-text-sec text-[13px] px-3 py-[7px] cursor-pointer hover:border-cyan hover:text-cyan"
+        >
+          + Add
+        </button>
+      </div>
+
+      {customTickers.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {customTickers.map((t) => (
+            <span
+              key={t}
+              className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-[6px]"
+              style={{ background: 'var(--color-amber-dim)', color: 'var(--color-amber)', border: '1px solid rgba(245,158,11,.2)' }}
+            >
+              {t}
+              <button
+                onClick={() => removeCustomTicker(t)}
+                title={`Remover ${t}`}
+                className="cursor-pointer leading-none"
+                style={{ background: 'none', border: 'none', padding: 0, color: 'inherit' }}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <FilterChips
+        config={filterConfig}
+        onChange={setFilterConfig}
+        onReset={resetFilterConfig}
+      />
+    </div>
   )
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 py-4 md:px-6 md:py-7 pb-16 flex flex-col gap-5">
-      {/* Hero header */}
-      <div
-        className="rounded-[16px] border border-border p-6"
-        style={{ background: 'linear-gradient(180deg, #0d1829 0%, #0b0f17 100%)' }}
-      >
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
-          <div>
-            <h1 className="text-[24px] font-bold text-text-base leading-tight">
-              Ranking de Ações · B3
-            </h1>
-            <p className="text-[13px] text-text-muted mt-1">
-              {isLoading
-                ? `Carregando ${allTickers.length} tickers…`
-                : `${totalLoaded} tickers carregados · exibindo ${showing}`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Add custom ticker */}
-            <input
-              type="text"
-              className="rounded-[10px] border border-border bg-bg-3 text-text-base text-[13px] px-[14px] py-[7px] outline-none w-36 placeholder-text-muted focus:border-cyan"
-              placeholder="Adicionar ticker…"
-              value={newTicker}
-              onChange={(e) => setNewTicker(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAddTicker() }}
-            />
-            <button
-              onClick={handleAddTicker}
-              className="rounded-[10px] border border-border bg-bg-3 text-text-sec text-[13px] px-3 py-[7px] cursor-pointer hover:border-cyan hover:text-cyan"
-            >
-              + Add
-            </button>
-            {/* Search */}
-            <input
-              type="text"
-              className="rounded-[10px] border border-border bg-bg-3 text-text-base text-[13px] px-[14px] py-[7px] outline-none w-56 placeholder-text-muted focus:border-cyan"
-              placeholder="Buscar ticker ou empresa…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Custom tickers chips */}
-        {customTickers.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            {customTickers.map((t) => (
-              <span
-                key={t}
-                className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-[6px]"
-                style={{ background: 'var(--color-amber-dim)', color: 'var(--color-amber)', border: '1px solid rgba(245,158,11,.2)' }}
-              >
-                {t}
-                <button
-                  onClick={() => removeCustomTicker(t)}
-                  title={`Remover ${t}`}
-                  className="cursor-pointer leading-none"
-                  style={{ background: 'none', border: 'none', padding: 0, color: 'inherit' }}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
+      {/* Hero header — só título + contador (Step 7 da Task 12). Adicionar ticker,
+          chips de customs e busca migraram para fora daqui (ver filterChipsEl acima
+          e a barra de busca abaixo, sempre visível nos dois viewports). */}
+      <div className="rounded-[16px] border border-border p-6">
+        <h1 className="text-[24px] font-bold text-text-base leading-tight">
+          Ranking de Ações · B3
+        </h1>
+        <p className="text-[13px] text-text-muted mt-1 mb-5">
+          {isLoading
+            ? `Carregando ${allTickers.length} tickers…`
+            : `${totalLoaded} tickers carregados · exibindo ${showing}`}
+        </p>
 
         {/* Method tabs — pills fixas no desktop, faixa rolável no mobile */}
         <ScrollableTabs ariaLabel="Método de ranking" tabs={METHOD_TABS} active={method} onSelect={setMethod} />
       </div>
+
+      {/* Busca — decisão de UX (Task 23): diferente do "Adicionar ticker" (ação
+          eventual, foi para dentro do sheet de Filtros), buscar é ação frequente;
+          fica sempre visível nos dois viewports em vez de atrás de um toque extra
+          no botão Filtros. */}
+      <input
+        type="text"
+        className="w-full rounded-[10px] border border-border bg-bg-3 text-text-base text-[15px] md:text-[13px] px-[14px] py-[9px] md:py-[7px] outline-none placeholder-text-muted focus:border-cyan"
+        placeholder="Buscar ticker ou empresa…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        aria-label="Buscar ticker ou empresa"
+      />
 
       {/* Mobile toolbar: ordenação + filtros + comparar */}
       <div className="md:hidden flex gap-2">

@@ -23,6 +23,17 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      // mobile.spec.ts testa UI que só existe em mobile (BottomNav, gaveta via ☰,
+      // popover de Ranking são todos `md:hidden`) e overflow por largura real do
+      // device — não faz sentido (e falha) no viewport desktop. Fica só no projeto mobile.
+      testIgnore: ['**/mobile.spec.ts'],
+    },
+    {
+      // devices['iPhone 13'] traz defaultBrowserType: 'webkit' — só chromium está
+      // instalado neste ambiente (e é o motor que os specs foram escritos/validados
+      // contra), então força chromium mantendo viewport/UA/touch do device real.
+      name: 'mobile',
+      use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium' },
     },
   ],
 

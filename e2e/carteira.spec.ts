@@ -12,7 +12,9 @@ test.describe('Flow 3: register operation → appears in Carteira', () => {
   test('Carteira page renders tabs including Operações', async ({ page }) => {
     await mockAllApi(page)
     await page.goto('/carteira', { waitUntil: 'networkidle' })
-    await expect(page.getByRole('button', { name: 'Operações' })).toBeVisible({ timeout: 8000 })
+    // As abas viraram `ScrollableTabs` (role="tab") na Task 19 — role="button" era o
+    // seletor pré-conversão e nunca foi atualizado.
+    await expect(page.getByRole('tab', { name: 'Operações' })).toBeVisible({ timeout: 8000 })
   })
 
   test('registering a manual operation makes it appear in the table', async ({ page }) => {
@@ -27,8 +29,8 @@ test.describe('Flow 3: register operation → appears in Carteira', () => {
     })
     await page.reload({ waitUntil: 'networkidle' })
 
-    // Switch to Operações tab
-    await page.getByRole('button', { name: 'Operações' }).click()
+    // Switch to Operações tab (role="tab" via ScrollableTabs, Task 19)
+    await page.getByRole('tab', { name: 'Operações' }).click()
 
     // Open the registration modal
     await page.getByRole('button', { name: /Registrar Operação/i }).click()
