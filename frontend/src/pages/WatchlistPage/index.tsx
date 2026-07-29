@@ -1,53 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { StickyNote, History, X, Download, Bell, BellOff, BellRing } from 'lucide-react'
-import { useWatchlistStore } from '../stores'
-import { useBatchQuotes } from '../api/stocks'
-import { fBRL, fPct } from '../engines/formatters'
-import { Skeleton } from '../components'
-import { isPriceInBuyRange, shouldRecordAlert } from '../engines/alert-engine'
-import { useEscapeToClose } from '../hooks/useKeyBinding'
-
-// ── Ticker logo helpers ───────────────────────────────────────────────────────
-const PALETTE: [string, string][] = [
-  ['#06b6d4', 'rgba(6,182,212,.12)'],
-  ['#10b981', 'rgba(16,185,129,.12)'],
-  ['#f59e0b', 'rgba(245,158,11,.12)'],
-  ['#8b5cf6', 'rgba(139,92,246,.12)'],
-  ['#ef4444', 'rgba(239,68,68,.12)'],
-  ['#06b6d4', 'rgba(6,182,212,.15)'],
-  ['#10b981', 'rgba(16,185,129,.15)'],
-  ['#f59e0b', 'rgba(245,158,11,.15)'],
-]
-
-function tickerColors(ticker: string): [string, string] {
-  let h = 0
-  for (let i = 0; i < ticker.length; i++) h = ((h * 31) + ticker.charCodeAt(i)) >>> 0
-  return PALETTE[h % PALETTE.length]
-}
-
-interface TickerLogoProps {
-  ticker: string
-}
-
-function TickerLogo({ ticker }: TickerLogoProps) {
-  const [fg, bg] = tickerColors(ticker)
-  const label = ticker.replace(/\d+$/, '').slice(0, 4)
-  return (
-    <div
-      className="flex items-center justify-center flex-shrink-0 rounded-[10px] text-[10px] font-bold font-mono tracking-[.02em]"
-      style={{
-        width: 38,
-        height: 38,
-        background: bg,
-        color: fg,
-        border: `1px solid ${fg}33`,
-      }}
-    >
-      {label}
-    </div>
-  )
-}
+import { StickyNote, History, X, Download, Bell, BellRing } from 'lucide-react'
+import { useWatchlistStore } from '../../stores'
+import { useBatchQuotes } from '../../api/stocks'
+import { fBRL } from '../../engines/formatters'
+import { isPriceInBuyRange, shouldRecordAlert } from '../../engines/alert-engine'
+import { useEscapeToClose } from '../../hooks/useKeyBinding'
+import { WatchlistAlertModal } from './WatchlistAlertModal'
+import { WatchlistNotesModal } from './WatchlistNotesModal'
+import { WatchlistRow } from './WatchlistRow'
 
 // ── Format date ───────────────────────────────────────────────────────────────
 function fDate(iso: string): string {
@@ -81,7 +42,7 @@ export function WatchlistPage() {
 
   const [filterText, setFilterText] = useState('')
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
-  const [notesModal, setNotesModal] = useState<{ ticker: string; draft: string } | null>(null)
+  const [notesModalTicker, setNotesModalTicker] = useState<string | null>(null)
   const [historyModal, setHistoryModal] = useState<string | null>(null) // ticker
   const [alertHistoryModal, setAlertHistoryModal] = useState<string | null>(null) // ticker
   const [bannerDismissed, setBannerDismissed] = useState(false)
@@ -130,8 +91,8 @@ export function WatchlistPage() {
     }
   }, [])
 
-  useEscapeToClose(!!notesModal || !!historyModal || !!alertHistoryModal, () => {
-    setNotesModal(null)
+  useEscapeToClose(!!notesModalTicker || !!historyModal || !!alertHistoryModal, () => {
+    setNotesModalTicker(null)
     setHistoryModal(null)
     setAlertHistoryModal(null)
   })
@@ -154,16 +115,7 @@ export function WatchlistPage() {
       const fairPrice = entry.fairPrice
       const upside =
         currentPrice && fairPrice ? (fairPrice - currentPrice) / fairPrice : null
-      return {
-        ticker,
-        entry,
-        currentPrice,
-        upside,
-        changePercent: live?.changePercent ?? null,
-        dividendYield: live?.dividendYield ?? null,
-        liveError: live?.error ?? false,
-        liveLoading: !live,
-      }
+      return { entry, upside }
     })
     .sort((a, b) => {
       if (a.upside !== null && b.upside !== null) return b.upside - a.upside
@@ -396,248 +348,35 @@ export function WatchlistPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map(
-              ({
-                ticker,
-                entry,
-                currentPrice,
-                upside,
-                changePercent,
-                dividendYield,
-                liveError,
-                liveLoading,
-              }) => (
-                <tr
-                  key={ticker}
-                  className="border-b border-border-muted last:border-b-0 cursor-pointer"
-                  style={{ transition: 'background .15s ease, transform .15s ease' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(6,182,212,.03)'
-                    e.currentTarget.style.transform = 'translateX(2px)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = ''
-                    e.currentTarget.style.transform = ''
-                  }}
-                  onClick={() => navigate(`/dcf?wl=${encodeURIComponent(ticker)}`)}
-                  onContextMenu={(e) => handleContextMenu(e, ticker)}
-                >
-                  {/* Ticker */}
-                  <td className="font-mono text-[14px] py-[14px] px-4 text-left align-middle">
-                    <div className="flex items-center gap-[10px]">
-                      <TickerLogo ticker={ticker} />
-                      <span className="font-semibold text-[14px] font-mono text-cyan">
-                        {ticker}
-                      </span>
-                      {entry.notes && (
-                        <span
-                          title={entry.notes.slice(0, 80)}
-                          style={{ color: 'var(--color-amber)', display: 'flex', alignItems: 'center' }}
-                        >
-                          <StickyNote size={11} />
-                        </span>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Company name */}
-                  <td className="font-ui text-[13px] text-text-sec py-[14px] px-4 text-left align-middle">
-                    {entry.name || '—'}
-                  </td>
-
-                  {/* Current price */}
-                  <td className="font-mono text-[14px] py-[14px] px-4 text-right align-middle">
-                    {liveLoading || isLoading ? (
-                      <Skeleton width="72px" height="14px" className="inline-block" />
-                    ) : liveError ? (
-                      <span className="text-text-muted">—</span>
-                    ) : currentPrice != null ? (
-                      <span className="text-text-base">{fBRL.format(currentPrice)}</span>
-                    ) : (
-                      <span className="text-text-muted">—</span>
-                    )}
-                  </td>
-
-                  {/* Change % */}
-                  <td className="font-mono text-[14px] py-[14px] px-4 text-right align-middle">
-                    {liveLoading || isLoading ? (
-                      <Skeleton width="60px" height="14px" className="inline-block" />
-                    ) : liveError || changePercent == null ? (
-                      <span className="text-text-muted">—</span>
-                    ) : (
-                      <span
-                        className="inline-block text-[12px] font-semibold font-mono px-2 py-[2px] rounded-full"
-                        style={{
-                          background:
-                            changePercent >= 0
-                              ? 'var(--color-green-dim)'
-                              : 'var(--color-red-dim)',
-                          color: changePercent >= 0 ? 'var(--color-green)' : 'var(--color-red)',
-                          border: `1px solid ${changePercent >= 0 ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)'}`,
-                        }}
-                      >
-                        {changePercent >= 0 ? '+' : ''}
-                        {changePercent.toLocaleString('pt-BR', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                        %
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Dividend yield */}
-                  <td className="font-mono text-[14px] py-[14px] px-4 text-right align-middle">
-                    {liveLoading || isLoading ? (
-                      <Skeleton width="50px" height="14px" className="inline-block" />
-                    ) : liveError || dividendYield == null || dividendYield <= 0 ? (
-                      <span className="text-text-muted">—</span>
-                    ) : (
-                      <span className="text-green">{fPct(dividendYield)}</span>
-                    )}
-                  </td>
-
-                  {/* Fair price */}
-                  <td className="font-mono text-[14px] py-[14px] px-4 text-right align-middle font-semibold text-cyan">
-                    {fBRL.format(entry.fairPrice)}
-                  </td>
-
-                  {/* Upside */}
-                  <td className="font-mono text-[14px] py-[14px] px-4 text-right align-middle">
-                    {liveLoading || isLoading ? (
-                      <Skeleton width="80px" height="14px" className="inline-block" />
-                    ) : liveError || upside === null ? (
-                      <span className="text-text-muted">—</span>
-                    ) : (
-                      <span
-                        className="inline-flex items-center gap-1 text-[13px] font-bold font-mono px-3 py-1 rounded-full"
-                        style={{
-                          background:
-                            upside >= 0 ? 'var(--color-green-dim)' : 'var(--color-red-dim)',
-                          color: upside >= 0 ? 'var(--color-green)' : 'var(--color-red)',
-                          border: `1px solid ${upside >= 0 ? 'rgba(16,185,129,.25)' : 'rgba(239,68,68,.25)'}`,
-                        }}
-                      >
-                        {upside >= 0 ? '↑' : '↓'} {upside >= 0 ? '+' : ''}
-                        {fPct(upside)}
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Saved at */}
-                  <td className="font-ui text-[12px] text-text-muted py-[14px] px-4 text-right align-middle">
-                    {fDate(entry.savedAt)}
-                  </td>
-
-                  {/* Alert toggle */}
-                  <td
-                    className="py-[14px] px-4 text-center align-middle"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {(() => {
-                      const alertEnabled = entry.alertEnabled ?? true
-                      const isTriggered = triggeredTickers.includes(ticker)
-                      const Icon = !alertEnabled ? BellOff : isTriggered ? BellRing : Bell
-                      const color = !alertEnabled
-                        ? 'var(--color-text-muted)'
-                        : isTriggered
-                          ? 'var(--color-green)'
-                          : 'var(--color-text-sec)'
-                      return (
-                        <button
-                          onClick={() => toggleAlert(ticker)}
-                          title={alertEnabled ? 'Desativar alerta de preço' : 'Ativar alerta de preço'}
-                          style={{ color, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                        >
-                          <Icon size={14} />
-                        </button>
-                      )
-                    })()}
-                  </td>
-
-                  {/* Delete */}
-                  <td
-                    className="py-[14px] px-4 text-center align-middle"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      className="border border-transparent rounded-[6px] text-text-muted text-[13px] px-2 py-1 leading-none cursor-pointer"
-                      title="Remover"
-                      onClick={(e) => handleDelete(ticker, e)}
-                      onMouseEnter={(e) => {
-                        const el = e.currentTarget
-                        el.style.borderColor = 'var(--color-red)'
-                        el.style.color = 'var(--color-red)'
-                        el.style.background = 'var(--color-red-dim)'
-                      }}
-                      onMouseLeave={(e) => {
-                        const el = e.currentTarget
-                        el.style.borderColor = 'transparent'
-                        el.style.color = ''
-                        el.style.background = ''
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </td>
-                </tr>
-              )
-            )}
+            {rows.map(({ entry }) => (
+              <WatchlistRow
+                key={entry.ticker}
+                entry={entry}
+                quote={liveMap[entry.ticker]}
+                isTriggered={triggeredTickers.includes(entry.ticker)}
+                isLoading={isLoading}
+                onNavigate={(t) => navigate(`/dcf?wl=${encodeURIComponent(t)}`)}
+                onToggleAlert={toggleAlert}
+                onOpenMenu={handleContextMenu}
+                onDelete={handleDelete}
+              />
+            ))}
           </tbody>
         </table>
       </div>
 
       {/* Notes modal */}
-      {notesModal && (
-        <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center"
-          onClick={(e) => { if (e.target === e.currentTarget) setNotesModal(null) }}
-        >
-          <div className="bg-bg-2 border border-border rounded-[16px] p-6 w-[440px] max-w-[92vw]"
-               style={{ boxShadow: '0 8px 32px rgba(0,0,0,.6)' }}>
-            <div className="text-[16px] font-semibold mb-4">
-              Nota · <span style={{ color: 'var(--color-cyan)' }}>{notesModal.ticker}</span>
-            </div>
-            <textarea
-              className="w-full bg-bg-3 border border-border rounded-[10px] text-text-base text-[13px]
-                         p-3 resize-none outline-none h-[120px] placeholder-text-muted
-                         focus:border-cyan focus:shadow-[0_0_0_3px_rgba(6,182,212,.06)]"
-              maxLength={500}
-              value={notesModal.draft}
-              onChange={(e) => setNotesModal({ ...notesModal, draft: e.target.value })}
-              placeholder="Adicione suas observações sobre este ativo…"
-              autoFocus
-            />
-            <div className="text-[11px] text-text-muted text-right mt-1">
-              {notesModal.draft.length}/500
-            </div>
-            <div className="flex gap-2 justify-end mt-4">
-              <button
-                className="border border-border rounded-[10px] text-text-sec text-[13px] font-ui
-                           px-4 h-[38px] cursor-pointer hover:bg-bg-3 hover:text-text-base transition-colors"
-                style={{ background: 'none' }}
-                onClick={() => setNotesModal(null)}
-              >
-                Cancelar
-              </button>
-              <button
-                className="rounded-[10px] text-[13px] font-semibold font-ui px-4 h-[38px] cursor-pointer
-                           hover:-translate-y-px transition-all"
-                style={{
-                  background: 'linear-gradient(135deg, var(--color-cyan) 0%, #0891b2 100%)',
-                  color: 'var(--bg-0)',
-                  boxShadow: '0 2px 8px rgba(6,182,212,.2)',
-                }}
-                onClick={() => {
-                  updateNotes(notesModal.ticker, notesModal.draft)
-                  setNotesModal(null)
-                }}
-              >
-                Salvar
-              </button>
-            </div>
-          </div>
-        </div>
+      {notesModalTicker && (
+        <WatchlistNotesModal
+          isOpen
+          onClose={() => setNotesModalTicker(null)}
+          ticker={notesModalTicker}
+          note={entries[notesModalTicker]?.notes ?? ''}
+          onSave={(note) => {
+            updateNotes(notesModalTicker, note)
+            setNotesModalTicker(null)
+          }}
+        />
       )}
 
       {/* History modal */}
@@ -732,73 +471,12 @@ export function WatchlistPage() {
       })()}
 
       {/* Alert history modal */}
-      {alertHistoryModal && (() => {
-        const entry = entries[alertHistoryModal]
-        const hist = entry?.alertHistory ?? []
-        return (
-          <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center"
-            onClick={(e) => { if (e.target === e.currentTarget) setAlertHistoryModal(null) }}
-          >
-            <div
-              className="bg-bg-2 border border-border rounded-[16px] p-6 w-[480px] max-w-[94vw]"
-              style={{ boxShadow: '0 8px 32px rgba(0,0,0,.6)' }}
-            >
-              <div className="flex items-center justify-between mb-5">
-                <div className="text-[16px] font-semibold">
-                  Histórico de alertas · <span style={{ color: 'var(--color-cyan)' }}>{alertHistoryModal}</span>
-                </div>
-                <button
-                  className="text-text-muted hover:text-text-base transition-colors"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                  onClick={() => setAlertHistoryModal(null)}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {hist.length === 0 ? (
-                <p className="text-[13px] text-text-muted text-center py-6">
-                  Nenhum alerta disparado ainda — você é avisado quando o preço atual cair para o preço teto ou abaixo.
-                </p>
-              ) : (
-                <div className="overflow-auto max-h-[400px]">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr>
-                        {['Data', 'Preço', 'Preço Teto'].map((h) => (
-                          <th
-                            key={h}
-                            className="text-[11px] text-text-muted uppercase tracking-[.08em] font-semibold
-                                       py-2 px-3 text-left border-b border-border bg-bg-3"
-                          >
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {hist.map((h) => (
-                        <tr key={h.firedAt} className="border-b border-border-muted last:border-b-0">
-                          <td className="font-mono text-[13px] py-3 px-3 text-text-sec whitespace-nowrap">
-                            {fDate(h.firedAt)}
-                          </td>
-                          <td className="font-mono text-[13px] py-3 px-3" style={{ color: 'var(--color-green)' }}>
-                            {fBRL.format(h.price)}
-                          </td>
-                          <td className="font-mono text-[13px] py-3 px-3 text-cyan">
-                            {fBRL.format(h.fairPrice)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      })()}
+      <WatchlistAlertModal
+        isOpen={!!alertHistoryModal}
+        onClose={() => setAlertHistoryModal(null)}
+        ticker={alertHistoryModal}
+        history={alertHistoryModal ? entries[alertHistoryModal]?.alertHistory ?? [] : []}
+      />
 
       {/* Context menu */}
       {contextMenu && (
@@ -826,8 +504,7 @@ export function WatchlistPage() {
             className="w-full flex items-center gap-2 px-4 py-[10px] text-[13px] text-text-sec text-left cursor-pointer hover:bg-bg-4 hover:text-text-base"
             style={{ background: 'none', border: 'none', transition: 'background .12s ease, color .12s ease' }}
             onClick={() => {
-              const entry = entries[contextMenu!.ticker]
-              setNotesModal({ ticker: contextMenu!.ticker, draft: entry?.notes ?? '' })
+              setNotesModalTicker(contextMenu!.ticker)
               setContextMenu(null)
             }}
           >

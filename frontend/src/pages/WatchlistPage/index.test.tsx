@@ -1,20 +1,20 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { WatchlistPage } from './WatchlistPage'
-import type { WatchlistEntry } from '../stores/watchlistStore'
-import type { LiveQuote } from '../api/stocks'
+import { WatchlistPage } from './index'
+import type { WatchlistEntry } from '../../stores/watchlistStore'
+import type { LiveQuote } from '../../api/stocks'
 
 // Mock stores and API
-vi.mock('../stores', () => ({
+vi.mock('../../stores', () => ({
   useWatchlistStore: vi.fn(),
 }))
-vi.mock('../api/stocks', () => ({
+vi.mock('../../api/stocks', () => ({
   useBatchQuotes: vi.fn(),
 }))
 
-import { useWatchlistStore } from '../stores'
-import { useBatchQuotes } from '../api/stocks'
+import { useWatchlistStore } from '../../stores'
+import { useBatchQuotes } from '../../api/stocks'
 
 const mockUseWatchlist = vi.mocked(useWatchlistStore)
 const mockUseBatchQuotes = vi.mocked(useBatchQuotes)
