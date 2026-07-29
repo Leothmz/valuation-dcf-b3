@@ -9,6 +9,9 @@ import {
 } from '../../engines/portfolio-engine'
 import type { GainCategory } from '../../engines/portfolio-engine'
 import type { Operation, SplitEvent } from '../../stores/portfolioStore'
+import { useIsMobile } from '../../hooks/useMediaQuery'
+import { DataCard } from '../../components/DataCard'
+import { CarteiraIRMobile } from './CarteiraIRMobile'
 
 const fBRL = (v: number) => fBRLFormatter.format(v)
 
@@ -41,6 +44,7 @@ export function CarteiraIR({
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_SPLIT_FORM })
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
+  const isMobile = useIsMobile()
 
   const adjustedOps = useMemo(
     () => adjustOperationsForSplits(operations, splitEvents),
@@ -98,6 +102,28 @@ export function CarteiraIR({
         </div>
         {!splitEvents.length ? (
           <p className="text-text-muted text-xs">Nenhum evento registrado.</p>
+        ) : isMobile ? (
+          <div>
+            {splitEvents.map((e) => (
+              <DataCard
+                key={e.id}
+                title={e.ticker}
+                fields={[
+                  { label: 'Data', value: e.date },
+                  { label: 'Razão', value: `${e.ratio}x` },
+                ]}
+                actions={
+                  <button
+                    onClick={() => onDeleteSplitEvent(e.id)}
+                    className="flex-1 min-h-[44px] rounded-[8px] border border-border text-[12px] font-semibold cursor-pointer"
+                    style={{ color: 'var(--color-red)' }}
+                  >
+                    Remover
+                  </button>
+                }
+              />
+            ))}
+          </div>
         ) : (
           <table className="w-full text-xs">
             <thead>
@@ -140,6 +166,8 @@ export function CarteiraIR({
         </div>
         {!monthly.length ? (
           <p className="text-text-muted text-xs">Nenhuma venda registrada.</p>
+        ) : isMobile ? (
+          <CarteiraIRMobile summaries={monthly} />
         ) : (
           <table className="w-full text-xs">
             <thead>
@@ -226,6 +254,20 @@ export function CarteiraIR({
         </div>
         {!sortedPositions.length ? (
           <p className="text-text-muted text-xs mb-4">Nenhuma posição em aberto.</p>
+        ) : isMobile ? (
+          <div className="mb-4">
+            {sortedPositions.map((p) => (
+              <DataCard
+                key={p.ticker}
+                title={p.ticker}
+                fields={[
+                  { label: 'Qtd', value: p.qty },
+                  { label: 'Custo Médio', value: fBRL(p.avgCost) },
+                  { label: 'Custo Total', value: fBRL(p.totalCost), emphasis: true },
+                ]}
+              />
+            ))}
+          </div>
         ) : (
           <table className="w-full text-xs mb-4">
             <thead>
@@ -254,6 +296,20 @@ export function CarteiraIR({
         </div>
         {!annual.taxableGainsByMonth.length ? (
           <p className="text-text-muted text-xs">Nenhum ganho tributável no ano.</p>
+        ) : isMobile ? (
+          <div>
+            {annual.taxableGainsByMonth.map((m) => (
+              <DataCard
+                key={`${m.month}-${m.category}`}
+                title={`Ref. ${m.month}`}
+                fields={[
+                  { label: 'Categoria', value: CATEGORY_LABELS[m.category] },
+                  { label: 'Base Tributável', value: fBRL(m.taxableAmount) },
+                  { label: 'Imposto Pago', value: fBRL(m.darfAmount), emphasis: true },
+                ]}
+              />
+            ))}
+          </div>
         ) : (
           <table className="w-full text-xs">
             <thead>
@@ -309,11 +365,12 @@ export function CarteiraIR({
               <FormField label="Razão (ex: 2 para split 2-por-1, 0.5 para inplit 1-por-2)">
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="0.01"
                   value={form.ratio}
                   onChange={(e) => setForm({ ...form, ratio: e.target.value })}
-                  className="form-input-dark"
+                  className="form-input-dark text-[16px] md:text-[13px]"
                 />
               </FormField>
             </div>

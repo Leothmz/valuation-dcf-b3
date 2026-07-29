@@ -101,3 +101,77 @@ describe('CarteiraIR — IRPF annual summary', () => {
     expect(screen.getByText('Nenhuma posição em aberto.')).toBeInTheDocument()
   })
 })
+
+// Mesmo padrão de CarteiraAtivos.test.tsx (Task 20) / CarteiraRF.test.tsx (Task 21) — sobrescreve
+// o polyfill global de matchMedia (test-setup.ts, default matches:false = desktop) para provar
+// montagem condicional via useIsMobile(), não CSS (`md:hidden` + `hidden md:block`). getByText SEM
+// escopo de container é o detector de duplicata: se a versão mobile (cards) e a desktop (<table>)
+// fossem montadas ao mesmo tempo, o texto apareceria duas vezes e getByText lançaria
+// "found multiple elements" em vez de resolver normalmente.
+//
+// As 4 tabelas de CarteiraIR.tsx (splits, dashboard mensal, posições de fim de ano, ganhos
+// tributáveis do ano) são todas filhas do MESMO `isMobile` — um único render cobre as 4 ao
+// mesmo tempo. Em vez de repetir 4 pares idênticos, cada teste abaixo verifica, num único
+// render, um trecho de texto distintivo de CADA uma das 4 seções (prova as 4 tabelas).
+function mockMatchMedia(matches: boolean) {
+  window.matchMedia = ((query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia
+}
+
+describe('CarteiraIR — montagem condicional mobile/desktop (useIsMobile, não CSS) nas 4 tabelas', () => {
+  // Splits: um evento com VALE3. Dashboard mensal + ganhos tributáveis do ano: venda não-isenta de
+  // WEGE3 em 2024-06 (proceeds 40.000 > limite de 20k) gera DARF > 0 nesse mês, que também aparece
+  // no resumo anual. Posições de fim de ano: PETR4 permanece em aberto (nunca vendido).
+  const combinedOperations = [
+    op({ ticker: 'WEGE3', date: '2024-01-05', type: 'buy', qty: 1000, price: 30 }),
+    op({ ticker: 'WEGE3', date: '2024-06-10', type: 'sell', qty: 1000, price: 40 }),
+    op({ ticker: 'PETR4', date: '2024-02-01', type: 'buy', qty: 100, price: 20 }),
+  ]
+  const combinedSplitEvents: SplitEvent[] = [
+    { id: 'sp1', ticker: 'VALE3', date: '2024-06-01', ratio: 2 },
+  ]
+
+  afterEach(() => {
+    mockMatchMedia(false)
+  })
+
+  it('no mobile, os 4 cards estão no DOM e nenhuma tabela está', () => {
+    mockMatchMedia(true)
+    renderIR({ operations: combinedOperations, splitEvents: combinedSplitEvents })
+
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+
+    // 1. Splits — card com o ticker do evento.
+    expect(screen.getByText('VALE3')).toBeInTheDocument()
+    // 2. Dashboard mensal DARF — CarteiraIRMobile formata o mês como "06/2024".
+    expect(screen.getByText('06/2024')).toBeInTheDocument()
+    // 3. Posições de fim de ano — card com o ticker em aberto.
+    expect(screen.getByText('PETR4')).toBeInTheDocument()
+    // 4. Ganhos tributáveis do ano — título "Ref. 2024-06" do card.
+    expect(screen.getByText('Ref. 2024-06')).toBeInTheDocument()
+  })
+
+  it('no desktop, as 4 tabelas estão no DOM e nenhum card mobile está', () => {
+    mockMatchMedia(false)
+    renderIR({ operations: combinedOperations, splitEvents: combinedSplitEvents })
+
+    expect(screen.getAllByRole('table').length).toBe(4)
+
+    // 1. Splits — linha da tabela com o ticker do evento.
+    expect(screen.getByText('VALE3')).toBeInTheDocument()
+    // 2. Dashboard mensal DARF — a tabela desktop usa o mês cru "2024-06" (sem reformatar).
+    expect(screen.getByText('2024-06')).toBeInTheDocument()
+    // 3. Posições de fim de ano — linha da tabela com o ticker em aberto.
+    expect(screen.getByText('PETR4')).toBeInTheDocument()
+    // 4. Ganhos tributáveis do ano — célula "Ref. 2024-06" da tabela.
+    expect(screen.getByText('Ref. 2024-06')).toBeInTheDocument()
+  })
+})
