@@ -28,15 +28,20 @@ function isDueSoon(iso: string): boolean {
 }
 
 /**
- * Um mês pode zerar o DARF por dois motivos bem diferentes para o IRPF:
+ * Um mês pode zerar o DARF por três motivos bem diferentes para o IRPF:
  * - `exempt`: vendas do mês abaixo do limite de isenção (renda isenta).
- * - prejuízo acumulado (`lossCarriedIn`) abatendo o ganho do mês (tributável, só não
- *   há imposto a pagar agora). NÃO é renda isenta na declaração.
- * A tabela desktop mostra os dois como "R$ 0,00" indistintamente — aqui eles ganham
- * badges e cores diferentes.
+ * - o mês teve GANHO (`grossGain > 0`) mas o prejuízo acumulado (`lossCarriedIn`) abateu
+ *   tudo (tributável, só não há imposto a pagar agora). NÃO é renda isenta na declaração.
+ * - o mês foi ele próprio prejuízo (`grossGain <= 0`) — não há nada "compensado" aqui, o
+ *   prejuízo acumulado só cresceu (ver `buildMonthlyIRSummary`, ramo `grossGain <= 0` em
+ *   portfolio-engine.ts). Precisa do guard `grossGain > 0`, senão dois meses seguidos de
+ *   prejuízo na mesma categoria rotulam o segundo como "compensado" quando na verdade ele
+ *   só empilhou mais prejuízo.
+ * A tabela desktop mostra os três como "R$ 0,00" indistintamente — aqui eles ganham
+ * badges e cores diferentes (o terceiro caso cai no badge de categoria normal).
  */
 function isLossOffset(s: MonthlyIRSummary): boolean {
-  return !s.exempt && s.darfAmount === 0 && s.lossCarriedIn > 0
+  return !s.exempt && s.grossGain > 0 && s.darfAmount === 0 && s.lossCarriedIn > 0
 }
 
 // Visibilidade é decidida pelo pai (CarteiraIR) via useIsMobile() — monta só quando

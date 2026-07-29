@@ -48,6 +48,39 @@ const LOSS_OFFSET: MonthlyIRSummary = {
   dueDate: '2026-06-30',
 }
 
+// Dois meses seguidos de PREJUÍZO na mesma categoria — nenhum ganho em nenhum dos dois.
+// grossGain <= 0 cai no primeiro ramo de buildMonthlyIRSummary (portfolio-engine.ts:585),
+// que só ACUMULA o prejuízo (lossCarriedOut = lossCarriedIn + |grossGain|) — não há nada
+// "compensado". O segundo mês herda lossCarriedIn > 0 do primeiro só porque o prejuízo
+// anterior ainda não foi usado, não porque este mês tenha abatido ganho algum.
+const LOSS_MONTH_1: MonthlyIRSummary = {
+  month: '2026-03',
+  category: 'swing_acoes',
+  grossGain: -1000,
+  proceeds: 5000,
+  exempt: false,
+  lossCarriedIn: 0,
+  taxableAmount: 0,
+  rate: 0.15,
+  darfAmount: 0,
+  lossCarriedOut: 1000,
+  dueDate: '2026-04-30',
+}
+
+const LOSS_MONTH_2: MonthlyIRSummary = {
+  month: '2026-04',
+  category: 'swing_acoes',
+  grossGain: -500,
+  proceeds: 5000,
+  exempt: false,
+  lossCarriedIn: 1000,
+  taxableAmount: 0,
+  rate: 0.15,
+  darfAmount: 0,
+  lossCarriedOut: 1500,
+  dueDate: '2026-05-31',
+}
+
 const SUMMARIES = [TAXABLE, EXEMPT]
 
 describe('CarteiraIRMobile', () => {
@@ -89,5 +122,15 @@ describe('CarteiraIRMobile', () => {
     // Só o mês isento leva o badge ISENTO; o mês com prejuízo compensado leva outro badge.
     expect(screen.getAllByText('ISENTO')).toHaveLength(1)
     expect(screen.getByText('PREJUÍZO COMPENSADO')).toBeInTheDocument()
+  })
+
+  // Regressão: isLossOffset() exigia só `!exempt && darfAmount === 0 && lossCarriedIn > 0`,
+  // sem checar que o mês teve GANHO. Isso rotulava um mês que foi ele próprio prejuízo (e que
+  // só empilhou mais prejuízo acumulado) como "PREJUÍZO COMPENSADO" — nada foi compensado.
+  it('não rotula um mês de prejuízo (sem ganho) como "PREJUÍZO COMPENSADO", mesmo herdando lossCarriedIn > 0', () => {
+    render(<CarteiraIRMobile summaries={[LOSS_MONTH_1, LOSS_MONTH_2]} />)
+    expect(screen.queryByText('PREJUÍZO COMPENSADO')).not.toBeInTheDocument()
+    // Os dois caem no badge de categoria normal (Swing Trade), um por card.
+    expect(screen.getAllByText('Swing Trade (Ações)')).toHaveLength(2)
   })
 })
