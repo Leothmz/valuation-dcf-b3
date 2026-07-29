@@ -5,10 +5,14 @@ import type { FIIData as ApiFIIData } from '../../api/fiis'
 import { B3_FII_TICKERS } from '../../data/b3Tickers'
 import { calcThomazFIIScore } from '../../engines/fii-scores'
 import type { FIIData as EngineFIIData, RankedFII } from '../../engines/fii-scores'
-import { FIISegmentTabs } from './FIISegmentTabs'
+import { ScrollableTabs } from '../../components/ScrollableTabs'
+import type { TabItem } from '../../components/ScrollableTabs'
+import { BottomSheet } from '../../components/BottomSheet'
+import { useIsMobile } from '../../hooks/useMediaQuery'
 import { FIIFilterChips } from './FIIFilterChips'
 import type { FIIFilterConfig } from './FIIFilterChips'
 import { FIITable } from './FIITable'
+import { FIIMobileList } from './FIIMobileList'
 
 const DEFAULT_FILTER: FIIFilterConfig = {
   dyMin:       0.06,
@@ -17,6 +21,29 @@ const DEFAULT_FILTER: FIIFilterConfig = {
   pvpMin:      0.70,
   ffoYieldMin: null,
 }
+
+// Chaves de FIIFilterConfig que representam filtros de fato — usado para contar o
+// badge do botão "Filtros" no mobile (mesmo padrão de RankingPage/index.tsx).
+const FILTERABLE_KEYS: (keyof FIIFilterConfig)[] = [
+  'dyMin', 'liquidezMin', 'vacanciMax', 'pvpMin', 'ffoYieldMin',
+]
+
+function countActiveFilters(fc: FIIFilterConfig): number {
+  return FILTERABLE_KEYS.filter((k) => fc[k] !== DEFAULT_FILTER[k]).length
+}
+
+const SEGMENT_TABS: TabItem<string>[] = [
+  { key: 'todos',        label: 'Todos'        },
+  { key: 'Logística',    label: 'Logística'    },
+  { key: 'Shoppings',    label: 'Shoppings'    },
+  { key: 'Lajes Corp.',  label: 'Lajes Corp.'  },
+  { key: 'Papel/CRI',    label: 'Papel/CRI'    },
+  { key: 'Residencial',  label: 'Residencial'  },
+  { key: 'Híbrido',      label: 'Híbrido'      },
+  { key: 'Renda Urbana', label: 'Renda Urbana' },
+  { key: 'Hotel',        label: 'Hotel'        },
+  { key: 'Fiagro',       label: 'Fiagro'       },
+]
 
 function fPct(v: number | null | undefined): string {
   if (v == null) return '—'
@@ -48,6 +75,11 @@ export function FIIRankingPage() {
   const [customTickers, setCustomTickers] = useState<string[]>([])
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
   const [refreshKey, setRefreshKey] = useState(0)
+  const [sortCol, setSortCol] = useState('rank')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  const isMobile = useIsMobile()
 
   const allTickers = useMemo(
     () => [...new Set([...B3_FII_TICKERS, ...customTickers])],
@@ -65,8 +97,22 @@ export function FIIRankingPage() {
     if (!rawFIIs || rawFIIs.length === 0) return []
     const filtered = applyFilters(rawFIIs, filterConfig, segment)
     // Cast api FIIData to engine FIIData — structurally compatible via index signature
-    return calcThomazFIIScore(filtered as unknown as EngineFIIData[])
-  }, [rawFIIs, filterConfig, segment, refreshKey])
+    const scored = calcThomazFIIScore(filtered as unknown as EngineFIIData[])
+
+    // "rank" (posição no Rank Thomaz FII) é o próprio _scoreThomazFII — calcThomazFIIScore
+    // já devolve a lista ordenada por ele; os outros critérios reordenam por cima.
+    const col = sortCol === 'rank' ? '_scoreThomazFII' : sortCol
+    const dir = sortDir === 'asc' ? 1 : -1
+    return [...scored].sort((a, b) => {
+      const va = (a as unknown as Record<string, number | string | null | undefined>)[col]
+      const vb = (b as unknown as Record<string, number | string | null | undefined>)[col]
+      if (va == null && vb == null) return 0
+      if (va == null) return 1
+      if (vb == null) return -1
+      if (typeof va === 'string' && typeof vb === 'string') return dir * va.localeCompare(vb, 'pt-BR')
+      return dir * ((va as number) - (vb as number))
+    })
+  }, [rawFIIs, filterConfig, segment, refreshKey, sortCol, sortDir])
 
   // Hero stats
   const stats = useMemo(() => {
@@ -102,6 +148,29 @@ export function FIIRankingPage() {
   function removeCustomTicker(ticker: string) {
     setCustomTickers((prev) => prev.filter((t) => t !== ticker))
   }
+
+  const activeFilterCount = countActiveFilters(filterConfig)
+
+  // Mesmo elemento reaproveitado no BottomSheet (mobile) e inline (desktop) — evita
+  // duplicar o JSX de props idênticas nos dois lugares.
+  const filterChipsEl = (
+    <FIIFilterChips
+      config={filterConfig}
+      customTickers={customTickers}
+      onChange={setFilterConfig}
+      onAddTicker={addCustomTicker}
+      onRemoveTicker={removeCustomTicker}
+      onRefresh={handleRefresh}
+      count={rankedRows.length}
+      loading={isLoading}
+    />
+  )
+
+  const loadingBox = (
+    <div className="bg-bg-2 border border-border rounded-[14px] p-10 text-center text-text-muted text-[13px]">
+      Carregando FIIs...
+    </div>
+  )
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4 md:px-7 md:py-6 flex flex-col gap-4">
@@ -142,28 +211,96 @@ export function FIIRankingPage() {
         </div>
       </div>
 
+      {/* Mobile toolbar: ordenação */}
+      <div className="md:hidden flex gap-2">
+        <select
+          value={sortCol}
+          onChange={(e) => setSortCol(e.target.value)}
+          className="flex-1 min-h-[44px] rounded-[9px] border border-border px-3 text-[16px] text-text-base"
+          style={{ background: 'var(--color-bg-2)' }}
+          aria-label="Ordenar por"
+        >
+          <option value="rank">Rank</option>
+          <option value="ticker">Ticker</option>
+          <option value="price">Cotação</option>
+          <option value="dy">DY</option>
+          <option value="pvp">P/VP</option>
+          <option value="ffoYield">FFO Yield</option>
+          <option value="vacancia">Vacância</option>
+          <option value="liquidez">Liquidez</option>
+        </select>
+        <button
+          onClick={() => setSortDir(sortDir === 'desc' ? 'asc' : 'desc')}
+          aria-label={sortDir === 'desc' ? 'Ordem decrescente' : 'Ordem crescente'}
+          className="min-w-[44px] min-h-[44px] rounded-[9px] border border-border text-text-sec cursor-pointer"
+          style={{ background: 'var(--color-bg-2)' }}
+        >
+          {sortDir === 'desc' ? '↓' : '↑'}
+        </button>
+      </div>
+
+      {/* Mobile toolbar: filtros */}
+      <div className="md:hidden">
+        <button
+          onClick={() => setFiltersOpen(true)}
+          className="w-full flex items-center justify-between min-h-[44px] px-3 rounded-[9px] border border-border text-[13px] text-text-sec cursor-pointer"
+          style={{ background: 'var(--color-bg-2)' }}
+        >
+          Filtros
+          {activeFilterCount > 0 && (
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold"
+                  style={{ background: 'var(--color-cyan)', color: '#04121a' }}>
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Segment tabs */}
-      <FIISegmentTabs active={segment} onChange={setSegment} />
+      <ScrollableTabs ariaLabel="Segmento" tabs={SEGMENT_TABS} active={segment} onSelect={setSegment} />
 
-      {/* Filter chips */}
-      <FIIFilterChips
-        config={filterConfig}
-        customTickers={customTickers}
-        onChange={setFilterConfig}
-        onAddTicker={addCustomTicker}
-        onRemoveTicker={removeCustomTicker}
-        onRefresh={handleRefresh}
-        count={rankedRows.length}
-        loading={isLoading}
-      />
-
-      {/* Table */}
-      {isLoading ? (
-        <div className="bg-bg-2 border border-border rounded-[14px] p-10 text-center text-text-muted text-[13px]">
-          Carregando FIIs...
-        </div>
+      {/* Filter chips — uma instância só: dentro do BottomSheet no mobile, inline no
+          desktop. Nunca as duas montadas ao mesmo tempo (evita duplicata no DOM). */}
+      {isMobile ? (
+        <BottomSheet
+          isOpen={filtersOpen}
+          onClose={() => setFiltersOpen(false)}
+          title="Filtros"
+          footer={
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFilterConfig(DEFAULT_FILTER)}
+                className="flex-1 min-h-[44px] rounded-[9px] border border-border text-[13px] font-semibold text-text-sec cursor-pointer"
+                style={{ background: 'var(--color-bg-1)' }}
+              >
+                Limpar
+              </button>
+              <button
+                onClick={() => setFiltersOpen(false)}
+                className="flex-1 min-h-[44px] rounded-[9px] text-[13px] font-semibold cursor-pointer"
+                style={{ background: 'var(--color-cyan-dim)', color: 'var(--color-cyan)', border: '1px solid var(--color-border-glow)' }}
+              >
+                Aplicar ({rankedRows.length})
+              </button>
+            </div>
+          }
+        >
+          {filterChipsEl}
+        </BottomSheet>
       ) : (
-        <FIITable rows={rankedRows} favorites={favorites} onToggleFavorite={toggleFavorite} />
+        filterChipsEl
+      )}
+
+      {/* Montagem condicional (não CSS): lista compacta OU tabela, nunca as duas ao mesmo
+          tempo — evita renderizar linhas em dobro e duplicatas no DOM. */}
+      {isMobile ? (
+        isLoading ? loadingBox : (
+          <FIIMobileList rows={rankedRows} favorites={Array.from(favorites)} onToggleFavorite={toggleFavorite} />
+        )
+      ) : (
+        isLoading ? loadingBox : (
+          <FIITable rows={rankedRows} favorites={favorites} onToggleFavorite={toggleFavorite} />
+        )
       )}
 
       {/* Perfil legend */}

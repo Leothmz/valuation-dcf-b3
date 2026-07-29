@@ -84,7 +84,7 @@ export function FIITable({ rows, favorites, onToggleFavorite }: Props) {
 
   return (
     <div className="bg-bg-2 border border-border rounded-[14px] overflow-hidden flex-1">
-      <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 420px)' }}>
+      <div className="overflow-y-auto max-h-none md:max-h-[calc(100vh-420px)]">
         <table className="w-full border-collapse">
           <thead className="sticky top-0 z-10">
             <tr className="bg-bg-3 border-b border-border">
