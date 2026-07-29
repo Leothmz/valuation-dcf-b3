@@ -104,7 +104,7 @@ export function FIIRankingPage() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-7 py-6 flex flex-col gap-4">
+    <div className="flex-1 overflow-y-auto px-4 py-4 md:px-7 md:py-6 flex flex-col gap-4">
       {/* Hero */}
       <div
         className="rounded-[20px] px-8 py-7 border border-border"

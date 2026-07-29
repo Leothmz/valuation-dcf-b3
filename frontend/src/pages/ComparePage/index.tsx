@@ -98,7 +98,7 @@ export function ComparePage() {
   const rows = buildRows(stocks as StockData[])
 
   return (
-    <div className="max-w-[1440px] mx-auto px-6 py-7 pb-16 flex flex-col gap-5">
+    <div className="max-w-[1440px] mx-auto px-4 py-4 md:px-6 md:py-7 pb-16 flex flex-col gap-5">
       <div
         className="rounded-[16px] border border-border p-6"
         style={{ background: 'linear-gradient(180deg, #0d1829 0%, #0b0f17 100%)' }}

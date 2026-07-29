@@ -278,7 +278,7 @@ export function WatchlistPage() {
   const totalCount = tickers.length
 
   return (
-    <div className="max-w-[1340px] mx-auto px-6 py-7 pb-16">
+    <div className="max-w-[1340px] mx-auto px-4 py-4 md:px-6 md:py-7 pb-16">
       {/* Buy-range alert banner */}
       {!bannerDismissed && triggeredTickers.length > 0 && (
         <div

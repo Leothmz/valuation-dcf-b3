@@ -222,7 +222,7 @@ export function RankingPage() {
   const showing = rankedRows.length
 
   return (
-    <div className="max-w-[1440px] mx-auto px-6 py-7 pb-16 flex flex-col gap-5">
+    <div className="max-w-[1440px] mx-auto px-4 py-4 md:px-6 md:py-7 pb-16 flex flex-col gap-5">
       {/* Hero header */}
       <div
         className="rounded-[16px] border border-border p-6"
