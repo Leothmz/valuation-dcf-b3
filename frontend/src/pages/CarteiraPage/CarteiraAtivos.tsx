@@ -6,6 +6,8 @@ import { fBRL as fBRLFormatter, fPct } from '../../engines/formatters'
 import type { HoldingSummary, AssetTWRR } from '../../engines/portfolio-engine'
 import type { LiveQuote } from '../../api/stocks'
 import type { WatchlistEntry } from '../../stores/watchlistStore'
+import { useIsMobile } from '../../hooks/useMediaQuery'
+import { CarteiraAtivosMobile } from './CarteiraAtivosMobile'
 
 const fBRL = (v: number) => fBRLFormatter.format(v)
 
@@ -39,7 +41,9 @@ const COLUMNS = [
 ] as const
 
 type AssetFilter = 'all' | 'acao_br' | 'fii' | 'etf' | 'stock_intl' | 'cripto'
-type SortKey = 'simple' | 'twrr' | null
+// 'ticker'/'valor' só são acionáveis pelo seletor de ordenação mobile (Step 5) — a tabela
+// desktop continua só com os cabeçalhos clicáveis Retorno/TWRR, sem regressão de comportamento.
+type SortKey = 'ticker' | 'valor' | 'simple' | 'twrr' | null
 
 interface CarteiraAtivosProps {
   holdings: HoldingSummary[]
@@ -62,6 +66,7 @@ export function CarteiraAtivos({
   const [sortKey, setSortKey] = useState<SortKey>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [expandedTicker, setExpandedTicker] = useState<string | null>(null)
+  const isMobile = useIsMobile()
 
   const quoteMap = Object.fromEntries(quotes.map((q) => [q.ticker, q]))
 
@@ -107,8 +112,15 @@ export function CarteiraAtivos({
 
   const sorted = [...enriched].sort((a, b) => {
     if (!sortKey) return 0
-    const aVal = sortKey === 'simple' ? a.retorno : a.twrr
-    const bVal = sortKey === 'simple' ? b.retorno : b.twrr
+    if (sortKey === 'ticker') {
+      return sortDir === 'desc'
+        ? b.h.ticker.localeCompare(a.h.ticker, 'pt-BR')
+        : a.h.ticker.localeCompare(b.h.ticker, 'pt-BR')
+    }
+    const aVal =
+      sortKey === 'valor' ? a.valorCarteira : sortKey === 'simple' ? a.retorno : a.twrr
+    const bVal =
+      sortKey === 'valor' ? b.valorCarteira : sortKey === 'simple' ? b.retorno : b.twrr
     if (aVal == null && bVal == null) return 0
     if (aVal == null) return 1
     if (bVal == null) return -1
@@ -134,6 +146,49 @@ export function CarteiraAtivos({
         ))}
       </div>
 
+      {/* Montagem condicional (não CSS, nem para o seletor de ordenação): options do
+          <select> repetem os mesmos rótulos dos cabeçalhos da tabela ("TWRR", "Retorno") —
+          um `md:hidden` sempre montado duplicaria esse texto no DOM em qualquer viewport
+          (jsdom não aplica media query), quebrando queries sem escopo como getByText('TWRR').
+          Por isso todo o bloco mobile — seletor + lista — só monta quando isMobile é true. */}
+      {isMobile ? (
+        <>
+          {/* Seletor de ordenação mobile — reaproveita o mesmo estado sortKey/sortDir usado
+              pelos cabeçalhos clicáveis da tabela desktop (nenhum estado paralelo). Padrão
+              idêntico ao de RankingPage/index.tsx (Task 12 Step 6). */}
+          <div className="flex gap-2 mb-3">
+            <select
+              value={sortKey ?? 'none'}
+              onChange={(e) => setSortKey(e.target.value === 'none' ? null : (e.target.value as SortKey))}
+              className="flex-1 min-h-[44px] rounded-[9px] border border-border px-3 text-[16px] text-text-base"
+              style={{ background: 'var(--color-bg-2)' }}
+              aria-label="Ordenar por"
+            >
+              <option value="none">Padrão</option>
+              <option value="ticker">Ticker</option>
+              <option value="valor">Valor</option>
+              <option value="simple">Retorno Simples</option>
+              <option value="twrr">TWRR</option>
+            </select>
+            <button
+              onClick={() => setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))}
+              aria-label={sortDir === 'desc' ? 'Ordem decrescente' : 'Ordem crescente'}
+              className="min-w-[44px] min-h-[44px] rounded-[9px] border border-border text-text-sec cursor-pointer"
+              style={{ background: 'var(--color-bg-2)' }}
+            >
+              {sortDir === 'desc' ? '↓' : '↑'}
+            </button>
+          </div>
+
+          <CarteiraAtivosMobile
+            holdings={sorted.map((s) => s.h)}
+            currentPriceMap={Object.fromEntries(
+              quotes.filter((q) => q.price != null).map((q) => [q.ticker, q.price as number])
+            )}
+            twrrMap={twrrMap}
+          />
+        </>
+      ) : (
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
@@ -289,6 +344,7 @@ export function CarteiraAtivos({
           </tbody>
         </table>
       </div>
+      )}
     </div>
   )
 }
