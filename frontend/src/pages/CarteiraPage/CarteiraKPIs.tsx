@@ -19,7 +19,7 @@ export function CarteiraKPIs({ totalInvested, totalValue, loading }: CarteiraKPI
     retorno == null ? 'text-text-muted' : retorno >= 0 ? 'text-green' : 'text-red'
 
   return (
-    <div className="flex gap-3 mt-5 flex-wrap">
+    <div className="grid grid-cols-2 gap-2.5 mt-5 md:flex md:gap-3 md:flex-wrap">
       <KPICard label="Total Investido" loading={loading}>
         {totalInvested != null ? fBRL(totalInvested) : '—'}
       </KPICard>

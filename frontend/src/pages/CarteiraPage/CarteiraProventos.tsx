@@ -149,7 +149,7 @@ export function CarteiraProventos({
   return (
     <div>
       {/* Summary cards */}
-      <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
+      <div className="grid gap-3 mb-5 grid-cols-2 md:grid-cols-4">
         {[
           { label: 'TOTAL RECEBIDO', value: fBRL(total) },
           { label: 'ANO ATUAL', value: fBRL(anoAtual) },

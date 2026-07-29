@@ -66,7 +66,7 @@ export function CarteiraVisaoGeral({
     .sort((a, b) => b.retorno - a.retorno)
 
   return (
-    <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 1fr' }}>
+    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
       {/* Allocation */}
       <Card title="Alocação por Classe">
         {loading ? (
@@ -116,10 +116,7 @@ export function CarteiraVisaoGeral({
             {[1, 2].map((i) => <Skeleton key={i} className="h-8 w-full" />)}
           </div>
         ) : (
-          <div
-            className="grid gap-6 mt-2"
-            style={{ gridTemplateColumns: '1fr 1fr' }}
-          >
+          <div className="grid gap-6 mt-2 grid-cols-1 md:grid-cols-2">
             <div>
               <div className="text-[11px] font-semibold text-green mb-2.5 uppercase tracking-wider">
                 ↑ Melhores
@@ -149,7 +146,7 @@ export function CarteiraVisaoGeral({
       </Card>
 
       {/* Summary */}
-      <Card title="Resumo da Carteira" style={{ gridColumn: '1 / -1' }}>
+      <Card title="Resumo da Carteira" className="col-span-full">
         {loading ? (
           <Skeleton className="h-20 w-full mt-2" />
         ) : (
@@ -169,16 +166,16 @@ export function CarteiraVisaoGeral({
 function Card({
   title,
   children,
-  style,
+  className,
 }: {
   title: string
   children: React.ReactNode
-  style?: React.CSSProperties
+  className?: string
 }) {
   return (
     <div
-      className="rounded-[14px] p-[18px_20px]"
-      style={{ background: '#111827', border: '1px solid #1e2d42', ...style }}
+      className={`rounded-[14px] p-[18px_20px] ${className ?? ''}`}
+      style={{ background: '#111827', border: '1px solid #1e2d42' }}
     >
       <div className="text-[13px] font-semibold text-text-sec uppercase tracking-[0.5px]">
         {title}
