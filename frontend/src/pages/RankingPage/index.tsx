@@ -12,13 +12,43 @@ import {
   calcJoelScore,
 } from '../../engines/ranking-scores'
 import type { StockData } from '../../engines/ranking-scores'
-import { MethodPills } from './MethodPills'
-import { SectorTabs } from './SectorTabs'
-import type { SectorTab } from './SectorTabs'
+import { DEFAULT_FILTER_CONFIG } from '../../stores/rankingStore'
+import type { FilterConfig, RankingMethod } from '../../stores/rankingStore'
+import { ScrollableTabs } from '../../components/ScrollableTabs'
+import type { TabItem } from '../../components/ScrollableTabs'
+import { BottomSheet } from '../../components/BottomSheet'
 import { FilterChips } from './FilterChips'
 import { RankingTable } from './RankingTable'
+import { RankingMobileList } from './RankingMobileList'
 
 const MAX_COMPARE = 3
+
+type SectorTab = '' | 'insurance' | 'banks'
+
+const METHOD_TABS: TabItem<RankingMethod>[] = [
+  { key: 'thomaz', label: 'Rank Thomaz' },
+  { key: 'bazin',  label: 'Rank Bazin'  },
+  { key: 'graham', label: 'Rank Graham' },
+  { key: 'lynch',  label: 'Rank Lynch'  },
+  { key: 'joel',   label: 'Rank Joel'   },
+]
+
+const SECTOR_TABS: TabItem<SectorTab>[] = [
+  { key: '',          label: 'Todos'       },
+  { key: 'insurance', label: 'Seguradoras' },
+  { key: 'banks',     label: 'Bancos'      },
+]
+
+// Chaves de FilterConfig que representam filtros de fato (exclui campos de estado de UI
+// como `show`, `sectorTab`, `extrasOpen`) — usado para contar o badge do botão "Filtros".
+const FILTERABLE_KEYS: (keyof FilterConfig)[] = [
+  'taxaBazin', 'taxaGraham', 'taxaLynch', 'plMin', 'plMax',
+  'deMin', 'deMax', 'dyMin', 'margemMin', 'roeMin', 'liquidezMin',
+]
+
+function countActiveFilters(fc: FilterConfig): number {
+  return FILTERABLE_KEYS.filter((k) => fc[k] !== DEFAULT_FILTER_CONFIG[k]).length
+}
 
 // Enriched ranked row — includes valuation columns from all 4 methods
 export interface RankedRow extends StockData {
@@ -71,6 +101,8 @@ export function RankingPage() {
   const [search, setSearch] = useState('')
   const [newTicker, setNewTicker] = useState('')
   const [compareSelection, setCompareSelection] = useState<string[]>([])
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [compareMode, setCompareMode] = useState(false)
 
   function toggleCompareSelection(ticker: string) {
     setCompareSelection((prev) =>
@@ -220,6 +252,17 @@ export function RankingPage() {
 
   const totalLoaded = rawStocks?.length ?? 0
   const showing = rankedRows.length
+  const activeFilterCount = countActiveFilters(filterConfig)
+
+  // Mesmo elemento reaproveitado no BottomSheet (mobile) e no painel fixo (desktop) —
+  // evita duplicar o JSX de props idênticas nos dois lugares.
+  const filterChipsEl = (
+    <FilterChips
+      config={filterConfig}
+      onChange={setFilterConfig}
+      onReset={resetFilterConfig}
+    />
+  )
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 py-4 md:px-6 md:py-7 pb-16 flex flex-col gap-5">
@@ -289,26 +332,95 @@ export function RankingPage() {
           </div>
         )}
 
-        {/* Method pills */}
-        <MethodPills active={method} onSelect={setMethod} />
+        {/* Method tabs — pills fixas no desktop, faixa rolável no mobile */}
+        <ScrollableTabs ariaLabel="Método de ranking" tabs={METHOD_TABS} active={method} onSelect={setMethod} />
       </div>
 
-      {/* Filter chips */}
+      {/* Mobile toolbar: ordenação + filtros + comparar */}
+      <div className="md:hidden flex gap-2">
+        <select
+          value={sortCol}
+          onChange={(e) => setSortCol(e.target.value)}
+          className="flex-1 min-h-[44px] rounded-[9px] border border-border px-3 text-[16px] text-text-base"
+          style={{ background: 'var(--color-bg-2)' }}
+          aria-label="Ordenar por"
+        >
+          <option value="rank">Posição</option>
+          <option value="ticker">Ticker</option>
+          <option value="price">Cotação</option>
+          <option value="dy">DY</option>
+          <option value="pl">P/L</option>
+          <option value="roe">ROE</option>
+          <option value="margemLiquida">Margem Líquida</option>
+          <option value="dividaLiquidaEbit">DL/EBITDA</option>
+        </select>
+        <button
+          onClick={() => setSortDir(sortDir === 'desc' ? 'asc' : 'desc')}
+          aria-label={sortDir === 'desc' ? 'Ordem decrescente' : 'Ordem crescente'}
+          className="min-w-[44px] min-h-[44px] rounded-[9px] border border-border text-text-sec cursor-pointer"
+          style={{ background: 'var(--color-bg-2)' }}
+        >
+          {sortDir === 'desc' ? '↓' : '↑'}
+        </button>
+      </div>
+
+      <div className="md:hidden flex gap-2">
+        <button
+          onClick={() => setFiltersOpen(true)}
+          className="flex-1 flex items-center justify-between min-h-[44px] px-3 rounded-[9px] border border-border text-[13px] text-text-sec cursor-pointer"
+          style={{ background: 'var(--color-bg-2)' }}
+        >
+          Filtros
+          {activeFilterCount > 0 && (
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold"
+                  style={{ background: 'var(--color-cyan)', color: '#04121a' }}>
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setCompareMode((v) => !v)}
+          aria-pressed={compareMode}
+          className="min-h-[44px] px-3 rounded-[9px] border text-[13px] font-semibold cursor-pointer"
+          style={{
+            background: compareMode ? 'rgba(6,182,212,.15)' : 'var(--color-bg-2)',
+            color: compareMode ? 'var(--color-cyan)' : 'var(--color-text-sec)',
+            borderColor: compareMode ? 'rgba(6,182,212,.4)' : 'var(--color-border)',
+          }}
+        >
+          Comparar
+        </button>
+      </div>
+
+      <BottomSheet isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtros">
+        {filterChipsEl}
+      </BottomSheet>
+
+      {/* Filter chips — desktop apenas; no mobile vivem dentro do BottomSheet acima */}
       <div
-        className="rounded-[12px] border border-border px-4 py-3"
+        className="hidden md:block rounded-[12px] border border-border px-4 py-3"
         style={{ background: 'var(--color-bg-2)' }}
       >
-        <FilterChips
-          config={filterConfig}
-          onChange={setFilterConfig}
-          onReset={resetFilterConfig}
-        />
+        {filterChipsEl}
       </div>
 
-      {/* Sector tabs + table */}
+      {/* Sector tabs + lista/tabela */}
       <div>
-        <SectorTabs active={sectorTab} onSelect={setSectorTab} />
-        <div className="mt-4">
+        <ScrollableTabs ariaLabel="Setor" tabs={SECTOR_TABS} active={sectorTab} onSelect={setSectorTab} />
+
+        <RankingMobileList
+          rows={rankedRows}
+          method={method}
+          favorites={favorites}
+          onToggleFavorite={toggleFavorite}
+          onRemoveCustom={removeCustomTicker}
+          compareMode={compareMode}
+          compareSelection={compareSelection}
+          onToggleCompare={toggleCompareSelection}
+          maxCompare={MAX_COMPARE}
+        />
+
+        <div className="hidden md:block mt-4">
           <RankingTable
             rows={rankedRows}
             isLoading={isLoading}
