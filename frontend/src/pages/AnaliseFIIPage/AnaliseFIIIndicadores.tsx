@@ -24,9 +24,19 @@ function fLiq(v: number | null | undefined): string {
   return fBRL(v)
 }
 
+// Indicadores vindos do scraper do statusinvest (vacância, segmento, nº de imóveis) podem vir
+// nulos quando o scraper falha — mostra "indisponível" em vez de deixar a célula em branco/'—'
+// silencioso, que não distingue "campo zero" de "scraper falhou".
+function showOrIndisponivel(raw: unknown, formatted: string): React.ReactNode {
+  if (raw == null || raw === '') {
+    return <span className="italic text-text-muted">indisponível</span>
+  }
+  return formatted
+}
+
 interface CardDef {
   label: string
-  value: string
+  value: React.ReactNode
   colorClass?: string
   tip?: string
 }
@@ -101,17 +111,17 @@ export function AnaliseFIIIndicadores({ data }: Props) {
   const imoveis: CardDef[] = [
     {
       label: 'Vacância',
-      value: fPct(data.vacancia),
+      value: showOrIndisponivel(data.vacancia, fPct(data.vacancia)),
       colorClass: vacColor,
       tip: '<strong>Vacância Física</strong>Percentual da área bruta locável (ABL) desocupada.',
     },
     {
       label: 'Nº Imóveis',
-      value: data.numImoveis != null ? data.numImoveis.toLocaleString('pt-BR') : '—',
+      value: showOrIndisponivel(data.numImoveis, data.numImoveis?.toLocaleString('pt-BR') ?? ''),
     },
     {
       label: 'Segmento',
-      value: data.segmento ?? '—',
+      value: showOrIndisponivel(data.segmento, data.segmento ?? ''),
       colorClass: 'text-purple font-ui text-[14px]',
     },
   ]
@@ -133,17 +143,17 @@ export function AnaliseFIIIndicadores({ data }: Props) {
   return (
     <div>
       <SectionTitle>Rentabilidade</SectionTitle>
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
         {rentabilidade.map((c) => <IndCard key={c.label} {...c} />)}
       </div>
 
       <SectionTitle>Imóveis</SectionTitle>
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
         {imoveis.map((c) => <IndCard key={c.label} {...c} />)}
       </div>
 
       <SectionTitle>Mercado</SectionTitle>
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
         {mercado.map((c) => <IndCard key={c.label} {...c} />)}
       </div>
     </div>

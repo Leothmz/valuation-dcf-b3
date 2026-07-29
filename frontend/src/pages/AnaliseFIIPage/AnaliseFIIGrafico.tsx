@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useIsMobile } from '../../hooks/useMediaQuery'
 
 interface Props {
   ticker: string
@@ -15,6 +16,12 @@ const PERIODS = [
   { label: '10 ANOS', range: 'ALL' },
 ]
 
+const CHART_HEIGHT_DESKTOP = 520
+const CHART_HEIGHT_MOBILE = 280
+
+// Menos opções de período no mobile — evita estourar a largura da tela com 8 abas.
+const MOBILE_RANGES = new Set(['1D', '1M', '6M', '12M', 'ALL'])
+
 declare global {
   interface Window {
     TradingView?: {
@@ -27,6 +34,9 @@ export function AnaliseFIIGrafico({ ticker }: Props) {
   const [activeRange, setActiveRange] = useState('12M')
   const containerRef = useRef<HTMLDivElement>(null)
   const scriptRef = useRef<HTMLScriptElement | null>(null)
+  const isMobile = useIsMobile()
+  const chartHeight = isMobile ? CHART_HEIGHT_MOBILE : CHART_HEIGHT_DESKTOP
+  const periods = isMobile ? PERIODS.filter((p) => MOBILE_RANGES.has(p.range)) : PERIODS
 
   useEffect(() => {
     if (!ticker) return
@@ -35,14 +45,14 @@ export function AnaliseFIIGrafico({ ticker }: Props) {
       containerRef.current.innerHTML = '<div id="tradingview_fii_chart"></div>'
     }
 
-    function initWidget() {
+    const initWidget = () => {
       if (!window.TradingView) {
         setTimeout(initWidget, 200)
         return
       }
       new window.TradingView.widget({
         width: '100%',
-        height: 520,
+        height: chartHeight,
         symbol: `BMFBOVESPA:${ticker}`,
         interval: 'D',
         timezone: 'America/Sao_Paulo',
@@ -70,17 +80,20 @@ export function AnaliseFIIGrafico({ ticker }: Props) {
     } else {
       initWidget()
     }
-  }, [ticker, activeRange])
+  }, [ticker, activeRange, chartHeight])
 
   return (
     <div>
-      <div className="flex border-b border-border mb-0">
-        {PERIODS.map(({ label, range }) => (
+      <div
+        className="flex border-b border-border mb-0 overflow-x-auto
+                   [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {periods.map(({ label, range }) => (
           <button
             key={range}
             onClick={() => setActiveRange(range)}
             className={`bg-transparent border-0 border-b-2 px-3.5 py-2 text-[12px] font-semibold
-                        tracking-[0.03em] cursor-pointer transition-colors
+                        tracking-[0.03em] cursor-pointer transition-colors shrink-0 min-h-[44px]
                         ${activeRange === range
                           ? 'text-cyan border-cyan'
                           : 'text-text-muted border-transparent hover:text-text-sec'
@@ -92,7 +105,7 @@ export function AnaliseFIIGrafico({ ticker }: Props) {
       </div>
       <div
         ref={containerRef}
-        style={{ height: 520, borderRadius: '0 0 14px 14px', overflow: 'hidden' }}
+        style={{ height: chartHeight, borderRadius: '0 0 14px 14px', overflow: 'hidden' }}
       >
         <div id="tradingview_fii_chart" />
       </div>
