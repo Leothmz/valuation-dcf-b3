@@ -339,30 +339,40 @@ export function WatchlistRow({
         </button>
       </td>
 
-      {/* Delete */}
+      {/* Actions: menu ⋯ (descoberta no desktop, mesmo menu do botão mobile) + Delete */}
       <td
         className="py-[14px] px-4 text-center align-middle"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          className="border border-transparent rounded-[6px] text-text-muted text-[13px] px-2 py-1 leading-none cursor-pointer"
-          title="Remover"
-          onClick={(e) => onDelete(ticker, e)}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget
-            el.style.borderColor = 'var(--color-red)'
-            el.style.color = 'var(--color-red)'
-            el.style.background = 'var(--color-red-dim)'
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget
-            el.style.borderColor = 'transparent'
-            el.style.color = ''
-            el.style.background = ''
-          }}
-        >
-          ✕
-        </button>
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={(e) => onOpenMenu(e, ticker)}
+            aria-label={`Mais ações para ${ticker}`}
+            title="Mais ações"
+            style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+          >
+            <MoreHorizontal size={14} />
+          </button>
+          <button
+            className="border border-transparent rounded-[6px] text-text-muted text-[13px] px-2 py-1 leading-none cursor-pointer"
+            title="Remover"
+            onClick={(e) => onDelete(ticker, e)}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget
+              el.style.borderColor = 'var(--color-red)'
+              el.style.color = 'var(--color-red)'
+              el.style.background = 'var(--color-red-dim)'
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget
+              el.style.borderColor = 'transparent'
+              el.style.color = ''
+              el.style.background = ''
+            }}
+          >
+            ✕
+          </button>
+        </div>
       </td>
     </tr>
   )

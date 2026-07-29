@@ -468,14 +468,41 @@ describe('Watchlist mobile — padrão C (cards) e menu acessível', () => {
     expect(screen.queryByText('Preço Teto salvo')).not.toBeInTheDocument()
   })
 
-  it('não expande o card ao clicar ou apertar Enter no sino (alerta) aninhado no summary', () => {
+  it('não expande o card ao clicar no sino (alerta) aninhado no summary', () => {
     setupTwoEntries()
     mockMatchMedia(true)
     renderPage()
     const bell = screen.getAllByRole('button', { name: /alerta de preço/ })[0]
     fireEvent.click(bell)
+    expect(screen.queryByText('Preço Teto salvo')).not.toBeInTheDocument()
+  })
+
+  it('não expande o card ao apertar Enter no sino (alerta) aninhado no summary', () => {
+    setupTwoEntries()
+    mockMatchMedia(true)
+    renderPage()
+    const bell = screen.getAllByRole('button', { name: /alerta de preço/ })[0]
     fireEvent.keyDown(bell, { key: 'Enter' })
     expect(screen.queryByText('Preço Teto salvo')).not.toBeInTheDocument()
+  })
+
+  it('no desktop, o botão de reticências na célula de ações também abre o menu (descoberta sem clique direito)', async () => {
+    const user = userEvent.setup()
+    setupTwoEntries()
+    mockMatchMedia(false)
+    renderPage()
+    await user.click(screen.getAllByRole('button', { name: /Mais ações/ })[0])
+    expect(screen.getByText('Histórico de alertas')).toBeInTheDocument()
+  })
+
+  it('no desktop, o clique direito na linha continua funcionando (não regrediu)', async () => {
+    const user = userEvent.setup()
+    setupTwoEntries()
+    mockMatchMedia(false)
+    renderPage()
+    const row = screen.getByText('PETR4').closest('tr')!
+    await user.pointer({ target: row, keys: '[MouseRight]' })
+    expect(screen.getByText('Histórico de alertas')).toBeInTheDocument()
   })
 
   it('expande o card e mostra upside com sinal sempre visível (fPctSigned)', () => {

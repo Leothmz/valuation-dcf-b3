@@ -372,7 +372,7 @@ export function WatchlistPage() {
                 />
                 <th
                   className="bg-bg-2 border-b border-border py-3 px-4 text-center"
-                  style={{ width: 48 }}
+                  style={{ width: 84 }}
                 />
               </tr>
             </thead>

@@ -94,7 +94,7 @@ export function WatchlistHistoryModal({
                     type="text"
                     className="mt-2 bg-bg-2 border border-border rounded-[6px] text-text-sec text-[12px]
                                px-2 py-2 outline-none w-full placeholder-text-muted focus:border-cyan
-                               min-h-[38px]"
+                               min-h-[44px]"
                     defaultValue={h.annotation ?? ''}
                     placeholder="Anotação…"
                     onBlur={(e) => onUpdateAnnotation(h.savedAt, e.target.value)}
