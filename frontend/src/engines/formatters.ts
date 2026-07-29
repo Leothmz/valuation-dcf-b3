@@ -44,3 +44,9 @@ export function fPctSigned(n: number, dec = 2): string {
   const sign = n >= 0 ? '+' : '-';
   return sign + fPct(Math.abs(n), dec);
 }
+
+/** Número genérico pt-BR com casas decimais fixas; `—` para null/undefined. */
+export function fNum(n: number | null | undefined, dec = 2): string {
+  if (n == null) return '—';
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
