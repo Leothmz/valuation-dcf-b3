@@ -1,5 +1,6 @@
-import { StickyNote, Bell, BellOff, BellRing } from 'lucide-react'
-import { fBRL, fPct } from '../../engines/formatters'
+import { StickyNote, Bell, BellOff, BellRing, MoreHorizontal } from 'lucide-react'
+import { ExpandableRow } from '../../components/ExpandableRow'
+import { fBRL, fPct, fPctSigned } from '../../engines/formatters'
 import { Skeleton } from '../../components'
 import type { WatchlistEntry } from '../../stores/watchlistStore'
 import type { LiveQuote } from '../../api/stocks'
@@ -64,6 +65,8 @@ interface WatchlistRowProps {
   onToggleAlert: (ticker: string) => void
   onOpenMenu: (e: React.MouseEvent, ticker: string) => void
   onDelete: (ticker: string, e: React.MouseEvent) => void
+  /** 'table' = <tr> desktop (inalterado); 'card' = ExpandableRow mobile (padrão C). */
+  variant: 'table' | 'card'
 }
 
 export function WatchlistRow({
@@ -75,6 +78,7 @@ export function WatchlistRow({
   onToggleAlert,
   onOpenMenu,
   onDelete,
+  variant,
 }: WatchlistRowProps) {
   const ticker = entry.ticker
   const currentPrice = quote?.price ?? null
@@ -92,6 +96,112 @@ export function WatchlistRow({
     : isTriggered
       ? 'var(--color-green)'
       : 'var(--color-text-sec)'
+
+  if (variant === 'card') {
+    return (
+      <ExpandableRow
+        ariaLabel={ticker}
+        highlighted={isTriggered}
+        summary={
+          <>
+            <TickerLogo ticker={ticker} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono font-semibold text-[13px] text-cyan truncate">{ticker}</span>
+                {entry.notes && (
+                  <span
+                    title={entry.notes.slice(0, 80)}
+                    style={{ color: 'var(--color-amber)' }}
+                    className="shrink-0 flex items-center"
+                  >
+                    <StickyNote size={11} />
+                  </span>
+                )}
+              </div>
+              <div className="text-[11px] text-text-sec truncate">{entry.name || '—'}</div>
+            </div>
+
+            <div className="text-right shrink-0">
+              {liveLoading || isLoading ? (
+                <Skeleton width="60px" height="12px" className="inline-block" />
+              ) : liveError || currentPrice == null ? (
+                <div className="font-mono text-[13px] text-text-muted">—</div>
+              ) : (
+                <div className="font-mono text-[13px] text-text-base">{fBRL.format(currentPrice)}</div>
+              )}
+              {!liveLoading && !isLoading && !liveError && changePercent != null && (
+                <div
+                  className="font-mono text-[11px] font-semibold"
+                  style={{ color: changePercent >= 0 ? 'var(--color-green)' : 'var(--color-red)' }}
+                >
+                  {changePercent >= 0 ? '+' : ''}
+                  {changePercent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleAlert(ticker) }}
+              onKeyDown={(e) => { e.stopPropagation() }}
+              aria-label={alertEnabled ? `Desativar alerta de preço para ${ticker}` : `Ativar alerta de preço para ${ticker}`}
+              title={alertEnabled ? 'Desativar alerta de preço' : 'Ativar alerta de preço'}
+              className="shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+              style={{ color: alertColor, background: 'none', border: 'none' }}
+            >
+              <AlertIcon size={16} />
+            </button>
+
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenMenu(e, ticker) }}
+              onKeyDown={(e) => { e.stopPropagation() }}
+              aria-label={`Mais ações para ${ticker}`}
+              className="shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted cursor-pointer"
+              style={{ background: 'none', border: 'none' }}
+            >
+              <MoreHorizontal size={18} />
+            </button>
+          </>
+        }
+      >
+        <div className="flex items-baseline justify-between py-1">
+          <span className="text-[12px] text-text-sec">Preço Teto salvo</span>
+          <span className="font-mono text-[14px] font-bold text-cyan">{fBRL.format(entry.fairPrice)}</span>
+        </div>
+
+        <div className="flex items-baseline justify-between py-1">
+          <span className="text-[12px] text-text-sec">Upside</span>
+          {liveError || upside === null ? (
+            <span className="text-text-muted text-[13px]">—</span>
+          ) : (
+            <span
+              className="font-mono text-[13px] font-bold"
+              style={{ color: upside >= 0 ? 'var(--color-green)' : 'var(--color-red)' }}
+            >
+              {fPctSigned(upside)}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-baseline justify-between py-1">
+          <span className="text-[12px] text-text-sec">Dividend Yield</span>
+          {liveError || dividendYield == null || dividendYield <= 0 ? (
+            <span className="text-text-muted text-[13px]">—</span>
+          ) : (
+            <span className="font-mono text-[13px] text-green">{fPct(dividendYield)}</span>
+          )}
+        </div>
+
+        <div className="flex items-baseline justify-between py-1">
+          <span className="text-[12px] text-text-sec">Salvo em</span>
+          <span className="font-mono text-[12px] text-text-muted">{fDate(entry.savedAt)}</span>
+        </div>
+
+        {entry.notes && (
+          <p className="italic text-[12px] text-text-muted mt-2">{entry.notes}</p>
+        )}
+      </ExpandableRow>
+    )
+  }
 
   return (
     <tr

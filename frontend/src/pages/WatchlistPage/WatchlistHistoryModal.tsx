@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { fBRL } from '../../engines/formatters'
+import { useIsMobile } from '../../hooks/useMediaQuery'
 import type { PriceHistoryEntry } from '../../stores/watchlistStore'
 
 // ── Format date ───────────────────────────────────────────────────────────────
@@ -27,6 +28,7 @@ export function WatchlistHistoryModal({
   history,
   onUpdateAnnotation,
 }: WatchlistHistoryModalProps) {
+  const isMobile = useIsMobile()
   if (!isOpen || !ticker) return null
 
   return (
@@ -35,7 +37,9 @@ export function WatchlistHistoryModal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        className="bg-bg-2 border border-border rounded-[16px] p-6 w-[640px] max-w-[94vw]"
+        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
+                   bg-bg-2 border border-border rounded-none md:rounded-[14px] p-6
+                   w-auto md:w-[640px] max-w-none md:max-w-[94vw] max-h-none md:max-h-[80vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 32px rgba(0,0,0,.6)' }}
       >
         <div className="flex items-center justify-between mb-5">
@@ -55,6 +59,50 @@ export function WatchlistHistoryModal({
           <p className="text-[13px] text-text-muted text-center py-6">
             Nenhum histórico ainda — salve o preço teto mais de uma vez para registrar a evolução.
           </p>
+        ) : isMobile ? (
+          // Montagem condicional (não CSS) — mesma regra de WatchlistPage/index.tsx.
+          <div className="overflow-auto max-h-[70vh]">
+            {history.map((h, i) => {
+              const prev = history[i + 1]
+              const diff = prev ? ((h.fairPrice - prev.fairPrice) / prev.fairPrice) : null
+              return (
+                <div
+                  key={h.savedAt}
+                  className="rounded-[10px] border border-border-muted p-3 mb-2"
+                  style={{ background: 'var(--color-bg-3)' }}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[12px] text-text-sec">{fDate(h.savedAt)}</span>
+                    <span className="font-mono text-[13px] font-semibold" style={{ color: 'var(--color-cyan)' }}>
+                      {fBRL.format(h.fairPrice)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-[11px] text-text-muted">Variação</span>
+                    {diff == null ? (
+                      <span className="text-text-muted text-[12px]">—</span>
+                    ) : (
+                      <span
+                        className="font-mono text-[12px]"
+                        style={{ color: diff >= 0 ? 'var(--color-green)' : 'var(--color-red)' }}
+                      >
+                        {diff >= 0 ? '+' : ''}{(diff * 100).toFixed(1)}%
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    className="mt-2 bg-bg-2 border border-border rounded-[6px] text-text-sec text-[12px]
+                               px-2 py-2 outline-none w-full placeholder-text-muted focus:border-cyan
+                               min-h-[38px]"
+                    defaultValue={h.annotation ?? ''}
+                    placeholder="Anotação…"
+                    onBlur={(e) => onUpdateAnnotation(h.savedAt, e.target.value)}
+                  />
+                </div>
+              )
+            })}
+          </div>
         ) : (
           <div className="overflow-auto max-h-[400px]">
             <table className="w-full border-collapse">

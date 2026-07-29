@@ -5,6 +5,7 @@ import { useWatchlistStore } from '../../stores'
 import { useBatchQuotes } from '../../api/stocks'
 import { isPriceInBuyRange, shouldRecordAlert } from '../../engines/alert-engine'
 import { useEscapeToClose } from '../../hooks/useKeyBinding'
+import { useIsMobile } from '../../hooks/useMediaQuery'
 import { WatchlistAlertModal } from './WatchlistAlertModal'
 import { WatchlistContextMenu, type ContextMenuState } from './WatchlistContextMenu'
 import { WatchlistHistoryModal } from './WatchlistHistoryModal'
@@ -20,6 +21,7 @@ function fTime(date: Date): string {
 export function WatchlistPage() {
   const { entries, remove, updateNotes, updateHistoryAnnotation, toggleAlert, recordAlertFired } = useWatchlistStore()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   const tickers = Object.keys(entries)
   const { data: liveQuotes, isLoading, dataUpdatedAt } = useBatchQuotes(tickers)
@@ -265,17 +267,29 @@ export function WatchlistPage() {
             {totalCount} ativo{totalCount !== 1 ? 's' : ''} salvo{totalCount !== 1 ? 's' : ''}
           </p>
         </div>
-        <Link
-          to="/dcf"
-          className="inline-flex items-center gap-1 px-4 py-[7px] rounded-[10px] text-[13px] font-semibold"
-          style={{
-            background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-            color: '#060910',
-            boxShadow: '0 2px 8px rgba(6,182,212,.2)',
-          }}
-        >
-          + Nova Análise
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportCSV}
+            aria-label="Exportar CSV"
+            title="Exportar CSV"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center border border-border rounded-[10px]
+                       text-text-sec cursor-pointer hover:bg-bg-3 hover:text-text-base transition-colors"
+            style={{ background: 'none' }}
+          >
+            <Download size={16} />
+          </button>
+          <Link
+            to="/dcf"
+            className="inline-flex items-center gap-1 px-4 py-[7px] rounded-[10px] text-[13px] font-semibold"
+            style={{
+              background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+              color: '#060910',
+              boxShadow: '0 2px 8px rgba(6,182,212,.2)',
+            }}
+          >
+            + Nova Análise
+          </Link>
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -287,87 +301,100 @@ export function WatchlistPage() {
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
         />
-        <div className="ml-auto flex items-center gap-3">
-          {dataUpdatedAt > 0 && (
-            <span className="text-[12px] text-text-muted">
-              Atualizado às {fTime(new Date(dataUpdatedAt))} · próximo em 3 min
-            </span>
-          )}
-          <button
-            onClick={exportCSV}
-            className="inline-flex items-center gap-1.5 border border-border rounded-[10px] text-text-sec
-                       text-[13px] font-ui px-[14px] h-[36px] cursor-pointer hover:bg-bg-3
-                       hover:text-text-base transition-colors"
-            style={{ background: 'none' }}
-          >
-            <Download size={13} />
-            Exportar CSV
-          </button>
-        </div>
+        {dataUpdatedAt > 0 && (
+          <span className="ml-auto text-[12px] text-text-muted">
+            Atualizado às {fTime(new Date(dataUpdatedAt))} · próximo em 3 min
+          </span>
+        )}
       </div>
 
-      {/* Table */}
-      <div
-        className="border border-border rounded-[14px] overflow-hidden"
-        style={{ boxShadow: '0 4px 16px rgba(0,0,0,.5)' }}
-      >
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              <th
-                className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-left whitespace-nowrap"
-                style={{ minWidth: 180 }}
-              >
-                Ticker
-              </th>
-              <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-left whitespace-nowrap">
-                Empresa
-              </th>
-              <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-right whitespace-nowrap">
-                Preço
-              </th>
-              <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-right whitespace-nowrap">
-                Variação
-              </th>
-              <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-right whitespace-nowrap">
-                Dividend Yield
-              </th>
-              <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-right whitespace-nowrap">
-                Preço Teto
-              </th>
-              <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-right whitespace-nowrap">
-                Upside
-              </th>
-              <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-right whitespace-nowrap">
-                Salvo em
-              </th>
-              <th
-                className="bg-bg-2 border-b border-border py-3 px-4 text-center"
-                style={{ width: 40 }}
-              />
-              <th
-                className="bg-bg-2 border-b border-border py-3 px-4 text-center"
-                style={{ width: 48 }}
-              />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ entry }) => (
-              <WatchlistRow
-                key={entry.ticker}
-                entry={entry}
-                quote={liveMap[entry.ticker]}
-                isTriggered={triggeredTickers.includes(entry.ticker)}
-                isLoading={isLoading}
-                onNavigate={(t) => navigate(`/dcf?wl=${encodeURIComponent(t)}`)}
-                onToggleAlert={toggleAlert}
-                onOpenMenu={handleContextMenu}
-                onDelete={handleDelete}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/*
+        Montagem condicional (não CSS): lista de cards OU tabela, nunca as duas ao
+        mesmo tempo — <tr> e <div> não podem ser irmãos dentro de <tbody>, e montar
+        as duas árvores em paralelo duplicaria todo texto no DOM (queries sem escopo
+        quebrariam, inclusive no Playwright). Ver useIsMobile() acima.
+      */}
+      {isMobile ? (
+        <div>
+          {rows.map(({ entry }) => (
+            <WatchlistRow
+              key={entry.ticker}
+              variant="card"
+              entry={entry}
+              quote={liveMap[entry.ticker]}
+              isTriggered={triggeredTickers.includes(entry.ticker)}
+              isLoading={isLoading}
+              onNavigate={(t) => navigate(`/dcf?wl=${encodeURIComponent(t)}`)}
+              onToggleAlert={toggleAlert}
+              onOpenMenu={handleContextMenu}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+      ) : (
+        <div
+          className="border border-border rounded-[14px] overflow-hidden"
+          style={{ boxShadow: '0 4px 16px rgba(0,0,0,.5)' }}
+        >
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                <th
+                  className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-left whitespace-nowrap"
+                  style={{ minWidth: 180 }}
+                >
+                  Ticker
+                </th>
+                <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-left whitespace-nowrap">
+                  Empresa
+                </th>
+                <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-right whitespace-nowrap">
+                  Preço
+                </th>
+                <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-right whitespace-nowrap">
+                  Variação
+                </th>
+                <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-right whitespace-nowrap">
+                  Dividend Yield
+                </th>
+                <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-right whitespace-nowrap">
+                  Preço Teto
+                </th>
+                <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-right whitespace-nowrap">
+                  Upside
+                </th>
+                <th className="bg-bg-2 border-b border-border text-text-muted text-[11px] font-semibold tracking-[.1em] uppercase py-3 px-4 text-right whitespace-nowrap">
+                  Salvo em
+                </th>
+                <th
+                  className="bg-bg-2 border-b border-border py-3 px-4 text-center"
+                  style={{ width: 40 }}
+                />
+                <th
+                  className="bg-bg-2 border-b border-border py-3 px-4 text-center"
+                  style={{ width: 48 }}
+                />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ entry }) => (
+                <WatchlistRow
+                  key={entry.ticker}
+                  variant="table"
+                  entry={entry}
+                  quote={liveMap[entry.ticker]}
+                  isTriggered={triggeredTickers.includes(entry.ticker)}
+                  isLoading={isLoading}
+                  onNavigate={(t) => navigate(`/dcf?wl=${encodeURIComponent(t)}`)}
+                  onToggleAlert={toggleAlert}
+                  onOpenMenu={handleContextMenu}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Notes modal */}
       {notesModalTicker && (

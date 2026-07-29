@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { fBRL } from '../../engines/formatters'
+import { useIsMobile } from '../../hooks/useMediaQuery'
 import type { AlertEvent } from '../../engines/alert-engine'
 
 // ── Format date ───────────────────────────────────────────────────────────────
@@ -20,6 +21,7 @@ interface WatchlistAlertModalProps {
 }
 
 export function WatchlistAlertModal({ isOpen, onClose, ticker, history }: WatchlistAlertModalProps) {
+  const isMobile = useIsMobile()
   if (!isOpen || !ticker) return null
 
   return (
@@ -28,7 +30,9 @@ export function WatchlistAlertModal({ isOpen, onClose, ticker, history }: Watchl
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        className="bg-bg-2 border border-border rounded-[16px] p-6 w-[480px] max-w-[94vw]"
+        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
+                   bg-bg-2 border border-border rounded-none md:rounded-[14px] p-6
+                   w-auto md:w-[480px] max-w-none md:max-w-[94vw] max-h-none md:max-h-[80vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 32px rgba(0,0,0,.6)' }}
       >
         <div className="flex items-center justify-between mb-5">
@@ -48,6 +52,28 @@ export function WatchlistAlertModal({ isOpen, onClose, ticker, history }: Watchl
           <p className="text-[13px] text-text-muted text-center py-6">
             Nenhum alerta disparado ainda — você é avisado quando o preço atual cair para o preço teto ou abaixo.
           </p>
+        ) : isMobile ? (
+          // Montagem condicional (não CSS) — mesma regra de WatchlistPage/index.tsx.
+          <div className="overflow-auto max-h-[70vh]">
+            {history.map((h) => (
+              <div
+                key={h.firedAt}
+                className="rounded-[10px] border border-border-muted p-3 mb-2"
+                style={{ background: 'var(--color-bg-3)' }}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[12px] text-text-sec">{fDate(h.firedAt)}</span>
+                  <span className="font-mono text-[13px] font-semibold text-cyan">{fBRL.format(h.fairPrice)}</span>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-[11px] text-text-muted">Preço no disparo</span>
+                  <span className="font-mono text-[13px]" style={{ color: 'var(--color-green)' }}>
+                    {fBRL.format(h.price)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="overflow-auto max-h-[400px]">
             <table className="w-full border-collapse">

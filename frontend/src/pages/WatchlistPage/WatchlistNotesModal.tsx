@@ -18,8 +18,12 @@ export function WatchlistNotesModal({ isOpen, onClose, ticker, note, onSave }: W
       className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-bg-2 border border-border rounded-[16px] p-6 w-[440px] max-w-[92vw]"
-           style={{ boxShadow: '0 8px 32px rgba(0,0,0,.6)' }}>
+      <div
+        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
+                   bg-bg-2 border border-border rounded-none md:rounded-[14px] p-6
+                   w-auto md:w-[440px] max-w-none md:max-w-[92vw] max-h-none md:max-h-[80vh] overflow-y-auto"
+        style={{ boxShadow: '0 8px 32px rgba(0,0,0,.6)' }}
+      >
         <div className="text-[16px] font-semibold mb-4">
           Nota · <span style={{ color: 'var(--color-cyan)' }}>{ticker}</span>
         </div>
