@@ -19,7 +19,6 @@ import { CarteiraProventos } from './CarteiraProventos'
 import { CarteiraRF } from './CarteiraRF'
 import { CarteiraMetas } from './CarteiraMetas'
 import { CarteiraIR } from './CarteiraIR'
-import { CarteiraFab } from './CarteiraFab'
 import type { Operation, Provento, RFTitle, SplitEvent } from '../../stores/portfolioStore'
 import { useTabArrowNav } from '../../hooks/useKeyBinding'
 
@@ -53,15 +52,6 @@ export function CarteiraPage() {
     const i = TABS.findIndex((t) => t.key === tab)
     const next = dx < 0 ? i + 1 : i - 1
     if (next >= 0 && next < TABS.length) setTab(TABS[next].key) // sem dar volta nas pontas
-  }
-
-  // O FAB abre o formulário de adicionar da aba ativa. As abas com formulário (Operações,
-  // Proventos, Renda Fixa) já têm seu próprio botão "+" e estado de modal local — abrir esse
-  // modal remotamente exigiria elevar o estado para cá em 3+ componentes. Adiado para a Task 21,
-  // que já vai mexer nesses formulários (ver task-19-report.md).
-  function handleFabAction(tab: Tab) {
-    // placeholder intencional — ver comentário acima
-    void tab
   }
 
   const {
@@ -291,7 +281,11 @@ export function CarteiraPage() {
         </div>
       </div>
 
-      <CarteiraFab tab={tab} onAction={handleFabAction} />
+      {/* CarteiraFab existe e está coberto por testes (CarteiraFab.tsx / .test.tsx), mas não é
+          montado aqui ainda: os formulários de Operações/Proventos/Renda Fixa têm modal local
+          (useState próprio), e Ativos não tem formulário nenhum — abrir o modal certo a partir
+          daqui exige elevar esse estado, o que a Task 21 vai fazer junto da própria conversão
+          desses formulários. Até lá, um FAB sem ação real seria pior que nenhum FAB. */}
     </div>
   )
 }
