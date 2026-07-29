@@ -56,12 +56,12 @@ function IndCard({ label, value, colorClass = '', tip }: CardDef) {
             </span>
             <div
               className="hidden group-hover:block absolute bottom-[calc(100%+8px)] left-0 z-50
-                         rounded-[10px] p-3 text-[12px] leading-6 text-text-sec"
+                         rounded-[10px] p-3 text-[12px] leading-6 text-text-sec
+                         w-[180px] md:w-[230px]"
               style={{
                 background: 'var(--bg-2)',
                 border: '1px solid var(--border)',
                 boxShadow: '0 8px 32px rgba(0,0,0,.6)',
-                width: 230,
                 fontWeight: 400,
               }}
               dangerouslySetInnerHTML={{ __html: tip }}
