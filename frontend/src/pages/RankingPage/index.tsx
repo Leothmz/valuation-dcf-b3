@@ -17,6 +17,7 @@ import type { FilterConfig, RankingMethod } from '../../stores/rankingStore'
 import { ScrollableTabs } from '../../components/ScrollableTabs'
 import type { TabItem } from '../../components/ScrollableTabs'
 import { BottomSheet } from '../../components/BottomSheet'
+import { useIsMobile } from '../../hooks/useMediaQuery'
 import { FilterChips } from './FilterChips'
 import { RankingTable } from './RankingTable'
 import { RankingMobileList } from './RankingMobileList'
@@ -97,6 +98,7 @@ export function RankingPage() {
   } = useRankingStore()
 
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const [sectorTab, setSectorTab] = useState<SectorTab>('')
   const [search, setSearch] = useState('')
   const [newTicker, setNewTicker] = useState('')
@@ -392,49 +394,56 @@ export function RankingPage() {
         </button>
       </div>
 
-      <BottomSheet isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtros">
-        {filterChipsEl}
-      </BottomSheet>
-
-      {/* Filter chips — desktop apenas; no mobile vivem dentro do BottomSheet acima */}
-      <div
-        className="hidden md:block rounded-[12px] border border-border px-4 py-3"
-        style={{ background: 'var(--color-bg-2)' }}
-      >
-        {filterChipsEl}
-      </div>
+      {/* Filter chips — uma instância só: dentro do BottomSheet no mobile, no painel fixo
+          no desktop. Nunca as duas montadas ao mesmo tempo (evita duplicata no DOM). */}
+      {isMobile ? (
+        <BottomSheet isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtros">
+          {filterChipsEl}
+        </BottomSheet>
+      ) : (
+        <div
+          className="rounded-[12px] border border-border px-4 py-3"
+          style={{ background: 'var(--color-bg-2)' }}
+        >
+          {filterChipsEl}
+        </div>
+      )}
 
       {/* Sector tabs + lista/tabela */}
       <div>
         <ScrollableTabs ariaLabel="Setor" tabs={SECTOR_TABS} active={sectorTab} onSelect={setSectorTab} />
 
-        <RankingMobileList
-          rows={rankedRows}
-          method={method}
-          favorites={favorites}
-          onToggleFavorite={toggleFavorite}
-          onRemoveCustom={removeCustomTicker}
-          compareMode={compareMode}
-          compareSelection={compareSelection}
-          onToggleCompare={toggleCompareSelection}
-          maxCompare={MAX_COMPARE}
-        />
-
-        <div className="hidden md:block mt-4">
-          <RankingTable
+        {/* Montagem condicional (não CSS): lista compacta OU tabela, nunca as duas ao mesmo
+            tempo — evita renderizar ~centenas de linhas em dobro e duplicatas no DOM. */}
+        {isMobile ? (
+          <RankingMobileList
             rows={rankedRows}
-            isLoading={isLoading}
+            method={method}
             favorites={favorites}
-            onToggleFav={toggleFavorite}
-            sortCol={sortCol}
-            sortDir={sortDir}
-            onSort={handleSort}
+            onToggleFavorite={toggleFavorite}
             onRemoveCustom={removeCustomTicker}
+            compareMode={compareMode}
             compareSelection={compareSelection}
             onToggleCompare={toggleCompareSelection}
             maxCompare={MAX_COMPARE}
           />
-        </div>
+        ) : (
+          <div className="mt-4">
+            <RankingTable
+              rows={rankedRows}
+              isLoading={isLoading}
+              favorites={favorites}
+              onToggleFav={toggleFavorite}
+              sortCol={sortCol}
+              sortDir={sortDir}
+              onSort={handleSort}
+              onRemoveCustom={removeCustomTicker}
+              compareSelection={compareSelection}
+              onToggleCompare={toggleCompareSelection}
+              maxCompare={MAX_COMPARE}
+            />
+          </div>
+        )}
       </div>
 
       {compareSelection.length > 0 && (

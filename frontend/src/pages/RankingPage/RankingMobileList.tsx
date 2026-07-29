@@ -54,8 +54,11 @@ export function RankingMobileList({
   rows, method, favorites, onToggleFavorite, onRemoveCustom,
   compareMode = false, compareSelection = [], onToggleCompare, maxCompare = 3,
 }: RankingMobileListProps) {
+  // Visibilidade é decidida pelo pai (RankingPage) via useIsMobile() — monta só quando
+  // for o caso, nunca em paralelo com a RankingTable (evita render dobrado + duplicatas
+  // no DOM). Ver RankingPage/index.tsx.
   return (
-    <div className="md:hidden">
+    <div>
       {rows.map((row, i) => {
         const hero = heroMetric(row, method)
         const isFav = favorites.includes(row.ticker)
