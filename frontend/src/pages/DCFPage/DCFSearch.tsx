@@ -103,7 +103,7 @@ export function DCFSearch({ initialValue = '', isLoading, onSearch }: DCFSearchP
           maxLength={7}
           autoComplete="off"
           spellCheck={false}
-          className="w-full h-[42px] bg-bg-3 border border-border rounded-[10px] text-text-base font-mono text-sm
+          className="w-full h-[42px] bg-bg-3 border border-border rounded-[10px] text-text-base font-mono text-[16px] md:text-sm
                      px-[14px] uppercase outline-none placeholder:text-text-muted placeholder:normal-case
                      focus:border-cyan focus:shadow-[0_0_0_3px_rgba(6,182,212,0.08)]
                      transition-colors"

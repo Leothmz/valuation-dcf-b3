@@ -235,17 +235,25 @@ export function HomePage() {
             ].map(([lbl, eq, val], i, arr) => (
               <div
                 key={lbl}
-                className="flex flex-wrap items-baseline gap-3 py-2.5"
+                className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5"
                 style={{
                   borderBottom: i < arr.length - 1 ? '1px solid #151e2d' : 'none',
                   fontFamily: 'JetBrains Mono, Cascadia Code, Fira Code, monospace',
                   fontSize: '13px',
                 }}
               >
-                <span className="text-text-sec min-w-[140px] md:min-w-[200px]" style={{ fontFamily: 'Inter, system-ui, sans-serif', fontSize: '14px' }}>
-                  {lbl}
+                {/* Rótulo e "=" ocupam a linha inteira no mobile, forçando a
+                    fórmula para a linha de baixo em TODAS as linhas do bloco.
+                    Antes o rótulo tinha só min-width, então fórmula curta
+                    (crescimento) cabia ao lado e as longas quebravam — cada
+                    linha do bloco saía com um formato. No desktop segue lado a
+                    lado, com a mesma coluna de 200px de antes. */}
+                <span className="flex items-baseline gap-3 w-full md:w-auto">
+                  <span className="text-text-sec md:min-w-[200px]" style={{ fontFamily: 'Inter, system-ui, sans-serif', fontSize: '14px' }}>
+                    {lbl}
+                  </span>
+                  <span className="text-cyan font-bold">{eq}</span>
                 </span>
-                <span className="text-cyan font-bold">{eq}</span>
                 <span className="text-text-base">{val}</span>
               </div>
             ))}
