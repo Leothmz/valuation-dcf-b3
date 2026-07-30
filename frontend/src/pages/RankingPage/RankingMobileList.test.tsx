@@ -25,6 +25,27 @@ function setup(props = {}) {
   )
 }
 
+describe('RankingMobileList — pódio', () => {
+  // O mobile usava uma pílula ciano igual para toda posição, então 1º/2º/3º ficavam
+  // indistinguíveis. Agora usa o mesmo PositionBadge do desktop.
+  const PODIO = [
+    { ticker: 'VULC3', price: 14.15, fairPrice: 20, pl: 5, dy: 0.1, roe: 0.2 },
+    { ticker: 'BBSE3', price: 41.27, fairPrice: 50, pl: 6, dy: 0.09, roe: 0.3 },
+    { ticker: 'MDNE3', price: 24.23, fairPrice: 30, pl: 7, dy: 0.08, roe: 0.25 },
+    { ticker: 'CURY3', price: 29.85, fairPrice: 35, pl: 8, dy: 0.07, roe: 0.22 },
+  ]
+
+  it('destaca o 1º com selo TOP e dá cor própria a 1º, 2º e 3º', () => {
+    setup({ rows: PODIO as never })
+    expect(screen.getByText('TOP')).toBeInTheDocument()
+    const cor = (t: string) => screen.getByText(t).style.background
+    expect(cor('1')).toContain('16, 185, 129')  // verde
+    expect(cor('2')).toContain('6, 182, 212')   // ciano
+    expect(cor('3')).toContain('245, 158, 11')  // âmbar
+    expect(cor('4')).toBe('')                   // fora do pódio, sem fundo
+  })
+})
+
 describe('RankingMobileList', () => {
   it('mostra uma linha por ticker com posição e cotação', () => {
     setup()

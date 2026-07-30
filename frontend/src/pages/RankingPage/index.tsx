@@ -345,13 +345,19 @@ export function RankingPage() {
       />
 
       {/* Mobile toolbar: ordenação + filtros + comparar */}
-      <div className="md:hidden flex gap-2">
+      {/* O select sozinho mostrava só "Posição", sem dizer que era o critério de
+          ordenação — o rótulo visível tira a adivinhação (e vira <label> de verdade). */}
+      <div className="md:hidden flex gap-2 items-end">
+        <div className="flex-1 min-w-0">
+          <label htmlFor="ranking-sort" className="block text-[11px] text-text-muted mb-1">
+            Ordenar por
+          </label>
         <select
+          id="ranking-sort"
           value={sortCol}
           onChange={(e) => setSortCol(e.target.value)}
-          className="flex-1 min-h-[44px] rounded-[9px] border border-border px-3 text-[16px] text-text-base"
+          className="w-full min-h-[44px] rounded-[9px] border border-border px-3 text-[16px] text-text-base"
           style={{ background: 'var(--color-bg-2)' }}
-          aria-label="Ordenar por"
         >
           <option value="rank">Posição</option>
           <option value="ticker">Ticker</option>
@@ -362,6 +368,7 @@ export function RankingPage() {
           <option value="margemLiquida">Margem Líquida</option>
           <option value="dividaLiquidaEbit">DL/EBITDA</option>
         </select>
+        </div>
         <button
           onClick={() => setSortDir(sortDir === 'desc' ? 'asc' : 'desc')}
           aria-label={sortDir === 'desc' ? 'Ordem decrescente' : 'Ordem crescente'}
