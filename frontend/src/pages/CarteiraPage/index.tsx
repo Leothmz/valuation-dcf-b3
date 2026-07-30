@@ -218,7 +218,7 @@ export function CarteiraPage() {
         </div>
         <p className="text-text-muted text-[13px] mb-0">
           {holdings.length > 0
-            ? `${holdings.length} ativo${holdings.length > 1 ? 's' : ''} · ${operations.length} operação${operations.length !== 1 ? 'ões' : ''}`
+            ? `${holdings.length} ativo${holdings.length > 1 ? 's' : ''} · ${operations.length} ${operations.length !== 1 ? 'operações' : 'operação'}`
             : 'Nenhum ativo. Registre uma operação para começar.'}
         </p>
 
@@ -226,6 +226,7 @@ export function CarteiraPage() {
         <CarteiraKPIs
           totalInvested={totalInvested}
           totalValue={totalValue}
+          positions={holdings.length + fixedIncome.length}
           loading={quotesLoading && holdings.length > 0}
         />
 
