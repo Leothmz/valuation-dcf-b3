@@ -103,7 +103,12 @@ export function WatchlistRow({
         ariaLabel={ticker}
         highlighted={isTriggered}
         summary={
-          <>
+          /* Duas linhas: identificação + preço de mercado em cima, preço teto e
+             upside embaixo. Antes só o preço de mercado aparecia sem expandir —
+             numa tela chamada "Meus Valuations", o número que o usuário salvou
+             e a conclusão dele ficavam escondidos atrás de um toque. */
+          <div className="min-w-0 flex-1 flex flex-col gap-1">
+            <div className="flex items-center gap-2">
             <TickerLogo ticker={ticker} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
@@ -160,28 +165,33 @@ export function WatchlistRow({
             >
               <MoreHorizontal size={18} />
             </button>
-          </>
+            </div>
+
+            {/* Linha 2 — o que a tela existe para mostrar. */}
+            <div className="flex items-center gap-2 text-[11px] leading-none">
+              <span className="text-text-sec shrink-0">Preço teto</span>
+              <span className="font-mono font-semibold text-cyan shrink-0">
+                {fBRL.format(fairPrice)}
+              </span>
+              <span className="text-text-muted shrink-0">·</span>
+              {liveLoading || isLoading ? (
+                <Skeleton width="44px" height="10px" className="inline-block" />
+              ) : liveError || upside === null ? (
+                <span className="text-text-muted">—</span>
+              ) : (
+                <span
+                  className="font-mono font-semibold shrink-0"
+                  style={{ color: upside >= 0 ? 'var(--color-green)' : 'var(--color-red)' }}
+                >
+                  {fPctSigned(upside)} <span className="text-text-muted font-normal">upside</span>
+                </span>
+              )}
+            </div>
+          </div>
         }
       >
-        <div className="flex items-baseline justify-between py-1">
-          <span className="text-[12px] text-text-sec">Preço Teto salvo</span>
-          <span className="font-mono text-[14px] font-bold text-cyan">{fBRL.format(entry.fairPrice)}</span>
-        </div>
-
-        <div className="flex items-baseline justify-between py-1">
-          <span className="text-[12px] text-text-sec">Upside</span>
-          {liveError || upside === null ? (
-            <span className="text-text-muted text-[13px]">—</span>
-          ) : (
-            <span
-              className="font-mono text-[13px] font-bold"
-              style={{ color: upside >= 0 ? 'var(--color-green)' : 'var(--color-red)' }}
-            >
-              {fPctSigned(upside)}
-            </span>
-          )}
-        </div>
-
+        {/* Preço teto e upside NÃO se repetem aqui: agora vivem na linha 2 do
+            resumo, sempre visíveis. O detalhe mostra só o que não cabe lá. */}
         <div className="flex items-baseline justify-between py-1">
           <span className="text-[12px] text-text-sec">Dividend Yield</span>
           {liveError || dividendYield == null || dividendYield <= 0 ? (
