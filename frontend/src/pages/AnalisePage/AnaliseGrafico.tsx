@@ -16,6 +16,14 @@ const PERIODS = [
   { label: '10 ANOS', range: 'ALL' },
 ]
 
+/**
+ * Tipo de gráfico do widget do TradingView: '1' são velas (o default deles),
+ * '2' é linha. Linha é o padrão aqui — em análise fundamentalista o que importa
+ * é a trajetória do preço, não abertura/fechamento/máxima/mínima de cada dia.
+ * Vale para mobile e desktop; quem quiser velas troca na barra do próprio widget.
+ */
+const CHART_STYLE_LINE = '2'
+
 const CHART_HEIGHT_DESKTOP = 520
 const CHART_HEIGHT_MOBILE = 280
 
@@ -58,7 +66,7 @@ export function AnaliseGrafico({ ticker }: Props) {
         interval: 'D',
         timezone: 'America/Sao_Paulo',
         theme: 'dark',
-        style: '1',
+        style: CHART_STYLE_LINE,
         locale: 'br',
         enable_publishing: false,
         save_image: false,
