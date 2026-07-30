@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Star, X } from 'lucide-react'
 import { ExpandableRow } from '../../components/ExpandableRow'
+import { PositionBadge } from './PositionBadge'
 import { fBRL, fPct, fPctSigned, fNum } from '../../engines/formatters'
 import type { RankingMethod } from '../../stores/rankingStore'
 
@@ -57,8 +58,10 @@ export function RankingMobileList({
   // Visibilidade é decidida pelo pai (RankingPage) via useIsMobile() — monta só quando
   // for o caso, nunca em paralelo com a RankingTable (evita render dobrado + duplicatas
   // no DOM). Ver RankingPage/index.tsx.
+  // mt-3: a faixa de setores fica logo acima e sem isso o primeiro card cola nela
+  // (o ramo desktop já tinha mt-4 no wrapper da tabela; o mobile não tinha nada).
   return (
-    <div>
+    <div className="mt-3">
       {rows.map((row, i) => {
         const hero = heroMetric(row, method)
         const isFav = favorites.includes(row.ticker)
@@ -88,11 +91,11 @@ export function RankingMobileList({
                 </button>
               )}
 
-              <span
-                className="shrink-0 min-w-[24px] text-center text-[11px] font-extrabold rounded-full px-1.5 py-0.5"
-                style={{ background: 'rgba(6,182,212,.15)', color: 'var(--color-cyan)' }}
-              >
-                {i + 1}
+              {/* Mesmo badge do desktop: 1º verde com selo TOP, 2º ciano, 3º âmbar.
+                  Antes o mobile usava uma pílula ciano igual para todas as posições
+                  e o pódio sumia — a distinção é o ponto de um ranking. */}
+              <span className="shrink-0">
+                <PositionBadge rank={i + 1} />
               </span>
               <span className="font-mono font-extrabold text-[13px] text-cyan truncate">
                 {row.ticker}

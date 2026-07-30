@@ -108,6 +108,14 @@ export function CarteiraPage() {
 
   // Compute holdings
   const holdings = useMemo(() => buildHoldingSummaries(operations), [operations])
+
+  /**
+   * Ativos em carteira: renda variável com quantidade > 0 mais os títulos de
+   * renda fixa. Usado no subtítulo e no KPI "Posições" — os dois precisam dizer
+   * o mesmo número, e a RF entra porque os demais KPIs da linha (investido,
+   * valor atual, retorno) também a somam.
+   */
+  const totalAtivos = holdings.length + fixedIncome.length
   const stockTickers = useMemo(
     () => holdings.filter((h) => h.assetClass !== 'cripto').map((h) => h.ticker),
     [holdings]
@@ -217,8 +225,8 @@ export function CarteiraPage() {
           <h1 className="text-[22px] font-bold text-text-base">Minha Carteira</h1>
         </div>
         <p className="text-text-muted text-[13px] mb-0">
-          {holdings.length > 0
-            ? `${holdings.length} ativo${holdings.length > 1 ? 's' : ''} · ${operations.length} operação${operations.length !== 1 ? 'ões' : ''}`
+          {totalAtivos > 0
+            ? `${totalAtivos} ativo${totalAtivos > 1 ? 's' : ''} · ${operations.length} ${operations.length !== 1 ? 'operações' : 'operação'}`
             : 'Nenhum ativo. Registre uma operação para começar.'}
         </p>
 
@@ -226,6 +234,7 @@ export function CarteiraPage() {
         <CarteiraKPIs
           totalInvested={totalInvested}
           totalValue={totalValue}
+          positions={totalAtivos}
           loading={quotesLoading && holdings.length > 0}
         />
 

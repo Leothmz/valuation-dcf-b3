@@ -20,7 +20,12 @@ export function WelcomeModal({ isOpen, onDismiss }: WelcomeModalProps) {
 
   function handleStart() {
     onDismiss()
-    navigate('/dcf')
+    // Home, não /dcf: o modal apresenta 4 recursos e a Home é a página que os
+    // explica e dá o atalho para cada um. Mandar para a calculadora vazia
+    // escolhia um recurso pelo usuário — e deixava o "Pular" (que preserva a
+    // página atual, normalmente a própria Home) com experiência melhor que o
+    // "Começar".
+    navigate('/')
   }
 
   return (

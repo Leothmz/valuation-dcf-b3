@@ -474,38 +474,45 @@ export function DCFPage() {
               vem ANTES das premissas (que viram acordeão recolhido); no desktop a
               ordem original é preservada (inputs antes do resultado). */}
           <div className="bg-bg-2 border-b md:border-b-0 md:border-r border-border md:overflow-y-auto p-4 md:p-5">
-            <button
-              onClick={() => setPremissasOpen((o) => !o)}
-              className="md:hidden w-full flex items-center justify-between min-h-[44px]
-                         text-[11px] font-semibold text-text-muted tracking-[0.12em] uppercase
-                         cursor-pointer"
-              aria-expanded={premissasOpen}
-            >
-              Premissas
-              {premissasOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            </button>
             <div className="hidden md:block text-[11px] font-semibold text-text-muted tracking-[0.12em] uppercase mb-[14px]">
               Premissas
-            </div>
-
-            <div className="md:hidden grid grid-cols-3 gap-1.5 mt-2 mb-3">
-              {[
-                { lb: 'WACC', vl: fInputPct(store.assumptions.disc) + '%' },
-                { lb: 'Perp.', vl: fInputPct(store.assumptions.perp) + '%' },
-                { lb: 'Anos', vl: String(store.projYears) },
-              ].map(({ lb, vl }) => (
-                <div key={lb} className="rounded-[8px] border border-border p-2 text-center"
-                     style={{ background: 'var(--color-bg-1)' }}>
-                  <div className="text-[9px] uppercase tracking-[.4px] text-text-muted">{lb}</div>
-                  <div className="font-mono text-[13px] font-bold text-text-base">{vl}</div>
-                </div>
-              ))}
             </div>
 
             {isMobile ? (
               <>
                 <DCFCompanyHeader data={headerData} isLoading={isFetching} />
                 {resultPanel}
+                {/* O gatilho e o resumo do acordeão ficam colados no painel que
+                    revelam. Antes viviam no topo da coluna, ~900px acima do
+                    conteúdo: tocar abria de verdade, mas o painel surgia fora
+                    da tela e parecia que o botão não funcionava. */}
+                <button
+                  onClick={() => setPremissasOpen((o) => !o)}
+                  className="w-full flex items-center justify-between min-h-[44px] mt-4
+                             text-[11px] font-semibold text-text-muted tracking-[0.12em] uppercase
+                             cursor-pointer"
+                  aria-expanded={premissasOpen}
+                >
+                  Premissas
+                  {premissasOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                </button>
+                {/* Resumo só enquanto recolhido — aberto, os mesmos valores
+                    aparecem logo abaixo, editáveis. */}
+                {!premissasOpen && (
+                  <div className="grid grid-cols-3 gap-1.5 mt-2 mb-3">
+                    {[
+                      { lb: 'Desconto', vl: fInputPct(store.assumptions.disc) + '%' },
+                      { lb: 'Perp.', vl: fInputPct(store.assumptions.perp) + '%' },
+                      { lb: 'Anos', vl: String(store.projYears) },
+                    ].map(({ lb, vl }) => (
+                      <div key={lb} className="rounded-[8px] border border-border p-2 text-center"
+                           style={{ background: 'var(--color-bg-1)' }}>
+                        <div className="text-[9px] uppercase tracking-[.4px] text-text-muted">{lb}</div>
+                        <div className="font-mono text-[13px] font-bold text-text-base">{vl}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {showPremissas && inputPanel}
               </>
             ) : (

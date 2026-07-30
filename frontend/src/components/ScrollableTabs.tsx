@@ -18,6 +18,40 @@ export function ScrollableTabs<T extends string>({
 }: ScrollableTabsProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null)
   const activeRef = useRef<HTMLButtonElement>(null)
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  /**
+   * role="tab" é um contrato: a WAI-ARIA APG exige setas ←/→, Home/End e roving
+   * tabindex dentro do tablist. Anunciar as abas para um leitor de tela sem isso
+   * é pior que ter deixado botões soltos — promete uma navegação que não existe.
+   *
+   * Ativação automática (a seta move o foco E troca a aba): as abas aqui trocam
+   * conteúdo já carregado, sem custo de rede, e é o que a navegação por seta da
+   * página inteira (useTabArrowNav) já fazia — manter os dois iguais evita que a
+   * mesma tecla se comporte de um jeito com foco na aba e de outro fora dela.
+   *
+   * Não dá a volta nas pontas, igual ao useTabArrowNav.
+   */
+  function handleKeyDown(e: React.KeyboardEvent, idx: number) {
+    const last = tabs.length - 1
+    let next: number
+    if (e.key === 'ArrowLeft') next = Math.max(0, idx - 1)
+    else if (e.key === 'ArrowRight') next = Math.min(last, idx + 1)
+    else if (e.key === 'Home') next = 0
+    else if (e.key === 'End') next = last
+    else return
+
+    e.preventDefault()
+    // Análise, Análise FII e Carteira montam useTabArrowNav (listener no document)
+    // junto deste componente. Sem parar a propagação, a mesma seta roda os dois
+    // handlers: a aba final é a mesma (nenhum dos dois vê o state atualizado no
+    // meio do despacho, então ambos calculam o mesmo destino), mas o setter roda
+    // duas vezes. Com foco numa aba, quem manda é o tablist.
+    e.stopPropagation()
+    if (next === idx) return
+    onSelect(tabs[next].key)
+    itemRefs.current[next]?.focus()
+  }
 
   // Ao trocar de aba, garante que a pill ativa fica visível na horizontal.
   // Usa scrollLeft em vez de scrollIntoView para não afetar o scroll vertical da página.
@@ -52,15 +86,22 @@ export function ScrollableTabs<T extends string>({
                    [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
                    md:flex-wrap md:overflow-visible"
       >
-        {tabs.map(({ key, label }) => {
+        {tabs.map(({ key, label }, idx) => {
           const isActive = key === active
           return (
             <button
               key={key}
-              ref={isActive ? activeRef : undefined}
+              ref={(el) => {
+                itemRefs.current[idx] = el
+                if (isActive) activeRef.current = el
+              }}
               role="tab"
               aria-selected={isActive}
+              // Roving tabindex: só a aba ativa entra no tab order, então Tab
+              // atravessa o tablist inteiro de uma vez e as setas navegam dentro.
+              tabIndex={isActive ? 0 : -1}
               onClick={() => onSelect(key)}
+              onKeyDown={(e) => handleKeyDown(e, idx)}
               className="snap-start shrink-0 min-h-[44px] min-w-[44px] px-4 rounded-full
                          text-[13px] font-semibold cursor-pointer border transition-all
                          whitespace-nowrap"

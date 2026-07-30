@@ -177,7 +177,7 @@ export function FIIRankingPage() {
       {/* Hero */}
       <div
         className="rounded-[20px] px-8 py-7 border border-border"
-        style={{ background: 'linear-gradient(135deg, rgba(6,182,212,.06) 0%, var(--bg-2) 60%)' }}
+        style={{ background: 'linear-gradient(135deg, rgba(6,182,212,.06) 0%, var(--color-bg-2) 60%)' }}
       >
         <div className="flex items-center gap-4 mb-5">
           <div

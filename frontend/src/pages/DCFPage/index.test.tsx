@@ -90,15 +90,46 @@ describe('DCFPage — resultado antes das premissas (mobile)', () => {
     expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('no mobile, com resultado, o acordeão de premissas recolhe (mas os chips WACC/Perp./Anos continuam visíveis)', () => {
+  it('no mobile, com resultado, o acordeão recolhe e mostra o resumo Desconto/Perp./Anos', () => {
     mockMatchMedia(true)
     setStoreWithResult()
     renderPage()
 
     expect(screen.queryByText(/Lucro Líquido Base/i)).not.toBeInTheDocument()
-    expect(screen.getByText('WACC')).toBeInTheDocument()
+    // "WACC" virou "Desconto" no resumo: jargão de finanças corporativas não
+    // ajuda quem só quer saber a taxa. O painel aberto segue dizendo
+    // "Taxa de Desconto (WACC)" para quem procura o termo técnico.
+    expect(screen.getByText('Desconto')).toBeInTheDocument()
     expect(screen.getByText('Perp.')).toBeInTheDocument()
     expect(screen.getByText('Anos')).toBeInTheDocument()
+  })
+
+  it('o gatilho do acordeão fica DEPOIS do resultado, colado no painel que revela', () => {
+    // Regressão: o botão nascia no topo da coluna, ~900px acima do painel.
+    // Tocar abria de verdade, mas o conteúdo surgia fora da tela e parecia
+    // que o botão estava quebrado.
+    mockMatchMedia(true)
+    setStoreWithResult()
+    renderPage()
+
+    const resultEl = screen.getByText(/Preço Teto · Valor Intrínseco/i)
+    const toggle = screen.getByRole('button', { name: /Premissas/i })
+    const pos = resultEl.compareDocumentPosition(toggle)
+    expect(pos & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('abrir o acordeão revela os inputs e esconde o resumo', () => {
+    mockMatchMedia(true)
+    setStoreWithResult()
+    renderPage()
+
+    expect(screen.getByText('Desconto')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Premissas/i }))
+
+    expect(screen.getByText(/Lucro Líquido Base/i)).toBeInTheDocument()
+    // O resumo some quando aberto — os mesmos valores aparecem logo abaixo,
+    // agora editáveis.
+    expect(screen.queryByText('Desconto')).not.toBeInTheDocument()
   })
 
   it('no desktop, o painel de premissas continua visível mesmo com resultado calculado (acordeão nunca recolhe)', () => {

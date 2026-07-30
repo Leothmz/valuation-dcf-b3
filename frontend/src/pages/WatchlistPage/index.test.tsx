@@ -457,7 +457,7 @@ describe('Watchlist mobile — padrão C (cards) e menu acessível', () => {
     mockMatchMedia(true)
     renderPage()
     fireEvent.click(screen.getAllByRole('button', { name: /Mais ações/ })[0])
-    expect(screen.queryByText('Preço Teto salvo')).not.toBeInTheDocument()
+    expect(screen.queryByText('Salvo em')).not.toBeInTheDocument()
   })
 
   it('não expande o card ao apertar Enter no botão de reticências aninhado (sem stopPropagation o Enter borbulharia)', () => {
@@ -465,7 +465,7 @@ describe('Watchlist mobile — padrão C (cards) e menu acessível', () => {
     mockMatchMedia(true)
     renderPage()
     fireEvent.keyDown(screen.getAllByRole('button', { name: /Mais ações/ })[0], { key: 'Enter' })
-    expect(screen.queryByText('Preço Teto salvo')).not.toBeInTheDocument()
+    expect(screen.queryByText('Salvo em')).not.toBeInTheDocument()
   })
 
   it('não expande o card ao clicar no sino (alerta) aninhado no summary', () => {
@@ -474,7 +474,7 @@ describe('Watchlist mobile — padrão C (cards) e menu acessível', () => {
     renderPage()
     const bell = screen.getAllByRole('button', { name: /alerta de preço/ })[0]
     fireEvent.click(bell)
-    expect(screen.queryByText('Preço Teto salvo')).not.toBeInTheDocument()
+    expect(screen.queryByText('Salvo em')).not.toBeInTheDocument()
   })
 
   it('não expande o card ao apertar Enter no sino (alerta) aninhado no summary', () => {
@@ -483,7 +483,7 @@ describe('Watchlist mobile — padrão C (cards) e menu acessível', () => {
     renderPage()
     const bell = screen.getAllByRole('button', { name: /alerta de preço/ })[0]
     fireEvent.keyDown(bell, { key: 'Enter' })
-    expect(screen.queryByText('Preço Teto salvo')).not.toBeInTheDocument()
+    expect(screen.queryByText('Salvo em')).not.toBeInTheDocument()
   })
 
   it('no desktop, o botão de reticências na célula de ações também abre o menu (descoberta sem clique direito)', async () => {
@@ -505,22 +505,35 @@ describe('Watchlist mobile — padrão C (cards) e menu acessível', () => {
     expect(screen.getByText('Histórico de alertas')).toBeInTheDocument()
   })
 
-  it('expande o card e mostra upside com sinal sempre visível (fPctSigned)', () => {
+  // Preço teto e upside são o motivo de a tela existir — ficavam escondidos
+  // atrás de um toque. Agora vivem na linha 2 do resumo, sem expandir nada.
+  it('mostra preço teto e upside no resumo, sem precisar expandir o card', () => {
+    setupTwoEntries()
+    mockMatchMedia(true)
+    renderPage()
+    expect(screen.queryByText('Salvo em')).not.toBeInTheDocument()
+    // upside = (50 - 40) / 50 = 0.20 -> "+20,00%"
+    expect(screen.getByText('+20,00%')).toBeInTheDocument()
+    expect(screen.getAllByText('Preço teto').length).toBeGreaterThan(0)
+  })
+
+  it('upside positivo sai em verde e negativo em vermelho, com o sinal preservado', () => {
+    setupTwoEntries()
+    mockMatchMedia(true)
+    renderPage()
+    // PETR4: fairPrice 50, price 40 -> +20,00% (verde)
+    expect(screen.getByText('+20,00%').style.color).toBe('var(--color-green)')
+    // VALE3: fairPrice 80, price 90 -> (80-90)/80 = -0.125 -> -12,50% (vermelho)
+    expect(screen.getByText('-12,50%').style.color).toBe('var(--color-red)')
+  })
+
+  it('não duplica preço teto/upside dentro do detalhe ao expandir', () => {
     setupTwoEntries()
     mockMatchMedia(true)
     renderPage()
     fireEvent.click(screen.getByRole('button', { name: 'PETR4' }))
-    // upside = (50 - 40) / 50 = 0.20 -> "+20,00%"
-    expect(screen.getByText('+20,00%')).toBeInTheDocument()
-  })
-
-  it('expande o card e mostra upside negativo com sinal "-" (fPctSigned)', () => {
-    setupTwoEntries()
-    mockMatchMedia(true)
-    renderPage()
-    // VALE3: fairPrice 80, price 90 -> upside = (80-90)/80 = -0.125 -> "-12,50%"
-    fireEvent.click(screen.getByRole('button', { name: 'VALE3' }))
-    expect(screen.getByText('-12,50%')).toBeInTheDocument()
+    expect(screen.getByText('Salvo em')).toBeInTheDocument()
+    expect(screen.getAllByText('+20,00%')).toHaveLength(1)
   })
 
   it('exportar CSV vira ícone com aria-label acessível no header', () => {

@@ -59,8 +59,8 @@ function IndCard({ label, value, colorClass = '', tip }: CardDef) {
                          rounded-[10px] p-3 text-[12px] leading-6 text-text-sec
                          w-[180px] md:w-[230px]"
               style={{
-                background: 'var(--bg-2)',
-                border: '1px solid var(--border)',
+                background: 'var(--color-bg-2)',
+                border: '1px solid var(--color-border)',
                 boxShadow: '0 8px 32px rgba(0,0,0,.6)',
                 fontWeight: 400,
               }}
