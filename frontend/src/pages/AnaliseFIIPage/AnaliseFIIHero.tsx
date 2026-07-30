@@ -38,7 +38,7 @@ export function AnaliseFIIHero({ data, isLoading }: Props) {
   return (
     <div
       className="rounded-[14px] px-6 py-5 border border-border"
-      style={{ background: 'linear-gradient(135deg, var(--bg-2), rgba(6,182,212,.04))' }}
+      style={{ background: 'linear-gradient(135deg, var(--color-bg-2), rgba(6,182,212,.04))' }}
     >
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div className="flex flex-col gap-1">

@@ -103,7 +103,7 @@ function FilterPopover({
   return (
     <div
       className="absolute top-[calc(100%+6px)] left-0 z-50 rounded-[14px] p-4 min-w-[200px]"
-      style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', boxShadow: '0 4px 16px rgba(0,0,0,.5)' }}
+      style={{ background: 'var(--color-bg-2)', border: '1px solid var(--color-border)', boxShadow: '0 4px 16px rgba(0,0,0,.5)' }}
       onClick={(e) => e.stopPropagation()}
     >
       <label className="block text-[11px] text-text-muted mb-1 uppercase tracking-[0.04em]">
@@ -209,7 +209,7 @@ export function FIIFilterChips({ config, customTickers, onChange, onAddTicker, o
         {activePopover === 'add' && (
           <div
             className="absolute top-[calc(100%+6px)] left-0 z-50 rounded-[14px] p-4 min-w-[230px]"
-            style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', boxShadow: '0 4px 16px rgba(0,0,0,.5)' }}
+            style={{ background: 'var(--color-bg-2)', border: '1px solid var(--color-border)', boxShadow: '0 4px 16px rgba(0,0,0,.5)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <label className="block text-[11px] text-text-muted mb-1 uppercase tracking-[0.04em]">

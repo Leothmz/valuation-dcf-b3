@@ -54,7 +54,7 @@ export function WatchlistNotesModal({ isOpen, onClose, ticker, note, onSave }: W
                        hover:-translate-y-px transition-all"
             style={{
               background: 'linear-gradient(135deg, var(--color-cyan) 0%, #0891b2 100%)',
-              color: 'var(--bg-0)',
+              color: 'var(--color-bg-0)',
               boxShadow: '0 2px 8px rgba(6,182,212,.2)',
             }}
             onClick={() => onSave(draft)}
