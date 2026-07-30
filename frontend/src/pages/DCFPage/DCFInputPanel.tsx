@@ -63,13 +63,14 @@ function InputRow({
         <input
           ref={inputRef}
           type="text"
+          inputMode="decimal"
           defaultValue={formatFn(value) || ''}
           key={`${field}-${value}`}
           disabled={disabled}
           placeholder="—"
           onBlur={handleBlur}
           onChange={(e) => onCommit(field, e.target.value)}
-          className={`bg-bg-3 border rounded-[6px] text-text-base font-mono text-[13px]
+          className={`bg-bg-3 border rounded-[6px] text-text-base font-mono text-[16px] md:text-[13px]
                       px-2 py-1.5 text-right min-w-[56px] outline-none
                       focus:border-cyan focus:shadow-[0_0_0_2px_rgba(6,182,212,0.08)]
                       transition-colors
@@ -207,11 +208,12 @@ export function DCFInputPanel({
         <div className="flex items-center gap-1">
           <input
             type="text"
+            inputMode="decimal"
             defaultValue={fInputPct(assumptions.disc)}
             key={`disc-${assumptions.disc}`}
             placeholder="15"
             onChange={(e) => handleCommit('disc', e.target.value)}
-            className={`bg-bg-3 border rounded-[6px] text-text-base font-mono text-[13px]
+            className={`bg-bg-3 border rounded-[6px] text-text-base font-mono text-[16px] md:text-[13px]
                         px-2 py-1.5 text-right min-w-[56px] outline-none
                         focus:border-cyan focus:shadow-[0_0_0_2px_rgba(6,182,212,0.08)]
                         transition-colors
@@ -230,11 +232,12 @@ export function DCFInputPanel({
         <div className="flex items-center gap-1">
           <input
             type="text"
+            inputMode="decimal"
             defaultValue={fInputPct(assumptions.perp)}
             key={`perp-${assumptions.perp}`}
             placeholder="3"
             onChange={(e) => handleCommit('perp', e.target.value)}
-            className={`bg-bg-3 border rounded-[6px] text-text-base font-mono text-[13px]
+            className={`bg-bg-3 border rounded-[6px] text-text-base font-mono text-[16px] md:text-[13px]
                         px-2 py-1.5 text-right min-w-[56px] outline-none
                         focus:border-cyan focus:shadow-[0_0_0_2px_rgba(6,182,212,0.08)]
                         transition-colors

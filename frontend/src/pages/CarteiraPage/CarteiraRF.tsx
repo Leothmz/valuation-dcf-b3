@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { ChevronRight, Trash2 } from 'lucide-react'
-import { fBRL as fBRLFormatter, fPct } from '../../engines/formatters'
+import { fBRL as fBRLFormatter, fPct, fPctSigned } from '../../engines/formatters'
 import { aggregateTitle, projectDeposit } from '../../engines/portfolio-engine'
+import { useIsMobile } from '../../hooks/useMediaQuery'
+import { DataCard } from '../../components/DataCard'
 import type { RFTitle, RFType, RFRateType } from '../../stores/portfolioStore'
 
 const fBRL = (v: number) => fBRLFormatter.format(v)
@@ -41,6 +43,9 @@ interface CarteiraRFProps {
   onAdd: (title: Omit<RFTitle, 'id'>) => void
   onDelete: (id: string) => void
   onDeleteDeposit: (titleId: string, depositId: string) => void
+  /** Controlado pelo CarteiraPage (FAB) quando fornecido; cai para estado interno caso contrário. */
+  modalOpen?: boolean
+  onModalOpenChange?: (open: boolean) => void
 }
 
 export function CarteiraRF({
@@ -49,10 +54,15 @@ export function CarteiraRF({
   onAdd,
   onDelete,
   onDeleteDeposit,
+  modalOpen: modalOpenProp,
+  onModalOpenChange,
 }: CarteiraRFProps) {
-  const [showModal, setShowModal] = useState(false)
+  const [internalModalOpen, setInternalModalOpen] = useState(false)
+  const showModal = modalOpenProp ?? internalModalOpen
+  const setShowModal = onModalOpenChange ?? setInternalModalOpen
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const isMobile = useIsMobile()
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -121,6 +131,72 @@ export function CarteiraRF({
         + Adicionar Título
       </button>
 
+      {isMobile ? (
+        <div>
+          {titles.map((title) => {
+            const agg = aggregateTitle(title, { cdiAccumulated }, today)
+            const retColor = agg.retorno != null && agg.retorno >= 0 ? 'var(--color-green)' : 'var(--color-red)'
+            const rateSuffix =
+              RATE_LABELS[title.rateType] === '% CDI'
+                ? '% CDI'
+                : title.rateType === 'ipca_plus'
+                  ? '% IPCA+'
+                  : '%'
+
+            return (
+              <DataCard
+                key={title.id}
+                title={
+                  <span>
+                    {title.name}
+                    <span className="ml-2 text-[11px] text-text-muted font-normal">
+                      {title.deposits.length} aporte{title.deposits.length !== 1 ? 's' : ''}
+                    </span>
+                  </span>
+                }
+                badge={
+                  <span
+                    className="text-[10px] font-bold rounded-[5px] px-2 py-0.5"
+                    style={{
+                      background: 'rgba(129,140,248,.15)',
+                      color: RATE_COLORS[title.rateType],
+                    }}
+                  >
+                    {RATE_LABELS[title.rateType]}
+                  </span>
+                }
+                fields={[
+                  { label: 'Tipo', value: TYPE_LABELS[title.type] ?? title.type },
+                  { label: 'Taxa', value: `${title.baseRate}${rateSuffix}` },
+                  {
+                    label: 'Vencimento',
+                    value: title.maturityDate ? title.maturityDate.slice(0, 7) : '—',
+                  },
+                  { label: 'Valor Aplicado', value: fBRL(agg.totalInvested) },
+                  { label: 'Valor Projetado', value: fBRL(agg.totalProjected), emphasis: true },
+                  {
+                    label: 'Rentabilidade',
+                    value: (
+                      <span style={{ color: retColor }}>
+                        {agg.retorno != null ? fPctSigned(agg.retorno, 1) : '—'}
+                      </span>
+                    ),
+                  },
+                ]}
+                actions={
+                  <button
+                    onClick={() => onDelete(title.id)}
+                    className="flex-1 min-h-[44px] rounded-[8px] border border-border text-[12px] font-semibold cursor-pointer"
+                    style={{ color: 'var(--color-red)' }}
+                  >
+                    Remover
+                  </button>
+                }
+              />
+            )
+          })}
+        </div>
+      ) : (
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
@@ -151,9 +227,8 @@ export function CarteiraRF({
               const isOpen = expanded.has(title.id)
 
               return (
-                <>
+                <Fragment key={title.id}>
                   <tr
-                    key={title.id}
                     className="cursor-pointer hover:bg-white/[0.02] transition-colors"
                     style={{ background: '#111827' }}
                     onClick={() => toggleExpand(title.id)}
@@ -261,12 +336,13 @@ export function CarteiraRF({
                         </tr>
                       )
                     })}
-                </>
+                </Fragment>
               )
             })}
           </tbody>
         </table>
       </div>
+      )}
 
       {showModal && (
         <RFModal
@@ -384,21 +460,23 @@ function RFModal({
                 {RATE_INPUT_LABELS[form.rateType]}
               </label>
               <input
+                inputMode="decimal"
                 value={form.rate}
                 onChange={(e) => setForm({ ...form, rate: e.target.value })}
                 placeholder="Ex: 110"
-                className="form-input-dark"
+                className="form-input-dark text-[16px] md:text-[13px]"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[11px] text-text-muted uppercase tracking-[0.4px]">Valor Investido (R$)</label>
               <input
                 type="number"
+                inputMode="decimal"
                 min="0"
                 step="0.01"
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                className="form-input-dark"
+                className="form-input-dark text-[16px] md:text-[13px]"
               />
             </div>
           </div>

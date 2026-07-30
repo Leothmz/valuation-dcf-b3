@@ -97,3 +97,62 @@ describe('CarteiraProventosPorAtivo', () => {
     expect(screen.queryByText('Confirmar')).not.toBeInTheDocument()
   })
 })
+
+// Mesmo padrão de CarteiraAtivos.test.tsx (Task 21) — sobrescreve o polyfill global de
+// matchMedia (test-setup.ts, default matches:false = desktop) para provar montagem
+// condicional via useIsMobile(), não CSS. getByText SEM escopo de container é o detector
+// de duplicata.
+function mockMatchMedia(matches: boolean) {
+  window.matchMedia = ((query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia
+}
+
+describe('CarteiraProventosPorAtivo — montagem condicional mobile/desktop (useIsMobile, não CSS)', () => {
+  afterEach(() => {
+    mockMatchMedia(false)
+  })
+
+  it('no mobile, o histórico expandido mostra cards e não a tabela', () => {
+    mockMatchMedia(true)
+    render(
+      <CarteiraProventosPorAtivo
+        holdings={holdings}
+        dividendHistoryByTicker={{ WEGE3: [{ date: '2024-06-01', amount: 0.5 }] }}
+        dpaMap={{ WEGE3: 3 }}
+        operations={operations}
+        proventos={[]}
+        loading={false}
+        onConfirm={() => {}}
+      />
+    )
+    fireEvent.click(screen.getByText('WEGE3'))
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.getByText('Estimado')).toBeInTheDocument()
+  })
+
+  it('no desktop, o histórico expandido mostra a tabela e não cards', () => {
+    mockMatchMedia(false)
+    render(
+      <CarteiraProventosPorAtivo
+        holdings={holdings}
+        dividendHistoryByTicker={{ WEGE3: [{ date: '2024-06-01', amount: 0.5 }] }}
+        dpaMap={{ WEGE3: 3 }}
+        operations={operations}
+        proventos={[]}
+        loading={false}
+        onConfirm={() => {}}
+      />
+    )
+    fireEvent.click(screen.getByText('WEGE3'))
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByText('Estimado')).toBeInTheDocument()
+  })
+})

@@ -121,7 +121,7 @@ export function AnaliseIndicadores({ data }: Props) {
           >
             {group.title}
           </div>
-          <div className="grid grid-cols-4 gap-2.5 max-[900px]:grid-cols-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
             {group.items.map((cfg) => (
               <IndicatorCard key={`${group.title}-${cfg.field}-${cfg.label}`} cfg={cfg} data={data} />
             ))}

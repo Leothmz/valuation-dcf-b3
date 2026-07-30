@@ -2,6 +2,7 @@ import { Settings2, FileDown } from 'lucide-react'
 import { fBRL, fShort, fPct, fShares } from '../../engines/formatters'
 import type { DCFResult, DCFGordonError } from '../../engines/dcf-engine'
 import type { NullableDCFAssumptions, ScenarioState } from '../../stores/dcfStore'
+import { useIsMobile } from '../../hooks/useMediaQuery'
 
 interface DCFResultPanelProps {
   results: DCFResult | DCFGordonError | null
@@ -40,6 +41,7 @@ export function DCFResultPanel({
 }: DCFResultPanelProps) {
   const r = results
   const gordonError = r && 'error' in r && r.error === 'gordon'
+  const isMobile = useIsMobile()
 
   const otherR = dcfMethod === 'buffett' ? resultsClassico : resultsBuffett
   const otherLbl = dcfMethod === 'buffett' ? 'Clássico FCD' : 'Buffett (10%)'
@@ -101,21 +103,26 @@ export function DCFResultPanel({
         )}
       </div>
 
-      {/* Save + Export buttons */}
+      {/* Save + Export buttons — botão de salvar existe uma única vez por viewport:
+          no desktop é este (topo do painel); no mobile é o de baixo, perto das métricas
+          secundárias (ver mais abaixo). Montagem condicional via useIsMobile(), nunca
+          `md:hidden` — CSS hide mantinha os dois no DOM e duplicava o texto acessível. */}
       {showSave && (
         <>
-          <button
-            onClick={onSave}
-            className={`w-full mb-3 h-[42px] font-semibold text-sm rounded-[10px] cursor-pointer
-                        transition-all font-ui
-                        ${isSaved
-                          ? 'bg-green text-bg-0 shadow-[0_2px_8px_rgba(16,185,129,0.2)]'
-                          : 'bg-gradient-to-br from-cyan to-[#0891b2] text-bg-0 shadow-[0_2px_8px_rgba(6,182,212,0.2)]'
-                        }
-                        hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(6,182,212,0.35)]`}
-          >
-            {isSaved ? '✓ Atualizar Preço Teto Salvo' : '＋ Salvar Preço Teto'}
-          </button>
+          {!isMobile && (
+            <button
+              onClick={onSave}
+              className={`w-full mb-3 h-[42px] font-semibold text-sm rounded-[10px] cursor-pointer
+                          transition-all font-ui
+                          ${isSaved
+                            ? 'bg-green text-bg-0 shadow-[0_2px_8px_rgba(16,185,129,0.2)]'
+                            : 'bg-gradient-to-br from-cyan to-[#0891b2] text-bg-0 shadow-[0_2px_8px_rgba(6,182,212,0.2)]'
+                          }
+                          hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(6,182,212,0.35)]`}
+            >
+              {isSaved ? '✓ Atualizar Preço Teto Salvo' : '＋ Salvar Preço Teto'}
+            </button>
+          )}
 
           <button
             onClick={onExportHTML}
@@ -132,40 +139,44 @@ export function DCFResultPanel({
         </>
       )}
 
-      {/* Secondary metrics grid */}
+      {/* Secondary metrics grid — min-w-0 nos 4 cards: mesmo bug da Finding 1 (Task 23),
+          um nível mais fundo. Grid item também tem min-width:auto por padrão e não
+          encolhia abaixo do min-content de valores monetários grandes (ver achado sobre
+          fShort no CLAUDE.md — não abrevia, é alias de fBRL.format), estourando o card
+          e, por consequência, o documento em mobile. */}
       <div className="grid grid-cols-2 gap-2">
-        <div className="bg-bg-3 border border-border rounded-[10px] px-3 py-2.5">
+        <div className="min-w-0 bg-bg-3 border border-border rounded-[10px] px-3 py-2.5">
           <div className="text-[11px] text-text-muted uppercase tracking-[0.06em] font-medium mb-1.5">
             Preço Atual
           </div>
-          <div className="text-[14px] font-semibold font-mono">
+          <div className="text-[11px] md:text-[14px] font-semibold font-mono">
             {assumptions.price ? fBRL.format(assumptions.price) : '—'}
           </div>
         </div>
-        <div className="bg-bg-3 border border-border rounded-[10px] px-3 py-2.5">
+        <div className="min-w-0 bg-bg-3 border border-border rounded-[10px] px-3 py-2.5">
           <div className="text-[11px] text-text-muted uppercase tracking-[0.06em] font-medium mb-1.5">
             Market Cap Projetado
           </div>
-          <div className="text-[14px] font-semibold font-mono">
+          <div className="text-[11px] md:text-[14px] font-semibold font-mono">
             {r && !('error' in r) && assumptions.shares
               ? fShort(r.fairPrice * assumptions.shares)
               : '—'}
           </div>
         </div>
-        <div className="bg-bg-3 border border-border rounded-[10px] px-3 py-2.5">
+        <div className="min-w-0 bg-bg-3 border border-border rounded-[10px] px-3 py-2.5">
           <div className="text-[11px] text-text-muted uppercase tracking-[0.06em] font-medium mb-1.5">
             Nº de Ações
           </div>
-          <div className="text-[14px] font-semibold font-mono">
+          <div className="text-[11px] md:text-[14px] font-semibold font-mono">
             {assumptions.shares ? fShares(assumptions.shares) : '—'}
           </div>
           <div className="text-[11px] text-text-muted mt-0.5">em circulação</div>
         </div>
-        <div className="bg-bg-3 border border-border rounded-[10px] px-3 py-2.5">
+        <div className="min-w-0 bg-bg-3 border border-border rounded-[10px] px-3 py-2.5">
           <div className="text-[11px] text-text-muted uppercase tracking-[0.06em] font-medium mb-1.5">
             Valor da Empresa (EV)
           </div>
-          <div className="text-[14px] font-semibold font-mono">
+          <div className="text-[11px] md:text-[14px] font-semibold font-mono">
             {r && !('error' in r) ? fShort(r.ev) : '—'}
           </div>
         </div>
@@ -235,6 +246,24 @@ export function DCFResultPanel({
             </div>
           )}
         </div>
+      )}
+
+      {/* Botão de salvar mobile — reusa o mesmo handler `onSave` (o atalho `S`
+          em DCFPage/index.tsx chama esse mesmo handleSave via essa prop). Montagem
+          condicional via useIsMobile() (não `md:hidden`): o botão de topo acima já
+          cobre o desktop, então só o mobile chega até aqui — nunca os dois no DOM. */}
+      {showSave && isMobile && (
+        <button
+          onClick={onSave}
+          className="w-full min-h-[48px] mt-4 rounded-[12px] text-[14px] font-bold cursor-pointer"
+          style={{
+            background: 'rgba(6,182,212,.15)',
+            border: '1px solid rgba(6,182,212,.4)',
+            color: 'var(--color-cyan)',
+          }}
+        >
+          Salvar preço teto
+        </button>
       )}
     </div>
   )

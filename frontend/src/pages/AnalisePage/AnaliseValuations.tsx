@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { fBRL, fPct } from '../../engines/formatters'
+import { fBRL, fPct, fPctSigned } from '../../engines/formatters'
 import { useWatchlistStore } from '../../stores/watchlistStore'
 import type { FundamentalsData } from '../../api/stocks'
 
@@ -52,14 +52,14 @@ function ValCard({
 
   const upside = calcUpside(fair, price)
   const uSign = upside >= 0 ? 'text-green' : 'text-red'
-  const uArrow = upside >= 0 ? '↑ +' : '↓ '
+  const uArrow = upside >= 0 ? '↑ ' : '↓ '
 
   return (
     <div className="bg-bg-3 border border-border rounded-[10px] p-4">
       <div className="text-[11px] uppercase tracking-[0.06em] text-text-muted mb-1.5">{method}</div>
       <div className={`font-mono text-[22px] font-bold mb-1 ${colorClass}`}>{fBRL.format(fair)}</div>
       <div className={`text-[13px] font-semibold mb-1.5 ${uSign}`}>
-        {uArrow}{fPct(Math.abs(upside))} upside
+        {uArrow}{fPctSigned(upside)} upside
       </div>
       <div className="font-mono text-[11px] text-text-muted">{formula}</div>
     </div>
@@ -112,7 +112,7 @@ export function AnaliseValuations({ data, ticker }: Props) {
     const fair = dcfEntry.fairPrice
     const upside = calcUpside(fair, price)
     const uSign = upside >= 0 ? 'text-green' : 'text-red'
-    const uArrow = upside >= 0 ? '↑ +' : '↓ '
+    const uArrow = upside >= 0 ? '↑ ' : '↓ '
     const savedDate = new Date(dcfEntry.savedAt).toLocaleDateString('pt-BR')
 
     dcfBlock = (
@@ -134,7 +134,7 @@ export function AnaliseValuations({ data, ticker }: Props) {
           </div>
           <div className="font-mono text-[28px] font-bold text-cyan">{fBRL.format(fair)}</div>
           <div className={`text-[13px] font-semibold mt-1 ${uSign}`}>
-            {uArrow}{fPct(Math.abs(upside))} em relação ao preço atual
+            {uArrow}{fPctSigned(upside)} em relação ao preço atual
           </div>
           <div className="text-[12px] text-text-muted mt-1">
             Calculado em {savedDate} ·{' '}
@@ -166,7 +166,7 @@ export function AnaliseValuations({ data, ticker }: Props) {
         Outros Métodos de Valuation
       </div>
 
-      <div className="grid grid-cols-4 gap-3 max-[900px]:grid-cols-2">
+      <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-4 gap-3">
         <ValCard method="Bazin" fair={bazin} price={price} formula="DPA ÷ 6%" colorClass="text-cyan" />
         <ValCard method="Graham" fair={graham} price={price} formula="√(22.5 × LPA × VPA)" colorClass="text-purple" />
         <ValCard method="Peter Lynch" fair={lynch} price={price} formula="LPA × CAGR(%)" colorClass="text-green" />

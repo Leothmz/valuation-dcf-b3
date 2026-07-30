@@ -1,0 +1,151 @@
+import { render, screen } from '@testing-library/react'
+import { CarteiraIRMobile } from './CarteiraIRMobile'
+import type { MonthlyIRSummary } from '../../engines/portfolio-engine'
+
+const TAXABLE: MonthlyIRSummary = {
+  month: '2026-07',
+  category: 'swing_acoes',
+  grossGain: 2752,
+  proceeds: 25000,
+  exempt: false,
+  lossCarriedIn: 0,
+  taxableAmount: 2752,
+  rate: 0.15,
+  darfAmount: 412.8,
+  lossCarriedOut: 0,
+  dueDate: '2026-08-31',
+}
+
+const EXEMPT: MonthlyIRSummary = {
+  month: '2026-06',
+  category: 'swing_acoes',
+  grossGain: 900,
+  proceeds: 15000,
+  exempt: true,
+  lossCarriedIn: 0,
+  taxableAmount: 0,
+  rate: 0.15,
+  darfAmount: 0,
+  lossCarriedOut: 0,
+  dueDate: '2026-07-31',
+}
+
+// Mesmo ganho bruto positivo de EXEMPT, mas tributável — só não gera DARF porque o
+// prejuízo acumulado do mês anterior (lossCarriedIn) abate o ganho inteiro. Isso NÃO
+// é renda isenta para o IRPF, diferente de EXEMPT — a distinção que esta tela existe
+// para não perder (ver CLAUDE.md / brief da Task 22).
+const LOSS_OFFSET: MonthlyIRSummary = {
+  month: '2026-05',
+  category: 'swing_acoes',
+  grossGain: 900,
+  proceeds: 25000,
+  exempt: false,
+  lossCarriedIn: 900,
+  taxableAmount: 0,
+  rate: 0.15,
+  darfAmount: 0,
+  lossCarriedOut: 0,
+  dueDate: '2026-06-30',
+}
+
+// Dois meses seguidos de PREJUÍZO na mesma categoria — nenhum ganho em nenhum dos dois.
+// grossGain <= 0 cai no primeiro ramo de buildMonthlyIRSummary (portfolio-engine.ts:585),
+// que só ACUMULA o prejuízo (lossCarriedOut = lossCarriedIn + |grossGain|) — não há nada
+// "compensado". O segundo mês herda lossCarriedIn > 0 do primeiro só porque o prejuízo
+// anterior ainda não foi usado, não porque este mês tenha abatido ganho algum.
+const LOSS_MONTH_1: MonthlyIRSummary = {
+  month: '2026-03',
+  category: 'swing_acoes',
+  grossGain: -1000,
+  proceeds: 5000,
+  exempt: false,
+  lossCarriedIn: 0,
+  taxableAmount: 0,
+  rate: 0.15,
+  darfAmount: 0,
+  lossCarriedOut: 1000,
+  dueDate: '2026-04-30',
+}
+
+const LOSS_MONTH_2: MonthlyIRSummary = {
+  month: '2026-04',
+  category: 'swing_acoes',
+  grossGain: -500,
+  proceeds: 5000,
+  exempt: false,
+  lossCarriedIn: 1000,
+  taxableAmount: 0,
+  rate: 0.15,
+  darfAmount: 0,
+  lossCarriedOut: 1500,
+  dueDate: '2026-05-31',
+}
+
+const SUMMARIES = [TAXABLE, EXEMPT]
+
+describe('CarteiraIRMobile', () => {
+  it('mostra um card por mês+categoria', () => {
+    render(<CarteiraIRMobile summaries={SUMMARIES} />)
+    expect(screen.getByText('07/2026')).toBeInTheDocument()
+    expect(screen.getByText('06/2026')).toBeInTheDocument()
+  })
+
+  it('destaca o valor do DARF', () => {
+    render(<CarteiraIRMobile summaries={SUMMARIES} />)
+    expect(screen.getByText('R$ 412,80')).toBeInTheDocument()
+  })
+
+  it('marca mês isento com badge próprio', () => {
+    render(<CarteiraIRMobile summaries={SUMMARIES} />)
+    expect(screen.getByText('ISENTO')).toBeInTheDocument()
+  })
+
+  it('não marca como isento o mês tributado', () => {
+    render(<CarteiraIRMobile summaries={[TAXABLE]} />)
+    expect(screen.queryByText('ISENTO')).not.toBeInTheDocument()
+  })
+
+  it('mostra o vencimento de cada DARF', () => {
+    render(<CarteiraIRMobile summaries={SUMMARIES} />)
+    expect(screen.getByText('31/08/2026')).toBeInTheDocument()
+  })
+
+  // Review de branch inteira (item 2): com darfAmount === 0, o desktop (CarteiraIR.tsx)
+  // mostra "—" tanto no valor do DARF quanto no vencimento — "R$ 0,00" + uma data real
+  // ao lado lê como "você deve esse DARF nessa data", o que é falso. Mesma classe de
+  // defeito do badge PREJUÍZO COMPENSADO corrigido acima.
+  it('mostra — no valor do DARF e no vencimento quando darfAmount é 0, nunca R$ 0,00 + data real', () => {
+    render(<CarteiraIRMobile summaries={[EXEMPT]} />)
+    const darfRow = screen.getByText('DARF a pagar').closest('div')
+    expect(darfRow).toHaveTextContent('—')
+    expect(darfRow).not.toHaveTextContent('R$ 0,00')
+
+    const vencimentoRow = screen.getByText('Vencimento').closest('div')
+    expect(vencimentoRow).toHaveTextContent('—')
+    expect(vencimentoRow).not.toHaveTextContent('31/07/2026')
+  })
+
+  // O teste central desta task: um mês isento (exempt: true) e um mês com prejuízo
+  // compensado (lossCarriedIn abatendo tudo) mostram os DOIS "R$ 0,00" de DARF — mas
+  // só o isento é renda isenta na declaração. Se o badge ISENTO aparecesse nos dois
+  // (bug: badge condicionado só a darfAmount === 0 em vez de exempt === true), este
+  // teste falha porque passaria a haver 2 badges em vez de 1.
+  it('distingue mês isento de mês com prejuízo compensado, mesmo com valores iguais a R$ 0,00 nos dois', () => {
+    render(<CarteiraIRMobile summaries={[EXEMPT, LOSS_OFFSET]} />)
+    // Base tributável E DARF ficam zerados em ambos — nenhuma diferença no valor numérico exibido.
+    expect(screen.getAllByText('R$ 0,00').length).toBeGreaterThanOrEqual(2)
+    // Só o mês isento leva o badge ISENTO; o mês com prejuízo compensado leva outro badge.
+    expect(screen.getAllByText('ISENTO')).toHaveLength(1)
+    expect(screen.getByText('PREJUÍZO COMPENSADO')).toBeInTheDocument()
+  })
+
+  // Regressão: isLossOffset() exigia só `!exempt && darfAmount === 0 && lossCarriedIn > 0`,
+  // sem checar que o mês teve GANHO. Isso rotulava um mês que foi ele próprio prejuízo (e que
+  // só empilhou mais prejuízo acumulado) como "PREJUÍZO COMPENSADO" — nada foi compensado.
+  it('não rotula um mês de prejuízo (sem ganho) como "PREJUÍZO COMPENSADO", mesmo herdando lossCarriedIn > 0', () => {
+    render(<CarteiraIRMobile summaries={[LOSS_MONTH_1, LOSS_MONTH_2]} />)
+    expect(screen.queryByText('PREJUÍZO COMPENSADO')).not.toBeInTheDocument()
+    // Os dois caem no badge de categoria normal (Swing Trade), um por card.
+    expect(screen.getAllByText('Swing Trade (Ações)')).toHaveLength(2)
+  })
+})

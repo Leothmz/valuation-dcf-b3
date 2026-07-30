@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { Building2 } from 'lucide-react'
+import { Building2, Search } from 'lucide-react'
 import { useFIIData } from '../../api/fiis'
 import { B3_FII_TICKERS } from '../../data/b3Tickers'
 import { AnaliseFIIHero } from './AnaliseFIIHero'
 import { AnaliseFIIIndicadores } from './AnaliseFIIIndicadores'
 import { AnaliseFIIProventos } from './AnaliseFIIProventos'
 import { AnaliseFIIGrafico } from './AnaliseFIIGrafico'
+import { useTabArrowNav } from '../../hooks/useKeyBinding'
+import { ScrollableTabs } from '../../components/ScrollableTabs'
 
 type TabId = 'indicadores' | 'proventos' | 'grafico'
 
@@ -79,8 +81,8 @@ function SearchBar({ initialValue = '' }: { initialValue?: string }) {
           placeholder="Buscar FII… (ex: HGLG11)"
           autoComplete="off"
           spellCheck={false}
-          className="w-full h-[42px] bg-bg-3 border border-border rounded-[10px] text-text-base
-                     font-mono text-sm px-[14px] uppercase outline-none
+          className="w-full h-11 bg-bg-3 border border-border rounded-[10px] text-text-base
+                     font-mono text-[16px] md:text-sm px-[14px] uppercase outline-none
                      placeholder:text-text-muted placeholder:normal-case
                      focus:border-cyan focus:shadow-[0_0_0_2px_rgba(6,182,212,0.15)]
                      transition-colors"
@@ -106,10 +108,13 @@ function SearchBar({ initialValue = '' }: { initialValue?: string }) {
       </div>
       <button
         type="submit"
-        className="h-[42px] px-5 bg-cyan text-bg-0 font-bold text-[13px] rounded-[10px]
+        className="h-11 min-w-[44px] px-5 bg-cyan text-bg-0 font-bold text-[13px] rounded-[10px]
                    cursor-pointer hover:bg-[#0891b2] transition-colors"
       >
-        Buscar
+        <span className="flex items-center gap-1.5">
+          <Search size={14} />
+          Buscar
+        </span>
       </button>
     </form>
   )
@@ -119,16 +124,30 @@ export function AnaliseFIIPage() {
   const [searchParams] = useSearchParams()
   const ticker = searchParams.get('ticker')?.toUpperCase() ?? null
   const [activeTab, setActiveTab] = useState<TabId>('indicadores')
+  const touchStartX = useRef(0)
+
+  useTabArrowNav(TABS.map((t) => t.id), activeTab, setActiveTab)
 
   const { data, isLoading, error } = useFIIData(ticker)
 
   const showContent = !!ticker
   const hasError = !!error && !isLoading
 
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    if (Math.abs(dx) < 60) return
+    const i = TABS.findIndex((t) => t.id === activeTab)
+    const next = dx < 0 ? i + 1 : i - 1
+    if (next >= 0 && next < TABS.length) setActiveTab(TABS[next].id) // sem dar volta nas pontas
+  }
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Search bar */}
-      <div className="px-6 py-3.5 border-b border-border bg-bg-2 flex gap-2.5 items-center">
+      <div className="px-4 py-3 md:px-6 md:py-3.5 border-b border-border bg-bg-2 flex gap-2.5 items-center">
         <SearchBar initialValue={ticker ?? ''} />
         {hasError && (
           <span className="text-red text-[13px]">
@@ -138,7 +157,7 @@ export function AnaliseFIIPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-5">
+      <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6 flex flex-col gap-5">
         {!showContent ? (
           <EmptyState />
         ) : hasError ? (
@@ -153,30 +172,20 @@ export function AnaliseFIIPage() {
             <AnaliseFIIHero data={data} isLoading={isLoading} />
 
             {/* Tabs */}
-            <div className="flex border-b border-border gap-0 -mt-2">
-              {TABS.map(({ id, label }) => (
-                <button
-                  key={id}
-                  onClick={() => setActiveTab(id)}
-                  className={`bg-transparent border-0 border-b-2 px-5 py-3 text-[14px] font-medium
-                              cursor-pointer transition-colors
-                              ${activeTab === id
-                                ? 'text-cyan border-cyan'
-                                : 'text-text-muted border-transparent hover:text-text-sec'
-                              }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <ScrollableTabs
+              tabs={TABS.map((t) => ({ key: t.id, label: t.label }))}
+              active={activeTab}
+              onSelect={setActiveTab}
+              ariaLabel="Seções da análise de FII"
+            />
 
             {/* Tab panes */}
-            <div className="pt-0">
+            <div className="pt-0" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
               {activeTab === 'indicadores' && (
-                data ? <AnaliseFIIIndicadores data={data} /> : <TabSkeleton cols={3} />
+                data ? <AnaliseFIIIndicadores data={data} /> : <TabSkeleton />
               )}
               {activeTab === 'proventos' && (
-                data ? <AnaliseFIIProventos data={data} /> : <TabSkeleton cols={3} />
+                data ? <AnaliseFIIProventos data={data} /> : <TabSkeleton />
               )}
               {activeTab === 'grafico' && ticker && (
                 <AnaliseFIIGrafico ticker={ticker} />
@@ -203,12 +212,12 @@ function EmptyState() {
   )
 }
 
-function TabSkeleton({ cols = 3 }: { cols?: number }) {
+function TabSkeleton() {
   return (
     <div className="flex flex-col gap-4">
       {[...Array(3)].map((_, i) => (
-        <div key={i} className={`grid gap-2.5`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-          {[...Array(cols)].map((_, j) => (
+        <div key={i} className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+          {[...Array(3)].map((_, j) => (
             <div key={j} className="bg-bg-3 border border-border rounded-[10px] p-4 h-20 skeleton" />
           ))}
         </div>

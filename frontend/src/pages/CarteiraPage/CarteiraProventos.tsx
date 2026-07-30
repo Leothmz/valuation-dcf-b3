@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Trash2 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { fBRL as fBRLFormatter } from '../../engines/formatters'
 import { parseB3Proventos } from '../../engines/b3-csv-parser'
 import { CarteiraProventosPorAtivo } from './CarteiraProventosPorAtivo'
+import { useIsMobile } from '../../hooks/useMediaQuery'
+import { DataCard } from '../../components/DataCard'
 import type { HoldingSummary, ApiDividendEntry } from '../../engines/portfolio-engine'
 import type { Provento, Operation } from '../../stores/portfolioStore'
 
@@ -43,6 +45,9 @@ interface CarteiraProventosProps {
   dividendHistoryByTicker: Record<string, ApiDividendEntry[]>
   dpaMap: Record<string, number | null>
   dividendDataLoading: boolean
+  /** Controlado pelo CarteiraPage (FAB) quando fornecido; cai para estado interno caso contrário. */
+  modalOpen?: boolean
+  onModalOpenChange?: (open: boolean) => void
 }
 
 const EMPTY_FORM = {
@@ -63,9 +68,24 @@ export function CarteiraProventos({
   dividendHistoryByTicker,
   dpaMap,
   dividendDataLoading,
+  modalOpen: modalOpenProp,
+  onModalOpenChange,
 }: CarteiraProventosProps) {
-  const [showModal, setShowModal] = useState(false)
+  const [internalModalOpen, setInternalModalOpen] = useState(false)
+  const showModal = modalOpenProp ?? internalModalOpen
+  const setShowModal = onModalOpenChange ?? setInternalModalOpen
   const [form, setForm] = useState({ ...EMPTY_FORM })
+  const isMobile = useIsMobile()
+
+  // Sempre que o modal abre (botão local ou FAB via prop controlada), reseta o
+  // formulário com a data de hoje — mesmo comportamento do onClick original.
+  useEffect(() => {
+    if (showModal) {
+      setForm({ ...EMPTY_FORM, date: new Date().toISOString().slice(0, 10) })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showModal])
+
   const [yearFilter, setYearFilter] = useState('')
   const [tickerFilter, setTickerFilter] = useState('')
   const [showImportModal, setShowImportModal] = useState(false)
@@ -149,7 +169,7 @@ export function CarteiraProventos({
   return (
     <div>
       {/* Summary cards */}
-      <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
+      <div className="grid gap-3 mb-5 grid-cols-2 md:grid-cols-4">
         {[
           { label: 'TOTAL RECEBIDO', value: fBRL(total) },
           { label: 'ANO ATUAL', value: fBRL(anoAtual) },
@@ -174,7 +194,7 @@ export function CarteiraProventos({
 
       {/* Import banner */}
       <div
-        className="rounded-lg p-3 mb-4 flex items-center gap-3"
+        className="rounded-lg p-3 mb-4 flex flex-col md:flex-row md:items-center gap-3"
         style={{ background: '#1a2233', border: '1px solid #1e2d42' }}
       >
         <div className="flex-1">
@@ -185,7 +205,7 @@ export function CarteiraProventos({
         </div>
         <button
           onClick={() => document.getElementById('prov-file-input')?.click()}
-          className="px-3.5 py-1.5 rounded-md text-xs font-semibold
+          className="w-full md:w-auto min-h-[44px] md:min-h-0 px-3.5 py-1.5 rounded-md text-xs font-semibold
                      bg-transparent text-text-sec border border-border cursor-pointer"
         >
           Importar XLS
@@ -221,10 +241,7 @@ export function CarteiraProventos({
       {/* Toolbar */}
       <div className="flex items-center gap-2 mb-3.5 flex-wrap">
         <button
-          onClick={() => {
-            setForm({ ...EMPTY_FORM, date: new Date().toISOString().slice(0, 10) })
-            setShowModal(true)
-          }}
+          onClick={() => setShowModal(true)}
           className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold
                      bg-cyan text-black cursor-pointer border-0"
         >
@@ -252,6 +269,38 @@ export function CarteiraProventos({
 
       {!filtered.length ? (
         <p className="text-center text-text-muted py-10 text-sm">Nenhum provento registrado.</p>
+      ) : isMobile ? (
+        <div>
+          {filtered.map((p) => (
+            <DataCard
+              key={p.id}
+              title={<span className="font-mono">{p.ticker}</span>}
+              badge={
+                <span
+                  className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold border
+                              ${PROV_BADGE_CLASS[p.type] ?? ''}`}
+                >
+                  {PROV_TYPE_LABELS[p.type] ?? p.type}
+                </span>
+              }
+              fields={[
+                { label: 'Data', value: p.date },
+                { label: 'Quantidade', value: p.qty },
+                { label: 'Valor/cota', value: fBRL(p.valuePerShare) },
+                { label: 'Total', value: <span className="text-green">{fBRL(p.qty * p.valuePerShare)}</span>, emphasis: true },
+              ]}
+              actions={
+                <button
+                  onClick={() => onDelete(p.id)}
+                  className="flex-1 min-h-[44px] rounded-[8px] border border-border text-[12px] font-semibold cursor-pointer"
+                  style={{ color: 'var(--color-red)' }}
+                >
+                  Remover
+                </button>
+              }
+            />
+          ))}
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -364,10 +413,11 @@ export function CarteiraProventos({
                   <label className="text-[11px] text-text-muted uppercase tracking-[0.4px]">Quantidade</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     min="0"
                     value={form.qty}
                     onChange={(e) => setForm({ ...form, qty: e.target.value })}
-                    className="form-input-dark"
+                    className="form-input-dark text-[16px] md:text-[13px]"
                   />
                 </div>
               </div>
@@ -377,11 +427,12 @@ export function CarteiraProventos({
                 </label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="0.0001"
                   value={form.valuePerShare}
                   onChange={(e) => setForm({ ...form, valuePerShare: e.target.value })}
-                  className="form-input-dark"
+                  className="form-input-dark text-[16px] md:text-[13px]"
                 />
               </div>
             </div>
@@ -417,52 +468,98 @@ export function CarteiraProventos({
           >
             <h3 className="text-base font-bold mb-3">Confirmar importação de proventos</h3>
             <p className="text-xs text-text-sec mb-3">{parsedImport.length} proventos encontrados.</p>
-            <table className="w-full text-xs mb-4">
-              <thead>
-                <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      checked={checkedImport.size === parsedImport.length && parsedImport.length > 0}
-                      onChange={(e) =>
-                        setCheckedImport(
-                          e.target.checked ? new Set(parsedImport.map((_, i) => i)) : new Set()
-                        )
-                      }
-                    />
-                  </th>
-                  <th className="text-left">Data</th>
-                  <th className="text-left">Ticker</th>
-                  <th className="text-left">Tipo</th>
-                  <th className="text-right">Qtd</th>
-                  <th className="text-right">Valor/cota</th>
-                </tr>
-              </thead>
-              <tbody>
+            {isMobile ? (
+              <div className="mb-4">
+                <label className="flex items-center gap-2 mb-2 text-xs text-text-sec min-h-[44px]">
+                  <input
+                    type="checkbox"
+                    className="w-5 h-5"
+                    checked={checkedImport.size === parsedImport.length && parsedImport.length > 0}
+                    onChange={(e) =>
+                      setCheckedImport(
+                        e.target.checked ? new Set(parsedImport.map((_, i) => i)) : new Set()
+                      )
+                    }
+                  />
+                  Selecionar todos
+                </label>
                 {parsedImport.map((p, i) => (
-                  <tr key={i}>
-                    <td>
+                  <DataCard
+                    key={i}
+                    title={<span className="font-mono">{p.ticker}</span>}
+                    badge={
+                      <label className="flex items-center gap-1.5 text-[11px] text-text-sec min-h-[44px] min-w-[44px] justify-center">
+                        <input
+                          type="checkbox"
+                          data-prov-idx={i}
+                          checked={checkedImport.has(i)}
+                          onChange={(e) => {
+                            const next = new Set(checkedImport)
+                            if (e.target.checked) next.add(i)
+                            else next.delete(i)
+                            setCheckedImport(next)
+                          }}
+                          className="w-5 h-5"
+                        />
+                      </label>
+                    }
+                    fields={[
+                      { label: 'Data', value: p.date },
+                      { label: 'Tipo', value: PROV_TYPE_LABELS[p.type] ?? p.type },
+                      { label: 'Quantidade', value: p.qty },
+                      { label: 'Valor/cota', value: fBRL(p.valuePerShare), emphasis: true },
+                    ]}
+                  />
+                ))}
+              </div>
+            ) : (
+              <table className="w-full text-xs mb-4">
+                <thead>
+                  <tr>
+                    <th>
                       <input
                         type="checkbox"
-                        data-prov-idx={i}
-                        checked={checkedImport.has(i)}
-                        onChange={(e) => {
-                          const next = new Set(checkedImport)
-                          if (e.target.checked) next.add(i)
-                          else next.delete(i)
-                          setCheckedImport(next)
-                        }}
+                        checked={checkedImport.size === parsedImport.length && parsedImport.length > 0}
+                        onChange={(e) =>
+                          setCheckedImport(
+                            e.target.checked ? new Set(parsedImport.map((_, i) => i)) : new Set()
+                          )
+                        }
                       />
-                    </td>
-                    <td className="font-mono py-1">{p.date}</td>
-                    <td className="font-bold py-1">{p.ticker}</td>
-                    <td className="py-1">{PROV_TYPE_LABELS[p.type] ?? p.type}</td>
-                    <td className="text-right font-mono py-1">{p.qty}</td>
-                    <td className="text-right font-mono py-1">{fBRL(p.valuePerShare)}</td>
+                    </th>
+                    <th className="text-left">Data</th>
+                    <th className="text-left">Ticker</th>
+                    <th className="text-left">Tipo</th>
+                    <th className="text-right">Qtd</th>
+                    <th className="text-right">Valor/cota</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {parsedImport.map((p, i) => (
+                    <tr key={i}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          data-prov-idx={i}
+                          checked={checkedImport.has(i)}
+                          onChange={(e) => {
+                            const next = new Set(checkedImport)
+                            if (e.target.checked) next.add(i)
+                            else next.delete(i)
+                            setCheckedImport(next)
+                          }}
+                        />
+                      </td>
+                      <td className="font-mono py-1">{p.date}</td>
+                      <td className="font-bold py-1">{p.ticker}</td>
+                      <td className="py-1">{PROV_TYPE_LABELS[p.type] ?? p.type}</td>
+                      <td className="text-right font-mono py-1">{p.qty}</td>
+                      <td className="text-right font-mono py-1">{fBRL(p.valuePerShare)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setShowImportModal(false)}

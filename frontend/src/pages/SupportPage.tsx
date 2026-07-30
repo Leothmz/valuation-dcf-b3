@@ -32,7 +32,7 @@ export function SupportPage() {
           'radial-gradient(ellipse at 30% -20%, rgba(6,182,212,.08) 0%, transparent 60%), #0b0f17',
       }}
     >
-      <div className="max-w-[680px] mx-auto px-10 py-14">
+      <div className="max-w-[680px] mx-auto px-4 py-4 md:px-10 md:py-14">
         <section className="mb-10">
           <div
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full
@@ -73,7 +73,7 @@ export function SupportPage() {
                   alt="QR Code Pix"
                   width={180}
                   height={180}
-                  className="rounded-[10px]"
+                  className="rounded-[10px] max-w-full h-auto"
                   style={{ background: '#fff', padding: 8 }}
                 />
               </div>

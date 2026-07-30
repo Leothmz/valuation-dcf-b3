@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Settings } from 'lucide-react'
+import { Settings, ChevronDown, ChevronRight } from 'lucide-react'
 import { useDCFStore, useWatchlistStore } from '../../stores'
 import { notify } from '../../components'
 import { runDCF, growthRate } from '../../engines/dcf-engine'
-import { fBRL } from '../../engines/formatters'
+import { fBRL, fInputPct } from '../../engines/formatters'
 import type { NullableDCFAssumptions } from '../../stores/dcfStore'
 import type { StockQuote } from '../../api/stocks'
 import { DCFSearch } from './DCFSearch'
@@ -15,6 +15,7 @@ import { DCFTable } from './DCFTable'
 import { DCFMethodModal } from './DCFMethodModal'
 import { buildExportHTML } from '../../utils/exportHTML'
 import { useKeyBinding, useEscapeToClose } from '../../hooks/useKeyBinding'
+import { useIsMobile } from '../../hooks/useMediaQuery'
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)
@@ -37,6 +38,18 @@ export function DCFPage() {
 
   const store = useDCFStore()
   const watchlist = useWatchlistStore()
+
+  const isMobile = useIsMobile()
+  const hasResult = Boolean(store.ticker) && !isFetching
+  const [premissasOpen, setPremissasOpen] = useState(true)
+  // No mobile, uma vez que existe resultado, as premissas começam recolhidas.
+  const showPremissas = !isMobile || premissasOpen
+
+  // No mobile, ao surgir um resultado, recolhe o acordeão de premissas
+  // automaticamente para que o preço teto fique visível sem scroll.
+  useEffect(() => {
+    if (isMobile && hasResult) setPremissasOpen(false)
+  }, [isMobile, hasResult])
 
   // Re-run DCF whenever assumptions, yearOverrides, projYears, or dcfMethod change
   const debouncedAssumptions = useDebounce(store.assumptions, 300)
@@ -382,6 +395,40 @@ export function DCFPage() {
     netIncomeHistory: [],
   } as StockQuote : null)
 
+  // Içados para fora do ternário de ordem mobile/desktop — evita duplicar o
+  // bloco de props em cada ramo. São elementos React (valores); guardá-los numa
+  // const não muda onde/quando eles montam.
+  const resultPanel = (
+    <DCFResultPanel
+      results={store.results}
+      resultsClassico={store.resultsClassico}
+      resultsBuffett={store.resultsBuffett}
+      dcfMethod={store.dcfMethod}
+      assumptions={store.assumptions}
+      ticker={store.ticker}
+      onSave={handleSave}
+      isSaved={isSaved}
+      onOpenMethodModal={() => setMethodModalOpen(true)}
+      scenarios={store.scenarios}
+      scenarioResults={scenarioResults}
+      onToggleScenarios={(g) => store.toggleScenarios(g)}
+      onSetScenario={(key, value) => store.setScenario(key, value)}
+      onExportHTML={handleExportHTML}
+      isExporting={isExporting}
+    />
+  )
+
+  const inputPanel = (
+    <DCFInputPanel
+      assumptions={store.assumptions}
+      overrides={store.overrides}
+      apiVals={store.apiVals}
+      llHint={llHint}
+      onAssumptionChange={handleAssumptionChange}
+      onRestore={handleRestore}
+    />
+  )
+
   return (
     <div className="flex flex-col min-h-screen md:h-screen md:overflow-hidden">
       {/* Header */}
@@ -395,7 +442,8 @@ export function DCFPage() {
         <button
           onClick={() => setSettingsOpen(true)}
           className="ml-auto bg-none border border-border rounded-[10px] text-text-sec text-[13px]
-                     font-ui px-[14px] h-[38px] cursor-pointer flex items-center gap-1.5
+                     font-ui px-[14px] min-h-[44px] min-w-[44px] md:h-[38px] md:min-h-0 md:min-w-0 cursor-pointer
+                     flex items-center justify-center gap-1.5
                      hover:bg-bg-3 hover:text-text-base transition-colors shrink-0"
         >
           <Settings size={14} />
@@ -422,44 +470,55 @@ export function DCFPage() {
         </div>
       ) : (
         <div className="grid flex-1 md:overflow-hidden grid-cols-1 md:grid-cols-[390px_1fr]">
-          {/* Left panel */}
-          <div className="bg-bg-2 border-b md:border-b-0 md:border-r border-border md:overflow-y-auto p-5">
-            <div className="text-[11px] font-semibold text-text-muted tracking-[0.12em] uppercase mb-[14px]">
+          {/* Left panel — Premissas + Resultado. No mobile, o resultado (Preço Teto)
+              vem ANTES das premissas (que viram acordeão recolhido); no desktop a
+              ordem original é preservada (inputs antes do resultado). */}
+          <div className="bg-bg-2 border-b md:border-b-0 md:border-r border-border md:overflow-y-auto p-4 md:p-5">
+            <button
+              onClick={() => setPremissasOpen((o) => !o)}
+              className="md:hidden w-full flex items-center justify-between min-h-[44px]
+                         text-[11px] font-semibold text-text-muted tracking-[0.12em] uppercase
+                         cursor-pointer"
+              aria-expanded={premissasOpen}
+            >
+              Premissas
+              {premissasOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+            <div className="hidden md:block text-[11px] font-semibold text-text-muted tracking-[0.12em] uppercase mb-[14px]">
               Premissas
             </div>
 
-            <DCFCompanyHeader data={headerData} isLoading={isFetching} />
+            <div className="md:hidden grid grid-cols-3 gap-1.5 mt-2 mb-3">
+              {[
+                { lb: 'WACC', vl: fInputPct(store.assumptions.disc) + '%' },
+                { lb: 'Perp.', vl: fInputPct(store.assumptions.perp) + '%' },
+                { lb: 'Anos', vl: String(store.projYears) },
+              ].map(({ lb, vl }) => (
+                <div key={lb} className="rounded-[8px] border border-border p-2 text-center"
+                     style={{ background: 'var(--color-bg-1)' }}>
+                  <div className="text-[9px] uppercase tracking-[.4px] text-text-muted">{lb}</div>
+                  <div className="font-mono text-[13px] font-bold text-text-base">{vl}</div>
+                </div>
+              ))}
+            </div>
 
-            <DCFInputPanel
-              assumptions={store.assumptions}
-              overrides={store.overrides}
-              apiVals={store.apiVals}
-              llHint={llHint}
-              onAssumptionChange={handleAssumptionChange}
-              onRestore={handleRestore}
-            />
-
-            <DCFResultPanel
-              results={store.results}
-              resultsClassico={store.resultsClassico}
-              resultsBuffett={store.resultsBuffett}
-              dcfMethod={store.dcfMethod}
-              assumptions={store.assumptions}
-              ticker={store.ticker}
-              onSave={handleSave}
-              isSaved={isSaved}
-              onOpenMethodModal={() => setMethodModalOpen(true)}
-              scenarios={store.scenarios}
-              scenarioResults={scenarioResults}
-              onToggleScenarios={(g) => store.toggleScenarios(g)}
-              onSetScenario={(key, value) => store.setScenario(key, value)}
-              onExportHTML={handleExportHTML}
-              isExporting={isExporting}
-            />
+            {isMobile ? (
+              <>
+                <DCFCompanyHeader data={headerData} isLoading={isFetching} />
+                {resultPanel}
+                {showPremissas && inputPanel}
+              </>
+            ) : (
+              <>
+                <DCFCompanyHeader data={headerData} isLoading={isFetching} />
+                {inputPanel}
+                {resultPanel}
+              </>
+            )}
           </div>
 
           {/* Right panel */}
-          <div className="bg-bg-1 md:overflow-y-auto p-5">
+          <div className="bg-bg-1 md:overflow-y-auto p-4 md:p-5">
             <DCFTable
               results={store.results}
               history={store.history}

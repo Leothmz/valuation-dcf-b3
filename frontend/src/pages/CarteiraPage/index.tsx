@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { Briefcase } from 'lucide-react'
+import { ScrollableTabs } from '../../components/ScrollableTabs'
 import { usePortfolioStore } from '../../stores/portfolioStore'
 import { useWatchlistStore } from '../../stores/watchlistStore'
 import { useBatchQuotes, usePortfolioHistory, useBatchDividendHistory, useDpaMap } from '../../api/stocks'
@@ -18,10 +19,11 @@ import { CarteiraProventos } from './CarteiraProventos'
 import { CarteiraRF } from './CarteiraRF'
 import { CarteiraMetas } from './CarteiraMetas'
 import { CarteiraIR } from './CarteiraIR'
+import { CarteiraFab } from './CarteiraFab'
 import type { Operation, Provento, RFTitle, SplitEvent } from '../../stores/portfolioStore'
 import { useTabArrowNav } from '../../hooks/useKeyBinding'
 
-type Tab = 'visao' | 'ativos' | 'operacoes' | 'proventos' | 'rf' | 'metas' | 'ir'
+export type Tab = 'visao' | 'ativos' | 'operacoes' | 'proventos' | 'rf' | 'metas' | 'ir'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'visao', label: 'Visão Geral' },
@@ -38,8 +40,48 @@ const CDI_DEFAULT = 0.1415 // approx CDI accumulated 2024 — fetched from /api/
 export function CarteiraPage() {
   const [tab, setTab] = useState<Tab>('visao')
   const [cdiAccumulated] = useState(CDI_DEFAULT)
+  const touchStartX = useRef(0)
+
+  // Estado dos modais de "adicionar" elevado do respectivo componente (Task 19 deixou o FAB
+  // pronto mas sem ação real, exatamente por causa disso). Cada componente ainda aceita abrir
+  // seu modal localmente (botão "+ Registrar..." existente) — os pares modalOpen/onModalOpenChange
+  // abaixo só dão ao FAB um jeito de controlar o mesmo estado de fora.
+  const [operacoesModalOpen, setOperacoesModalOpen] = useState(false)
+  const [proventosModalOpen, setProventosModalOpen] = useState(false)
+  const [rfModalOpen, setRfModalOpen] = useState(false)
+
+  function handleFabAction(fabTab: Tab) {
+    switch (fabTab) {
+      case 'operacoes':
+        setOperacoesModalOpen(true)
+        break
+      case 'ativos':
+        // Ativos não tem formulário próprio (Task 19) — "Adicionar operação" leva para a
+        // aba Operações já com o modal aberto.
+        setTab('operacoes')
+        setOperacoesModalOpen(true)
+        break
+      case 'proventos':
+        setProventosModalOpen(true)
+        break
+      case 'rf':
+        setRfModalOpen(true)
+        break
+    }
+  }
 
   useTabArrowNav(TABS.map((t) => t.key), tab, setTab)
+
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    if (Math.abs(dx) < 60) return
+    const i = TABS.findIndex((t) => t.key === tab)
+    const next = dx < 0 ? i + 1 : i - 1
+    if (next >= 0 && next < TABS.length) setTab(TABS[next].key) // sem dar volta nas pontas
+  }
 
   const {
     operations,
@@ -168,7 +210,7 @@ export function CarteiraPage() {
 
   return (
     <div className="min-h-screen overflow-y-auto" style={{ background: '#0b0f17' }}>
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-4 md:p-6 max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3 mb-1">
           <Briefcase size={22} className="text-cyan" />
@@ -188,94 +230,93 @@ export function CarteiraPage() {
         />
 
         {/* Tabs */}
-        <div
-          className="flex gap-1 mt-6 mb-5 overflow-x-auto scrollbar-none"
-          style={{ borderBottom: '1px solid #1e2d42' }}
-        >
-          {TABS.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`px-[18px] py-2.5 text-[13px] font-medium cursor-pointer
-                         border-0 bg-transparent border-b-2 -mb-px transition-colors
-                         ${tab === key
-                           ? 'text-cyan border-cyan'
-                           : 'text-text-muted border-transparent hover:text-text-sec'
-                         }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="mt-6 mb-5">
+          <ScrollableTabs
+            tabs={TABS.map(({ key, label }) => ({ key, label }))}
+            active={tab}
+            onSelect={setTab}
+            ariaLabel="Seções da carteira"
+          />
         </div>
 
         {/* Tab content */}
-        {tab === 'visao' && (
-          <CarteiraVisaoGeral
-            holdings={holdings}
-            quotes={quotes}
-            rfValue={rfValue}
-            loading={quotesLoading && holdings.length > 0}
-          />
-        )}
-        {tab === 'ativos' && (
-          <CarteiraAtivos
-            holdings={holdings}
-            quotes={quotes}
-            watchlistEntries={watchlistEntries}
-            quotesLoading={quotesLoading}
-            twrrMap={twrrMap}
-            twrrLoading={historyLoading}
-          />
-        )}
-        {tab === 'operacoes' && (
-          <CarteiraOperacoes
-            operations={operations}
-            onAdd={handleAddOperation}
-            onDelete={deleteOperation}
-          />
-        )}
-        {tab === 'proventos' && (
-          <CarteiraProventos
-            proventos={proventos}
-            onAdd={handleAddProvento}
-            onDelete={deleteProvento}
-            onImport={handleImportProventos}
-            holdings={holdings}
-            operations={operations}
-            dividendHistoryByTicker={dividendHistoryByTicker}
-            dpaMap={dpaMap}
-            dividendDataLoading={dividendHistoryLoading || dpaLoading}
-          />
-        )}
-        {tab === 'rf' && (
-          <CarteiraRF
-            titles={fixedIncome}
-            cdiAccumulated={cdiAccumulated}
-            onAdd={handleAddRFTitle}
-            onDelete={deleteFixedIncomeTitle}
-            onDeleteDeposit={deleteDeposit}
-          />
-        )}
-        {tab === 'metas' && (
-          <CarteiraMetas
-            holdings={holdings}
-            priceMap={currentPriceMap}
-            rfValue={rfValue}
-            cashBalance={cashBalance}
-            allocationTargets={allocationTargets}
-            onSetCashBalance={setCashBalance}
-            onSetTarget={setAllocationTarget}
-          />
-        )}
-        {tab === 'ir' && (
-          <CarteiraIR
-            operations={operations}
-            splitEvents={splitEvents}
-            onAddSplitEvent={handleAddSplitEvent}
-            onDeleteSplitEvent={deleteSplitEvent}
-          />
-        )}
+        <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+          {tab === 'visao' && (
+            <CarteiraVisaoGeral
+              holdings={holdings}
+              quotes={quotes}
+              rfValue={rfValue}
+              loading={quotesLoading && holdings.length > 0}
+            />
+          )}
+          {tab === 'ativos' && (
+            <CarteiraAtivos
+              holdings={holdings}
+              quotes={quotes}
+              watchlistEntries={watchlistEntries}
+              quotesLoading={quotesLoading}
+              twrrMap={twrrMap}
+              twrrLoading={historyLoading}
+            />
+          )}
+          {tab === 'operacoes' && (
+            <CarteiraOperacoes
+              operations={operations}
+              onAdd={handleAddOperation}
+              onDelete={deleteOperation}
+              modalOpen={operacoesModalOpen}
+              onModalOpenChange={setOperacoesModalOpen}
+            />
+          )}
+          {tab === 'proventos' && (
+            <CarteiraProventos
+              proventos={proventos}
+              onAdd={handleAddProvento}
+              onDelete={deleteProvento}
+              onImport={handleImportProventos}
+              holdings={holdings}
+              operations={operations}
+              dividendHistoryByTicker={dividendHistoryByTicker}
+              dpaMap={dpaMap}
+              dividendDataLoading={dividendHistoryLoading || dpaLoading}
+              modalOpen={proventosModalOpen}
+              onModalOpenChange={setProventosModalOpen}
+            />
+          )}
+          {tab === 'rf' && (
+            <CarteiraRF
+              titles={fixedIncome}
+              cdiAccumulated={cdiAccumulated}
+              onAdd={handleAddRFTitle}
+              onDelete={deleteFixedIncomeTitle}
+              onDeleteDeposit={deleteDeposit}
+              modalOpen={rfModalOpen}
+              onModalOpenChange={setRfModalOpen}
+            />
+          )}
+          {tab === 'metas' && (
+            <CarteiraMetas
+              holdings={holdings}
+              priceMap={currentPriceMap}
+              rfValue={rfValue}
+              cashBalance={cashBalance}
+              allocationTargets={allocationTargets}
+              onSetCashBalance={setCashBalance}
+              onSetTarget={setAllocationTarget}
+            />
+          )}
+          {tab === 'ir' && (
+            <CarteiraIR
+              operations={operations}
+              splitEvents={splitEvents}
+              onAddSplitEvent={handleAddSplitEvent}
+              onDeleteSplitEvent={deleteSplitEvent}
+            />
+          )}
+        </div>
       </div>
+
+      <CarteiraFab tab={tab} onAction={handleFabAction} />
     </div>
   )
 }

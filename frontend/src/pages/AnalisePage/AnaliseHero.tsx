@@ -35,9 +35,9 @@ export function AnaliseHero({ data, isLoading }: Props) {
             <Skeleton width="80px" height="18px" className="mt-1 ml-auto" />
           </div>
         </div>
-        <div className="flex flex-wrap gap-2.5 mb-4">
+        <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-2.5 mb-4">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-bg-3 border border-border rounded-[10px] px-3.5 py-2 min-w-[110px]">
+            <div key={i} className="bg-bg-3 border border-border rounded-[10px] px-3.5 py-2 md:min-w-[110px]">
               <Skeleton width="60px" height="10px" className="mb-1" />
               <Skeleton width="70px" height="18px" />
             </div>
@@ -75,7 +75,7 @@ export function AnaliseHero({ data, isLoading }: Props) {
           </span>
           <div className="text-[22px] font-bold text-text-base mt-1">{data.name ?? '—'}</div>
         </div>
-        <div className="text-right">
+        <div className="text-right whitespace-nowrap">
           <span className="font-mono text-[32px] font-bold block">{fBRL.format(price)}</span>
           <span className={`text-[15px] font-semibold block mt-0.5 ${chg >= 0 ? 'text-green' : 'text-red'}`}>
             {chg >= 0 ? '▲ +' : '▼ '}{fPct(chg / 100)}
@@ -84,7 +84,7 @@ export function AnaliseHero({ data, isLoading }: Props) {
       </div>
 
       {/* KPIs */}
-      <div className="flex flex-wrap gap-2.5 mb-4">
+      <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-2.5 mb-4">
         <KpiChip label="Mkt Cap" value={fMktCap(data.marketCap)} />
         <KpiChip label="52s Mín" value={lo ? fBRL.format(lo) : '—'} />
         <KpiChip label="52s Máx" value={hi ? fBRL.format(hi) : '—'} />
@@ -125,7 +125,7 @@ function KpiChip({
   valueClass?: string
 }) {
   return (
-    <div className="bg-bg-3 border border-border rounded-[10px] px-3.5 py-2 flex flex-col gap-0.5 min-w-[110px]">
+    <div className="bg-bg-3 border border-border rounded-[10px] px-3.5 py-2 flex flex-col gap-0.5 md:min-w-[110px]">
       <span className="text-[10px] uppercase tracking-[0.06em] text-text-muted">{label}</span>
       <span className={`font-mono text-[15px] font-semibold ${valueClass}`}>{value}</span>
     </div>
