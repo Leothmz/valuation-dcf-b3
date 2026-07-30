@@ -106,9 +106,13 @@ export function AnaliseFIIHero({ data, isLoading }: Props) {
           {fBRL(lo)}
         </span>
         <div className="flex-1 h-1.5 bg-bg-3 rounded-full relative">
+          {/* Mesmas classes da barra da análise de ações. Antes era um gradiente
+              inline com var(--red)/var(--amber)/var(--green) — variáveis que não
+              existem: os tokens do tema são --color-red/-amber/-green. Sem elas o
+              gradiente não pintava nada e sobrava só o trilho cinza. */}
           <div
-            className="h-full rounded-full"
-            style={{ width: '100%', background: 'linear-gradient(90deg, var(--red), var(--amber), var(--green))' }}
+            className="h-full bg-gradient-to-r from-red via-amber to-green rounded-full"
+            style={{ width: '100%' }}
           />
           <div
             className="w-3 h-3 bg-text-base border-2 border-bg-1 rounded-full absolute top-[-3px]"
