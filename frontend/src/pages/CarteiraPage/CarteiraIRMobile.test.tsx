@@ -110,6 +110,21 @@ describe('CarteiraIRMobile', () => {
     expect(screen.getByText('31/08/2026')).toBeInTheDocument()
   })
 
+  // Review de branch inteira (item 2): com darfAmount === 0, o desktop (CarteiraIR.tsx)
+  // mostra "—" tanto no valor do DARF quanto no vencimento — "R$ 0,00" + uma data real
+  // ao lado lê como "você deve esse DARF nessa data", o que é falso. Mesma classe de
+  // defeito do badge PREJUÍZO COMPENSADO corrigido acima.
+  it('mostra — no valor do DARF e no vencimento quando darfAmount é 0, nunca R$ 0,00 + data real', () => {
+    render(<CarteiraIRMobile summaries={[EXEMPT]} />)
+    const darfRow = screen.getByText('DARF a pagar').closest('div')
+    expect(darfRow).toHaveTextContent('—')
+    expect(darfRow).not.toHaveTextContent('R$ 0,00')
+
+    const vencimentoRow = screen.getByText('Vencimento').closest('div')
+    expect(vencimentoRow).toHaveTextContent('—')
+    expect(vencimentoRow).not.toHaveTextContent('31/07/2026')
+  })
+
   // O teste central desta task: um mês isento (exempt: true) e um mês com prejuízo
   // compensado (lossCarriedIn abatendo tudo) mostram os DOIS "R$ 0,00" de DARF — mas
   // só o isento é renda isenta na declaração. Se o badge ISENTO aparecesse nos dois

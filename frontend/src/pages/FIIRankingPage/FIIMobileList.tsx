@@ -65,7 +65,7 @@ export function FIIMobileList({ rows, favorites, onToggleFavorite }: FIIMobileLi
               {dy != null && (
                 <span
                   className="font-mono text-[12px] font-bold shrink-0"
-                  style={{ color: dy >= 0.08 ? 'var(--color-green)' : 'var(--color-amber)' }}
+                  style={{ color: dy >= 0.06 ? 'var(--color-green)' : 'var(--color-amber)' }}
                 >
                   {fPct(dy, 1)}
                 </span>

@@ -93,13 +93,15 @@ export function CarteiraIRMobile({ summaries }: { summaries: MonthlyIRSummary[] 
               },
               { label: 'Base tributável', value: fBRL(s.taxableAmount) },
               { label: 'Alíquota', value: fPct(s.rate, 0) },
-              { label: 'DARF a pagar', value: fBRL(s.darfAmount), emphasis: true },
+              { label: 'DARF a pagar', value: s.darfAmount > 0 ? fBRL(s.darfAmount) : '—', emphasis: true },
               {
                 label: 'Vencimento',
-                value: (
+                value: s.darfAmount > 0 ? (
                   <span style={{ color: dueSoon ? 'var(--color-amber)' : undefined }}>
                     {fDate(s.dueDate)}
                   </span>
+                ) : (
+                  '—'
                 ),
               },
             ]}

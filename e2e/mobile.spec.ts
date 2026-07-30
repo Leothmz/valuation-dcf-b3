@@ -66,7 +66,10 @@ test.describe('layout mobile — varredura de overflow', () => {
 
   // Pendência específica da Task 21: a linha de inputs de "Metas por Categoria"
   // (CarteiraMetas.tsx:105-145) tinha ~21px de folga em 375px por análise estática,
-  // nunca verificada em navegador real. Testada à parte porque não é a aba default.
+  // nunca verificada em navegador real. Este teste mede a 390px (projeto `mobile` =
+  // iPhone 13) — a verificação em 375px/360px continua pendente, vai virar um card
+  // à parte (segundo projeto do Playwright). Testada aqui separadamente porque não
+  // é a aba default.
   test('Carteira · aba Metas não rola horizontalmente', async ({ page }) => {
     await page.goto('/carteira', { waitUntil: 'networkidle' })
     await page.getByRole('tab', { name: 'Metas' }).click()
@@ -162,9 +165,15 @@ test.describe('layout mobile — Padrão C (linha expansível)', () => {
     })
     await page.reload({ waitUntil: 'networkidle' })
 
+    const loaded = await measureOverflow(page)
+    expect(loaded.scrollWidth, `/ranking (carregado): scrollWidth=${loaded.scrollWidth} vs deviceWidth=${loaded.deviceWidth}`).toBeLessThanOrEqual(loaded.deviceWidth)
+
     const firstRow = page.getByRole('button', { name: /^[A-Z]{4}\d{1,2}$/ }).first()
     await firstRow.click()
     await expect(page.getByText('Preço Teto').first()).toBeVisible()
+
+    const expanded = await measureOverflow(page)
+    expect(expanded.scrollWidth, `/ranking (expandido): scrollWidth=${expanded.scrollWidth} vs deviceWidth=${expanded.deviceWidth}`).toBeLessThanOrEqual(expanded.deviceWidth)
   })
 })
 
