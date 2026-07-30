@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useState } from 'react'
 import { RotateCcw } from 'lucide-react'
 import { fInputLL, fInputPct } from '../../engines/formatters'
 import { parseLL, parsePct } from '../../engines/parsers'
@@ -27,6 +27,9 @@ interface InputRowProps {
   unit?: string
   isOverride?: boolean
   showRestore?: boolean
+  /** Borda vermelha — hoje só disc/perp, quando a condição de Gordon quebra. */
+  invalid?: boolean
+  placeholder?: string
   formatFn: (v: number | null | undefined) => string
   parseFn: (s: string) => number | null
   onCommit: (field: keyof NullableDCFAssumptions, raw: string) => void
@@ -36,21 +39,26 @@ interface InputRowProps {
 
 function InputRow({
   label, hint, field, value, unit,
-  isOverride = false, showRestore = false,
+  isOverride = false, showRestore = false, invalid = false,
+  placeholder = '—',
   formatFn, parseFn,
   onCommit, onRestore, disabled,
 }: InputRowProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const invalid = false // handled externally for disc/perp
+  // Rascunho: enquanto o usuário digita, o input mostra exatamente o que ele
+  // escreveu; o valor formatado do prop só volta a mandar no blur.
+  //
+  // Antes o input era não-controlado com `key={field}-{value}`: cada tecla
+  // gravava no store, o `value` mudava, a key mudava e o React DESMONTAVA e
+  // remontava o input. Voltava um DOM novo com o texto já formatado e o cursor
+  // no fim — digitar "12,13" num ROE virava "1,00", depois "12,00", tecla a
+  // tecla. O recálculo ao vivo continua: `onCommit` roda a cada tecla como
+  // antes, só o texto do campo é que deixou de ser reescrito por baixo.
+  const [draft, setDraft] = useState<string | null>(null)
 
-  function handleBlur() {
-    if (inputRef.current) {
-      const parsed = parseFn(inputRef.current.value)
-      if (parsed != null) {
-        // Reformat on blur
-        inputRef.current.value = formatFn(parsed)
-      }
-    }
+  function handleBlur(raw: string) {
+    setDraft(null)
+    const parsed = parseFn(raw)
+    if (parsed != null) onCommit(field, formatFn(parsed))
   }
 
   return (
@@ -61,15 +69,16 @@ function InputRow({
       </div>
       <div className="flex items-center gap-1">
         <input
-          ref={inputRef}
           type="text"
           inputMode="decimal"
-          defaultValue={formatFn(value) || ''}
-          key={`${field}-${value}`}
+          value={draft ?? (formatFn(value) || '')}
           disabled={disabled}
-          placeholder="—"
-          onBlur={handleBlur}
-          onChange={(e) => onCommit(field, e.target.value)}
+          placeholder={placeholder}
+          onBlur={(e) => handleBlur(e.target.value)}
+          onChange={(e) => {
+            setDraft(e.target.value)
+            onCommit(field, e.target.value)
+          }}
           className={`bg-bg-3 border rounded-[6px] text-text-base font-mono text-[16px] md:text-[13px]
                       px-2 py-1.5 text-right min-w-[56px] outline-none
                       focus:border-cyan focus:shadow-[0_0_0_2px_rgba(6,182,212,0.08)]
@@ -200,54 +209,30 @@ export function DCFInputPanel({
         onCommit={handleCommit}
         onRestore={() => onRestore('shares')}
       />
-      <div className="flex items-center gap-2 py-[9px] border-b border-border-muted">
-        <div className="flex-1">
-          <div className="text-[13px] font-medium text-text-base">Taxa de Desconto (WACC)</div>
-          <div className="text-[11px] text-text-muted mt-0.5">Selic hist. ~11,5% · IR15 ~9,8%</div>
-        </div>
-        <div className="flex items-center gap-1">
-          <input
-            type="text"
-            inputMode="decimal"
-            defaultValue={fInputPct(assumptions.disc)}
-            key={`disc-${assumptions.disc}`}
-            placeholder="15"
-            onChange={(e) => handleCommit('disc', e.target.value)}
-            className={`bg-bg-3 border rounded-[6px] text-text-base font-mono text-[16px] md:text-[13px]
-                        px-2 py-1.5 text-right min-w-[56px] outline-none
-                        focus:border-cyan focus:shadow-[0_0_0_2px_rgba(6,182,212,0.08)]
-                        transition-colors
-                        ${gordonInvalid ? 'border-red' : 'border-transparent'}`}
-            style={{ fieldSizing: 'content' } as React.CSSProperties}
-          />
-          <span className="text-[12px] text-text-muted w-4">%</span>
-          <span className="w-[17px]" />
-        </div>
-      </div>
-      <div className="flex items-center gap-2 py-[9px]">
-        <div className="flex-1">
-          <div className="text-[13px] font-medium text-text-base">Crescimento na Perpetuidade</div>
-          <div className="text-[11px] text-text-muted mt-0.5">≤ crescimento do PIB (~2–3%)</div>
-        </div>
-        <div className="flex items-center gap-1">
-          <input
-            type="text"
-            inputMode="decimal"
-            defaultValue={fInputPct(assumptions.perp)}
-            key={`perp-${assumptions.perp}`}
-            placeholder="3"
-            onChange={(e) => handleCommit('perp', e.target.value)}
-            className={`bg-bg-3 border rounded-[6px] text-text-base font-mono text-[16px] md:text-[13px]
-                        px-2 py-1.5 text-right min-w-[56px] outline-none
-                        focus:border-cyan focus:shadow-[0_0_0_2px_rgba(6,182,212,0.08)]
-                        transition-colors
-                        ${gordonInvalid ? 'border-red' : 'border-transparent'}`}
-            style={{ fieldSizing: 'content' } as React.CSSProperties}
-          />
-          <span className="text-[12px] text-text-muted w-4">%</span>
-          <span className="w-[17px]" />
-        </div>
-      </div>
+      {/* disc/perp usavam markup próprio, duplicado do InputRow — e por isso
+          carregavam o mesmo bug de remontagem. Reusam o componente agora. */}
+      <InputRow
+        label="Taxa de Desconto (WACC)"
+        hint="Selic hist. ~11,5% · IR15 ~9,8%"
+        id="inp-disc" field="disc"
+        value={assumptions.disc}
+        unit="%"
+        placeholder="15"
+        invalid={gordonInvalid}
+        formatFn={fInputPct} parseFn={parsePct}
+        onCommit={handleCommit}
+      />
+      <InputRow
+        label="Crescimento na Perpetuidade"
+        hint="≤ crescimento do PIB (~2–3%)"
+        id="inp-perp" field="perp"
+        value={assumptions.perp}
+        unit="%"
+        placeholder="3"
+        invalid={gordonInvalid}
+        formatFn={fInputPct} parseFn={parsePct}
+        onCommit={handleCommit}
+      />
     </div>
   )
 }
