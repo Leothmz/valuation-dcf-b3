@@ -1,10 +1,10 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { Layout } from './Layout'
 
-function renderLayout() {
+function renderLayout(initialEntries: string[] = ['/']) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={initialEntries}>
       <Layout>
         <div>content</div>
       </Layout>
@@ -73,5 +73,84 @@ describe('Layout welcome modal', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByText('Bem-vindo!')).not.toBeInTheDocument()
     expect(localStorage.getItem('onboarding_done')).toBe('1')
+  })
+})
+
+describe('Layout mobile drawer', () => {
+  it('abre a gaveta pelo botão de menu', () => {
+    renderLayout()
+    expect(screen.queryByTestId('sidebar-scrim')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
+    expect(screen.getByTestId('sidebar-scrim')).toBeInTheDocument()
+  })
+
+  it('fecha a gaveta ao clicar no scrim', () => {
+    renderLayout()
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
+    fireEvent.click(screen.getByTestId('sidebar-scrim'))
+    expect(screen.queryByTestId('sidebar-scrim')).not.toBeInTheDocument()
+  })
+
+  it('fecha a gaveta ao navegar para outra rota', () => {
+    renderLayout()
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
+    expect(screen.getByTestId('sidebar-scrim')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('link', { name: 'Calculadora' }))
+    expect(screen.queryByTestId('sidebar-scrim')).not.toBeInTheDocument()
+  })
+
+  it('fecha a gaveta ao pressionar Escape', () => {
+    renderLayout()
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
+    expect(screen.getByTestId('sidebar-scrim')).toBeInTheDocument()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByTestId('sidebar-scrim')).not.toBeInTheDocument()
+  })
+})
+
+describe('Layout route title', () => {
+  it('mostra o título correto para /carteira', () => {
+    renderLayout(['/carteira'])
+    expect(screen.getByRole('heading', { name: 'Carteira' })).toBeInTheDocument()
+  })
+
+  it('mostra o título correto para /fiis', () => {
+    renderLayout(['/fiis'])
+    expect(screen.getByRole('heading', { name: 'Ranking de FIIs' })).toBeInTheDocument()
+  })
+})
+
+describe('Layout welcome modal — destino do "Começar"', () => {
+  // Sonda que expõe a rota atual, para assertar navegação de verdade em vez
+  // de estado interno.
+  function LocationProbe() {
+    const { pathname } = useLocation()
+    return <span data-testid="rota">{pathname}</span>
+  }
+
+  function renderComSonda(initialEntries: string[]) {
+    return render(
+      <MemoryRouter initialEntries={initialEntries}>
+        <Layout>
+          <LocationProbe />
+        </Layout>
+      </MemoryRouter>
+    )
+  }
+
+  it('"Começar" leva para a Home, não para a calculadora vazia', () => {
+    localStorage.clear()
+    renderComSonda(['/carteira'])
+    expect(screen.getByTestId('rota')).toHaveTextContent('/carteira')
+    fireEvent.click(screen.getByText('Começar'))
+    expect(screen.getByTestId('rota')).toHaveTextContent('/')
+    expect(screen.getByTestId('rota')).not.toHaveTextContent('/dcf')
+  })
+
+  it('"Pular" preserva a rota em que o usuário estava', () => {
+    localStorage.clear()
+    renderComSonda(['/carteira'])
+    fireEvent.click(screen.getByText('Pular'))
+    expect(screen.getByTestId('rota')).toHaveTextContent('/carteira')
   })
 })

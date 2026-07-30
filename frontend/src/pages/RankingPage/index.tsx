@@ -12,13 +12,44 @@ import {
   calcJoelScore,
 } from '../../engines/ranking-scores'
 import type { StockData } from '../../engines/ranking-scores'
-import { MethodPills } from './MethodPills'
-import { SectorTabs } from './SectorTabs'
-import type { SectorTab } from './SectorTabs'
+import { DEFAULT_FILTER_CONFIG } from '../../stores/rankingStore'
+import type { FilterConfig, RankingMethod } from '../../stores/rankingStore'
+import { ScrollableTabs } from '../../components/ScrollableTabs'
+import type { TabItem } from '../../components/ScrollableTabs'
+import { BottomSheet } from '../../components/BottomSheet'
+import { useIsMobile } from '../../hooks/useMediaQuery'
 import { FilterChips } from './FilterChips'
 import { RankingTable } from './RankingTable'
+import { RankingMobileList } from './RankingMobileList'
 
 const MAX_COMPARE = 3
+
+type SectorTab = '' | 'insurance' | 'banks'
+
+const METHOD_TABS: TabItem<RankingMethod>[] = [
+  { key: 'thomaz', label: 'Rank Thomaz' },
+  { key: 'bazin',  label: 'Rank Bazin'  },
+  { key: 'graham', label: 'Rank Graham' },
+  { key: 'lynch',  label: 'Rank Lynch'  },
+  { key: 'joel',   label: 'Rank Joel'   },
+]
+
+const SECTOR_TABS: TabItem<SectorTab>[] = [
+  { key: '',          label: 'Todos'       },
+  { key: 'insurance', label: 'Seguradoras' },
+  { key: 'banks',     label: 'Bancos'      },
+]
+
+// Chaves de FilterConfig que representam filtros de fato (exclui campos de estado de UI
+// como `show`, `sectorTab`, `extrasOpen`) — usado para contar o badge do botão "Filtros".
+const FILTERABLE_KEYS: (keyof FilterConfig)[] = [
+  'taxaBazin', 'taxaGraham', 'taxaLynch', 'plMin', 'plMax',
+  'deMin', 'deMax', 'dyMin', 'margemMin', 'roeMin', 'liquidezMin',
+]
+
+function countActiveFilters(fc: FilterConfig): number {
+  return FILTERABLE_KEYS.filter((k) => fc[k] !== DEFAULT_FILTER_CONFIG[k]).length
+}
 
 // Enriched ranked row — includes valuation columns from all 4 methods
 export interface RankedRow extends StockData {
@@ -67,10 +98,13 @@ export function RankingPage() {
   } = useRankingStore()
 
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const [sectorTab, setSectorTab] = useState<SectorTab>('')
   const [search, setSearch] = useState('')
   const [newTicker, setNewTicker] = useState('')
   const [compareSelection, setCompareSelection] = useState<string[]>([])
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [compareMode, setCompareMode] = useState(false)
 
   function toggleCompareSelection(ticker: string) {
     setCompareSelection((prev) =>
@@ -220,109 +254,209 @@ export function RankingPage() {
 
   const totalLoaded = rawStocks?.length ?? 0
   const showing = rankedRows.length
+  const activeFilterCount = countActiveFilters(filterConfig)
+
+  // Mesmo elemento reaproveitado no BottomSheet (mobile) e no painel fixo (desktop) —
+  // evita duplicar o JSX de props idênticas nos dois lugares. Inclui também o
+  // "Adicionar ticker" + chips de customs (Finding 2 da Task 23: o Step 7 da Task 12
+  // já previa isso saindo do hero para dentro do sheet/painel de filtros — a Task 12
+  // criou o BottomSheet mas nunca esvaziou o hero, e isso deixava um input de largura
+  // fixa (w-36 + botão + w-56) sem variante mobile no hero, causando overflow horizontal
+  // real em 375px mesmo depois do fix do Layout.tsx).
+  const filterChipsEl = (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          className="rounded-[10px] border border-border bg-bg-3 text-text-base text-[13px] px-[14px] py-[7px] outline-none flex-1 min-w-0 placeholder-text-muted focus:border-cyan"
+          placeholder="Adicionar ticker…"
+          value={newTicker}
+          onChange={(e) => setNewTicker(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleAddTicker() }}
+        />
+        <button
+          onClick={handleAddTicker}
+          className="shrink-0 rounded-[10px] border border-border bg-bg-3 text-text-sec text-[13px] px-3 py-[7px] cursor-pointer hover:border-cyan hover:text-cyan"
+        >
+          + Add
+        </button>
+      </div>
+
+      {customTickers.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {customTickers.map((t) => (
+            <span
+              key={t}
+              className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-[6px]"
+              style={{ background: 'var(--color-amber-dim)', color: 'var(--color-amber)', border: '1px solid rgba(245,158,11,.2)' }}
+            >
+              {t}
+              <button
+                onClick={() => removeCustomTicker(t)}
+                title={`Remover ${t}`}
+                className="cursor-pointer leading-none"
+                style={{ background: 'none', border: 'none', padding: 0, color: 'inherit' }}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <FilterChips
+        config={filterConfig}
+        onChange={setFilterConfig}
+        onReset={resetFilterConfig}
+      />
+    </div>
+  )
 
   return (
-    <div className="max-w-[1440px] mx-auto px-6 py-7 pb-16 flex flex-col gap-5">
-      {/* Hero header */}
-      <div
-        className="rounded-[16px] border border-border p-6"
-        style={{ background: 'linear-gradient(180deg, #0d1829 0%, #0b0f17 100%)' }}
-      >
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
-          <div>
-            <h1 className="text-[24px] font-bold text-text-base leading-tight">
-              Ranking de Ações · B3
-            </h1>
-            <p className="text-[13px] text-text-muted mt-1">
-              {isLoading
-                ? `Carregando ${allTickers.length} tickers…`
-                : `${totalLoaded} tickers carregados · exibindo ${showing}`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Add custom ticker */}
-            <input
-              type="text"
-              className="rounded-[10px] border border-border bg-bg-3 text-text-base text-[13px] px-[14px] py-[7px] outline-none w-36 placeholder-text-muted focus:border-cyan"
-              placeholder="Adicionar ticker…"
-              value={newTicker}
-              onChange={(e) => setNewTicker(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAddTicker() }}
-            />
-            <button
-              onClick={handleAddTicker}
-              className="rounded-[10px] border border-border bg-bg-3 text-text-sec text-[13px] px-3 py-[7px] cursor-pointer hover:border-cyan hover:text-cyan"
-            >
-              + Add
-            </button>
-            {/* Search */}
-            <input
-              type="text"
-              className="rounded-[10px] border border-border bg-bg-3 text-text-base text-[13px] px-[14px] py-[7px] outline-none w-56 placeholder-text-muted focus:border-cyan"
-              placeholder="Buscar ticker ou empresa…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+    <div className="max-w-[1440px] mx-auto px-4 py-4 md:px-6 md:py-7 pb-16 flex flex-col gap-5">
+      {/* Hero header — só título + contador (Step 7 da Task 12). Adicionar ticker,
+          chips de customs e busca migraram para fora daqui (ver filterChipsEl acima
+          e a barra de busca abaixo, sempre visível nos dois viewports). */}
+      <div className="rounded-[16px] border border-border p-6">
+        <h1 className="text-[24px] font-bold text-text-base leading-tight">
+          Ranking de Ações · B3
+        </h1>
+        <p className="text-[13px] text-text-muted mt-1 mb-5">
+          {isLoading
+            ? `Carregando ${allTickers.length} tickers…`
+            : `${totalLoaded} tickers carregados · exibindo ${showing}`}
+        </p>
+
+        {/* Method tabs — pills fixas no desktop, faixa rolável no mobile */}
+        <ScrollableTabs ariaLabel="Método de ranking" tabs={METHOD_TABS} active={method} onSelect={setMethod} />
+      </div>
+
+      {/* Busca — decisão de UX (Task 23): diferente do "Adicionar ticker" (ação
+          eventual, foi para dentro do sheet de Filtros), buscar é ação frequente;
+          fica sempre visível nos dois viewports em vez de atrás de um toque extra
+          no botão Filtros. */}
+      <input
+        type="text"
+        className="w-full rounded-[10px] border border-border bg-bg-3 text-text-base text-[15px] md:text-[13px] px-[14px] py-[9px] md:py-[7px] outline-none placeholder-text-muted focus:border-cyan"
+        placeholder="Buscar ticker ou empresa…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        aria-label="Buscar ticker ou empresa"
+      />
+
+      {/* Mobile toolbar: ordenação + filtros + comparar */}
+      {/* O select sozinho mostrava só "Posição", sem dizer que era o critério de
+          ordenação — o rótulo visível tira a adivinhação (e vira <label> de verdade). */}
+      <div className="md:hidden flex gap-2 items-end">
+        <div className="flex-1 min-w-0">
+          <label htmlFor="ranking-sort" className="block text-[11px] text-text-muted mb-1">
+            Ordenar por
+          </label>
+        <select
+          id="ranking-sort"
+          value={sortCol}
+          onChange={(e) => setSortCol(e.target.value)}
+          className="w-full min-h-[44px] rounded-[9px] border border-border px-3 text-[16px] text-text-base"
+          style={{ background: 'var(--color-bg-2)' }}
+        >
+          <option value="rank">Posição</option>
+          <option value="ticker">Ticker</option>
+          <option value="price">Cotação</option>
+          <option value="dy">DY</option>
+          <option value="pl">P/L</option>
+          <option value="roe">ROE</option>
+          <option value="margemLiquida">Margem Líquida</option>
+          <option value="dividaLiquidaEbit">DL/EBITDA</option>
+        </select>
         </div>
-
-        {/* Custom tickers chips */}
-        {customTickers.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            {customTickers.map((t) => (
-              <span
-                key={t}
-                className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-[6px]"
-                style={{ background: 'var(--color-amber-dim)', color: 'var(--color-amber)', border: '1px solid rgba(245,158,11,.2)' }}
-              >
-                {t}
-                <button
-                  onClick={() => removeCustomTicker(t)}
-                  title={`Remover ${t}`}
-                  className="cursor-pointer leading-none"
-                  style={{ background: 'none', border: 'none', padding: 0, color: 'inherit' }}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Method pills */}
-        <MethodPills active={method} onSelect={setMethod} />
+        <button
+          onClick={() => setSortDir(sortDir === 'desc' ? 'asc' : 'desc')}
+          aria-label={sortDir === 'desc' ? 'Ordem decrescente' : 'Ordem crescente'}
+          className="min-w-[44px] min-h-[44px] rounded-[9px] border border-border text-text-sec cursor-pointer"
+          style={{ background: 'var(--color-bg-2)' }}
+        >
+          {sortDir === 'desc' ? '↓' : '↑'}
+        </button>
       </div>
 
-      {/* Filter chips */}
-      <div
-        className="rounded-[12px] border border-border px-4 py-3"
-        style={{ background: 'var(--color-bg-2)' }}
-      >
-        <FilterChips
-          config={filterConfig}
-          onChange={setFilterConfig}
-          onReset={resetFilterConfig}
-        />
+      <div className="md:hidden flex gap-2">
+        <button
+          onClick={() => setFiltersOpen(true)}
+          className="flex-1 flex items-center justify-between min-h-[44px] px-3 rounded-[9px] border border-border text-[13px] text-text-sec cursor-pointer"
+          style={{ background: 'var(--color-bg-2)' }}
+        >
+          Filtros
+          {activeFilterCount > 0 && (
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold"
+                  style={{ background: 'var(--color-cyan)', color: '#04121a' }}>
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setCompareMode((v) => !v)}
+          aria-pressed={compareMode}
+          className="min-h-[44px] px-3 rounded-[9px] border text-[13px] font-semibold cursor-pointer"
+          style={{
+            background: compareMode ? 'rgba(6,182,212,.15)' : 'var(--color-bg-2)',
+            color: compareMode ? 'var(--color-cyan)' : 'var(--color-text-sec)',
+            borderColor: compareMode ? 'rgba(6,182,212,.4)' : 'var(--color-border)',
+          }}
+        >
+          Comparar
+        </button>
       </div>
 
-      {/* Sector tabs + table */}
+      {/* Filter chips — uma instância só: dentro do BottomSheet no mobile, no painel fixo
+          no desktop. Nunca as duas montadas ao mesmo tempo (evita duplicata no DOM). */}
+      {isMobile ? (
+        <BottomSheet isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtros">
+          {filterChipsEl}
+        </BottomSheet>
+      ) : (
+        <div
+          className="rounded-[12px] border border-border px-4 py-3"
+          style={{ background: 'var(--color-bg-2)' }}
+        >
+          {filterChipsEl}
+        </div>
+      )}
+
+      {/* Sector tabs + lista/tabela */}
       <div>
-        <SectorTabs active={sectorTab} onSelect={setSectorTab} />
-        <div className="mt-4">
-          <RankingTable
+        <ScrollableTabs ariaLabel="Setor" tabs={SECTOR_TABS} active={sectorTab} onSelect={setSectorTab} />
+
+        {/* Montagem condicional (não CSS): lista compacta OU tabela, nunca as duas ao mesmo
+            tempo — evita renderizar ~centenas de linhas em dobro e duplicatas no DOM. */}
+        {isMobile ? (
+          <RankingMobileList
             rows={rankedRows}
-            isLoading={isLoading}
+            method={method}
             favorites={favorites}
-            onToggleFav={toggleFavorite}
-            sortCol={sortCol}
-            sortDir={sortDir}
-            onSort={handleSort}
+            onToggleFavorite={toggleFavorite}
             onRemoveCustom={removeCustomTicker}
+            compareMode={compareMode}
             compareSelection={compareSelection}
             onToggleCompare={toggleCompareSelection}
             maxCompare={MAX_COMPARE}
           />
-        </div>
+        ) : (
+          <div className="mt-4">
+            <RankingTable
+              rows={rankedRows}
+              isLoading={isLoading}
+              favorites={favorites}
+              onToggleFav={toggleFavorite}
+              sortCol={sortCol}
+              sortDir={sortDir}
+              onSort={handleSort}
+              onRemoveCustom={removeCustomTicker}
+              compareSelection={compareSelection}
+              onToggleCompare={toggleCompareSelection}
+              maxCompare={MAX_COMPARE}
+            />
+          </div>
+        )}
       </div>
 
       {compareSelection.length > 0 && (

@@ -35,7 +35,10 @@ describe('CompareTable', () => {
 
   it('renders metric rows with values', () => {
     render(<CompareTable tickers={['PETR4', 'VALE3']} rows={makeRows()} isLoading={false} />)
-    expect(screen.getByText('DY')).toBeInTheDocument()
+    // O rótulo aparece duas vezes no DOM por design (Task 16): um <span md:hidden>
+    // com a versão curta e um <span hidden md:inline> com a versão longa, pra
+    // trocar via CSS conforme o breakpoint — não é duplicação acidental.
+    expect(screen.getAllByText('DY').length).toBe(2)
     expect(screen.getByText('8,00%')).toBeInTheDocument()
     expect(screen.getByText('4,00%')).toBeInTheDocument()
   })
@@ -46,5 +49,16 @@ describe('CompareTable', () => {
     const worst = screen.getByText('4,00%')
     expect(best).toHaveStyle({ color: 'var(--color-green)' })
     expect(worst).toHaveStyle({ color: 'var(--color-red)' })
+  })
+
+  it('renders shortLabel hidden on desktop and label hidden on mobile', () => {
+    const rows: CompareRow[] = [
+      { label: 'Bazin · Preço Teto', shortLabel: 'Bazin', cells: [{ value: 'R$ 10,00', highlight: null }, { value: 'R$ 12,00', highlight: null }] },
+    ]
+    render(<CompareTable tickers={['PETR4', 'VALE3']} rows={rows} isLoading={false} />)
+    const short = screen.getByText('Bazin')
+    const long = screen.getByText('Bazin · Preço Teto')
+    expect(short.className).toContain('md:hidden')
+    expect(long.className).toContain('hidden md:inline')
   })
 })

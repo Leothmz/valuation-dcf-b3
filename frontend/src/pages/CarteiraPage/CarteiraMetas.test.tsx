@@ -78,3 +78,41 @@ describe('CarteiraMetas', () => {
     expect(screen.getAllByText('Manter').length).toBeGreaterThan(0)
   })
 })
+
+// Mesmo padrão de CarteiraAtivos.test.tsx (Task 21) — sobrescreve o polyfill global de
+// matchMedia (test-setup.ts, default matches:false = desktop) para provar montagem
+// condicional via useIsMobile(), não CSS. getByText SEM escopo de container é o detector
+// de duplicata: se a lista mobile e a tabela desktop fossem montadas ao mesmo tempo, o
+// texto da categoria apareceria duas vezes e getByText lançaria "found multiple elements".
+function mockMatchMedia(matches: boolean) {
+  window.matchMedia = ((query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia
+}
+
+describe('CarteiraMetas — montagem condicional mobile/desktop da sugestão de rebalanceamento (useIsMobile, não CSS)', () => {
+  afterEach(() => {
+    mockMatchMedia(false)
+  })
+
+  it('no mobile, a sugestão de rebalanceamento mostra cards e não a tabela', () => {
+    mockMatchMedia(true)
+    renderMetas({ allocationTargets: { ...ZERO_TARGETS, acoes_br: 0 } })
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.getByText('Vender')).toBeInTheDocument()
+  })
+
+  it('no desktop, a sugestão de rebalanceamento mostra a tabela e não cards', () => {
+    mockMatchMedia(false)
+    renderMetas({ allocationTargets: { ...ZERO_TARGETS, acoes_br: 0 } })
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByText('Vender')).toBeInTheDocument()
+  })
+})

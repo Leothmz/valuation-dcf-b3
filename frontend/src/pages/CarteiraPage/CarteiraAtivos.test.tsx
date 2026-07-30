@@ -87,3 +87,44 @@ describe('CarteiraAtivos — TWRR', () => {
     expect(screen.queryByText('PETR4')).not.toBeInTheDocument()
   })
 })
+
+// Mesmo padrão de RankingPage/index.test.tsx (Task 12) / AnaliseHistorico.test.tsx (Task 17) /
+// AnaliseFIIProventos.test.tsx (Task 18) — sobrescreve o polyfill global de matchMedia
+// (test-setup.ts, default matches:false = desktop) para provar montagem condicional via
+// useIsMobile(), não CSS. getByText SEM escopo de container é o detector de duplicata: se
+// lista mobile e tabela desktop fossem montadas ao mesmo tempo, o texto do ticker apareceria
+// duas vezes e o getByText lançaria "found multiple elements".
+function mockMatchMedia(matches: boolean) {
+  window.matchMedia = ((query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia
+}
+
+describe('CarteiraAtivos — montagem condicional mobile/desktop (useIsMobile, não CSS)', () => {
+  afterEach(() => {
+    mockMatchMedia(false)
+  })
+
+  it('no mobile, a lista de cards está no DOM e a tabela não', () => {
+    mockMatchMedia(true)
+    renderAtivos()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    // ExpandableRow expõe role="button" com aria-label = ticker — só existe na lista mobile.
+    expect(screen.getByRole('button', { name: 'PETR4' })).toBeInTheDocument()
+    expect(screen.getByText('PETR4')).toBeInTheDocument()
+  })
+
+  it('no desktop, a tabela está no DOM e a lista de cards não', () => {
+    mockMatchMedia(false)
+    renderAtivos()
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByText('PETR4')).toBeInTheDocument()
+  })
+})

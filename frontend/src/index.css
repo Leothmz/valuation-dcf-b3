@@ -56,6 +56,11 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* Respiro para o home indicator do iOS. Referenciada por BottomNav.tsx. */
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   /* Skeleton shimmer animation */
   @keyframes shimmer {
     0%   { background-position: -200% 0; }

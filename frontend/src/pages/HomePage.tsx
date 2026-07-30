@@ -56,7 +56,7 @@ const FEATURES = [
   {
     icon: Building2,
     title: 'Ranking de FIIs',
-    desc: 'Screening pelo método 2em1 (rank DY + rank P/VP), segmentado por Logística, Papel/CRI, Híbrido, Fiagro e mais.',
+    desc: 'Screening pelo Rank Thomaz FII (rank DY + rank P/VP), segmentado por Logística, Papel/CRI, Híbrido, Fiagro e mais.',
     to: '/fiis',
     accent: 'purple',
   },
@@ -127,7 +127,7 @@ export function HomePage() {
           'radial-gradient(ellipse at 90% 10%, rgba(168,85,247,.06) 0%, transparent 50%), #0b0f17',
       }}
     >
-      <div className="max-w-[860px] mx-auto px-10 py-14">
+      <div className="max-w-[860px] mx-auto px-4 py-8 md:px-10 md:py-14">
         {/* Hero */}
         <section className="mb-16">
           <div
@@ -144,7 +144,7 @@ export function HomePage() {
           </div>
 
           <h1
-            className="text-[48px] font-extrabold leading-[1.15] tracking-[-0.03em] mb-5"
+            className="text-[28px] md:text-[48px] font-extrabold leading-[1.15] tracking-[-0.03em] mb-5"
             style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
           >
             Encontre o valor<br />intrínseco de uma ação{' '}
@@ -161,16 +161,16 @@ export function HomePage() {
             </em>
           </h1>
 
-          <p className="text-[17px] text-text-sec leading-[1.75] max-w-[580px] mb-8">
+          <p className="text-[15px] md:text-[17px] text-text-sec leading-[1.75] max-w-[580px] mb-8">
             8 ferramentas integradas para análise fundamentalista de ações e FIIs — sem cadastro,
             sem custo. Do cálculo do preço teto ao ranking por múltiplos métodos, sempre como
             apoio à sua análise, nunca como substituto dela.
           </p>
 
-          <div className="flex gap-3 flex-wrap">
+          <div className="grid grid-cols-2 gap-2.5 md:flex md:gap-3 md:flex-wrap">
             <Link
               to="/dcf"
-              className="inline-flex items-center gap-1.5 px-[22px] py-2.5 rounded-[14px]
+              className="inline-flex items-center justify-center gap-1.5 px-3 md:px-[22px] py-3 md:py-2.5 min-h-[44px] md:min-h-0 text-center rounded-[14px]
                          text-sm font-semibold text-[#060910] no-underline"
               style={{
                 background: 'linear-gradient(135deg,#06b6d4 0%,#0891b2 100%)',
@@ -182,7 +182,7 @@ export function HomePage() {
             </Link>
             <Link
               to="/ranking"
-              className="inline-flex items-center gap-1.5 px-[22px] py-2.5 rounded-[14px]
+              className="inline-flex items-center justify-center gap-1.5 px-3 md:px-[22px] py-3 md:py-2.5 min-h-[44px] md:min-h-0 text-center rounded-[14px]
                          text-sm font-semibold text-text-base no-underline
                          border border-border hover:border-cyan"
               style={{ background: '#1a2233' }}
@@ -192,7 +192,7 @@ export function HomePage() {
             </Link>
             <Link
               to="/fiis"
-              className="inline-flex items-center gap-1.5 px-[22px] py-2.5 rounded-[14px]
+              className="inline-flex items-center justify-center gap-1.5 px-3 md:px-[22px] py-3 md:py-2.5 min-h-[44px] md:min-h-0 text-center rounded-[14px]
                          text-sm font-semibold text-text-base no-underline
                          border border-border hover:border-cyan"
               style={{ background: '#1a2233' }}
@@ -202,7 +202,7 @@ export function HomePage() {
             </Link>
             <Link
               to="/analise"
-              className="inline-flex items-center gap-1.5 px-[22px] py-2.5 rounded-[14px]
+              className="inline-flex items-center justify-center gap-1.5 px-3 md:px-[22px] py-3 md:py-2.5 min-h-[44px] md:min-h-0 text-center rounded-[14px]
                          text-sm font-semibold text-text-base no-underline
                          border border-border hover:border-cyan"
               style={{ background: '#1a2233' }}
@@ -235,17 +235,25 @@ export function HomePage() {
             ].map(([lbl, eq, val], i, arr) => (
               <div
                 key={lbl}
-                className="flex items-baseline gap-3 py-2.5"
+                className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5"
                 style={{
                   borderBottom: i < arr.length - 1 ? '1px solid #151e2d' : 'none',
                   fontFamily: 'JetBrains Mono, Cascadia Code, Fira Code, monospace',
                   fontSize: '13px',
                 }}
               >
-                <span className="text-text-sec min-w-[200px]" style={{ fontFamily: 'Inter, system-ui, sans-serif', fontSize: '14px' }}>
-                  {lbl}
+                {/* Rótulo e "=" ocupam a linha inteira no mobile, forçando a
+                    fórmula para a linha de baixo em TODAS as linhas do bloco.
+                    Antes o rótulo tinha só min-width, então fórmula curta
+                    (crescimento) cabia ao lado e as longas quebravam — cada
+                    linha do bloco saía com um formato. No desktop segue lado a
+                    lado, com a mesma coluna de 200px de antes. */}
+                <span className="flex items-baseline gap-3 w-full md:w-auto">
+                  <span className="text-text-sec md:min-w-[200px]" style={{ fontFamily: 'Inter, system-ui, sans-serif', fontSize: '14px' }}>
+                    {lbl}
+                  </span>
+                  <span className="text-cyan font-bold">{eq}</span>
                 </span>
-                <span className="text-cyan font-bold">{eq}</span>
                 <span className="text-text-base">{val}</span>
               </div>
             ))}
@@ -278,7 +286,7 @@ export function HomePage() {
               </p>
             </div>
 
-            <div className="flex md:flex-col items-center justify-center text-text-muted">
+            <div className="flex md:flex-col items-center justify-center text-text-muted py-2 md:py-0">
               <Plus size={18} strokeWidth={2.5} />
             </div>
 
@@ -447,7 +455,7 @@ export function HomePage() {
 
         {/* Support CTA */}
         <section
-          className="rounded-[14px] p-6 flex items-center justify-between gap-4 flex-wrap"
+          className="rounded-[14px] p-6 flex items-center justify-between gap-4 flex-wrap pb-8 md:pb-6"
           style={{ background: '#111827', border: '1px solid #1e2d42' }}
         >
           <div>
@@ -459,6 +467,7 @@ export function HomePage() {
           <Link
             to="/apoiar"
             className="inline-flex items-center gap-1.5 px-[18px] py-2.5 rounded-[12px]
+                       min-h-[44px] md:min-h-0
                        text-sm font-semibold text-[#060910] no-underline shrink-0"
             style={{
               background: 'linear-gradient(135deg,#06b6d4 0%,#0891b2 100%)',

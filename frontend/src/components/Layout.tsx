@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { Heart } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { BottomNav } from './BottomNav'
+import { MobileHeader } from './MobileHeader'
 import { NotificationProvider } from './Notification'
 import { GlobalSearch } from './GlobalSearch'
 import { ShortcutsPanel } from './ShortcutsPanel'
@@ -15,10 +16,29 @@ interface LayoutProps {
 
 const ONBOARDING_KEY = 'onboarding_done'
 
+const ROUTE_TITLES: Record<string, string> = {
+  '/': 'Valuation DCF',
+  '/dcf': 'Calculadora DCF',
+  '/watchlist': 'Meus Valuations',
+  '/ranking': 'Ranking de Ações',
+  '/compare': 'Comparar',
+  '/analise': 'Análise',
+  '/fiis': 'Ranking de FIIs',
+  '/analise-fii': 'Análise FII',
+  '/carteira': 'Carteira',
+  '/apoiar': 'Apoiar o Projeto',
+}
+
+// Rotas que já têm barra de busca/header própria — evita empilhar dois headers no mobile.
+const ROUTES_WITH_OWN_HEADER = new Set(['/dcf', '/analise', '/analise-fii'])
+
 export function Layout({ children }: LayoutProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false)
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => !localStorage.getItem(ONBOARDING_KEY))
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const { pathname } = useLocation()
+  const title = ROUTE_TITLES[pathname] ?? 'Valuation DCF'
 
   function dismissWelcome() {
     localStorage.setItem(ONBOARDING_KEY, '1')
@@ -31,11 +51,37 @@ export function Layout({ children }: LayoutProps) {
   })
 
   useEscapeToClose(isWelcomeOpen, dismissWelcome)
+  useEscapeToClose(isDrawerOpen, () => setIsDrawerOpen(false))
+
+  // Fecha a gaveta ao trocar de rota — cobre clique em NavLink e qualquer
+  // navegação futura que não venha de um clique direto no link.
+  useEffect(() => {
+    setIsDrawerOpen(false)
+  }, [pathname])
 
   return (
     <div className="flex min-h-screen bg-bg-1">
-      <Sidebar onOpenSearch={() => setIsSearchOpen(true)} />
-      <main className="flex-1 ml-0 md:ml-[58px] min-h-screen pb-14 md:pb-0">
+      <Sidebar
+        onOpenSearch={() => setIsSearchOpen(true)}
+        isDrawerOpen={isDrawerOpen}
+        onCloseDrawer={() => setIsDrawerOpen(false)}
+      />
+      {/* min-w-0 é essencial aqui: <main> é o único item em fluxo do flex row acima
+          (a Sidebar é position:fixed, fora do fluxo). Item de flex tem min-width:auto
+          por padrão — não encolhe abaixo do min-content dos descendentes. Páginas com
+          ScrollableTabs (pills shrink-0 de propósito) tinham um min-content maior que
+          a viewport; sem min-w-0, <main> nunca encolhia e o overflow-x-auto do tablist
+          nunca engatava (a faixa ficava do tamanho cheio em vez de rolar internamente),
+          vazando para document.documentElement.scrollWidth. Achado real da Task 23 —
+          afetava /carteira, /ranking e /fiis (até 1020px de largura em 375px de tela). */}
+      <main className="flex-1 min-w-0 ml-0 md:ml-[58px] min-h-screen pb-14 md:pb-0">
+        {!ROUTES_WITH_OWN_HEADER.has(pathname) && (
+          <MobileHeader
+            title={title}
+            onOpenSearch={() => setIsSearchOpen(true)}
+            onOpenDrawer={() => setIsDrawerOpen(true)}
+          />
+        )}
         {children}
       </main>
       <SupportButton />
@@ -54,8 +100,8 @@ function SupportButton() {
       to="/apoiar"
       aria-label="Apoiar o Projeto"
       title="Apoiar o Projeto"
-      className="group/support fixed top-4 right-4 md:top-5 md:right-6 z-40
-                 inline-flex items-center gap-2 rounded-full
+      className="group/support hidden md:inline-flex fixed md:top-5 md:right-6 z-40
+                 items-center gap-2 rounded-full
                  px-2.5 sm:px-3.5 py-2 text-[13px] font-semibold text-text-base
                  border border-[rgba(244,63,94,0.35)] hover:border-[rgba(244,63,94,0.6)]
                  backdrop-blur-md transition-[transform,box-shadow,border-color]

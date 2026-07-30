@@ -43,7 +43,13 @@ test.describe('Flow 4: open ranking → table loads with scores', () => {
     await expect(page.getByText('PETR4')).toBeVisible()
   })
 
-  test('ranking table renders fair price column headers', async ({ page }) => {
+  test('ranking table renders fair price column headers', async ({ page }, testInfo) => {
+    // Desktop-only por design (Padrão C, Task 12): no mobile o RankingPage monta
+    // RankingMobileList (cards ExpandableRow) em vez de RankingTable — não existe
+    // <table>/columnheader no DOM nesse viewport. Não é bug; é a conversão de tabela
+    // esperada. Cobertura equivalente para mobile vive em mobile.spec.ts ("Padrão C").
+    test.skip(testInfo.project.name === 'mobile', 'RankingTable é desktop-only — mobile usa RankingMobileList (Padrão C)')
+
     // Use column header role to avoid matching "Bazin 6%" filter chip
     await expect(
       page.getByRole('columnheader', { name: /Bazin/i })
@@ -54,6 +60,8 @@ test.describe('Flow 4: open ranking → table loads with scores', () => {
   })
 
   test('sector tabs are rendered', async ({ page }) => {
-    await expect(page.getByRole('button', { name: 'Todos' })).toBeVisible({ timeout: 8000 })
+    // Sector tabs são `ScrollableTabs` (role="tab") — role="button" era o seletor
+    // pré-conversão e nunca foi atualizado.
+    await expect(page.getByRole('tab', { name: 'Todos' })).toBeVisible({ timeout: 8000 })
   })
 })

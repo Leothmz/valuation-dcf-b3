@@ -1,4 +1,4 @@
-import { fBRL, fPct, fShort, fInputLL, fInputPct } from './formatters'
+import { fBRL, fPct, fShort, fInputLL, fInputPct, fPctSigned } from './formatters'
 
 describe('fBRL', () => {
   it('formats positive value with pt-BR currency', () => {
@@ -58,5 +58,23 @@ describe('fInputPct', () => {
   it('converts 0.15 to ~15', () => {
     const result = fInputPct(0.15)
     expect(result).toContain('15')
+  })
+})
+
+describe('fPctSigned', () => {
+  it('prefixa "+" em valor positivo', () => {
+    expect(fPctSigned(0.263, 1)).toBe('+26,3%')
+  })
+
+  it('mantém o sinal negativo visível', () => {
+    expect(fPctSigned(-0.041, 1)).toBe('-4,1%')
+  })
+
+  it('trata zero como positivo', () => {
+    expect(fPctSigned(0, 1)).toBe('+0,0%')
+  })
+
+  it('usa 2 casas por padrão', () => {
+    expect(fPctSigned(0.1425)).toBe('+14,25%')
   })
 })

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Heart, Copy, Check, ExternalLink, Coffee, Star } from 'lucide-react'
 import QRCode from 'qrcode'
 import { buildPixPayload } from '../engines/pix'
@@ -8,9 +8,47 @@ const PIX_PAYLOAD = buildPixPayload({ key: PIX_KEY, name: 'VALUATION DCF B3', ci
 const KOFI_URL = 'https://ko-fi.com/leonardothomaz'
 const SPONSORS_URL = 'https://github.com/sponsors/Leothmz'
 
+/**
+ * Copia texto sem depender da Clipboard API.
+ *
+ * `navigator.clipboard` só existe em contexto seguro (HTTPS ou localhost). No
+ * celular o app é aberto pelo IP da rede local (http://192.168.x.x), onde a API
+ * é `undefined` — a chave Pix não copiava e nem erro aparecia, porque o
+ * `writeText` estourava antes de qualquer feedback. Cai para
+ * `execCommand('copy')`, que funciona em http.
+ */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+      return true
+    }
+  } catch {
+    // Contexto inseguro ou permissão negada — tenta o caminho legado.
+  }
+
+  const ta = document.createElement('textarea')
+  ta.value = text
+  ta.setAttribute('readonly', '')
+  // Precisa estar no layout para o iOS aceitar a seleção; fica imperceptível.
+  ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0'
+  document.body.appendChild(ta)
+  let ok = false
+  try {
+    ta.select()
+    ta.setSelectionRange(0, text.length) // o iOS ignora select() sozinho
+    ok = document.execCommand('copy')
+  } catch {
+    ok = false
+  }
+  ta.remove()
+  return ok
+}
+
 export function SupportPage() {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
+  const [copyState, setCopyState] = useState<'idle' | 'ok' | 'fail'>('idle')
+  const keyRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
     QRCode.toDataURL(PIX_PAYLOAD, { width: 220, margin: 1 })
@@ -18,10 +56,20 @@ export function SupportPage() {
       .catch(() => setQrDataUrl(null))
   }, [])
 
-  function copyKey() {
-    navigator.clipboard.writeText(PIX_KEY)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  async function copyKey() {
+    const ok = await copyText(PIX_KEY)
+    setCopyState(ok ? 'ok' : 'fail')
+    // Falhou: deixa a chave já selecionada, para o menu nativo de copiar do
+    // celular ficar a um toque de distância em vez de exigir mira no texto.
+    if (!ok && keyRef.current) {
+      const range = document.createRange()
+      range.selectNodeContents(keyRef.current)
+      const sel = window.getSelection()
+      sel?.removeAllRanges()
+      sel?.addRange(range)
+    }
+    // A mensagem de falha pede uma ação do usuário; fica mais tempo na tela.
+    setTimeout(() => setCopyState('idle'), ok ? 2000 : 8000)
   }
 
   return (
@@ -32,7 +80,7 @@ export function SupportPage() {
           'radial-gradient(ellipse at 30% -20%, rgba(6,182,212,.08) 0%, transparent 60%), #0b0f17',
       }}
     >
-      <div className="max-w-[680px] mx-auto px-10 py-14">
+      <div className="max-w-[680px] mx-auto px-4 py-4 md:px-10 md:py-14">
         <section className="mb-10">
           <div
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full
@@ -73,7 +121,7 @@ export function SupportPage() {
                   alt="QR Code Pix"
                   width={180}
                   height={180}
-                  className="rounded-[10px]"
+                  className="rounded-[10px] max-w-full h-auto"
                   style={{ background: '#fff', padding: 8 }}
                 />
               </div>
@@ -86,7 +134,7 @@ export function SupportPage() {
                          hover:border-cyan transition-colors"
               style={{ background: '#1a2233' }}
             >
-              {copied ? (
+              {copyState === 'ok' ? (
                 <>
                   <Check size={14} className="text-green" />
                   <span className="text-green">Copiado!</span>
@@ -94,10 +142,19 @@ export function SupportPage() {
               ) : (
                 <>
                   <Copy size={14} />
-                  <span className="truncate">{PIX_KEY}</span>
+                  {/* select-all: um toque longo pega a chave inteira, não uma
+                      palavra solta — é o caminho manual quando a cópia falha. */}
+                  <span ref={keyRef} className="truncate select-all">{PIX_KEY}</span>
                 </>
               )}
             </button>
+
+            {copyState === 'fail' && (
+              <p className="mt-2 text-[11px] text-amber text-center leading-snug">
+                Não foi possível copiar automaticamente. A chave já está selecionada —
+                toque e segure nela para copiar.
+              </p>
+            )}
           </div>
 
           {/* Ko-fi */}

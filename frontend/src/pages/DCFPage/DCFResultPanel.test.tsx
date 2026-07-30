@@ -29,6 +29,24 @@ const baseResult: DCFResult = {
 
 const gordonError = { error: 'gordon' as const }
 
+// Mesmo padrão de CarteiraMetas.test.tsx (Task 21) — sobrescreve o polyfill global de
+// matchMedia (test-setup.ts, default matches:false = desktop) para provar montagem
+// condicional via useIsMobile(), não CSS (`md:hidden`). Sem escopo de container,
+// getByRole é o detector de duplicata: se os dois botões de salvar montassem ao
+// mesmo tempo, a busca por nome lançaria "found multiple elements".
+function mockMatchMedia(matches: boolean) {
+  window.matchMedia = ((query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia
+}
+
 function renderPanel(overrides: Partial<Parameters<typeof DCFResultPanel>[0]> = {}) {
   const defaults = {
     results: null,
@@ -85,7 +103,10 @@ describe('DCFResultPanel', () => {
 
   it('shows save button when ticker + valid results', () => {
     renderPanel({ results: baseResult, ticker: 'PETR4' })
-    expect(screen.getByText(/Salvar Preço Teto/i)).toBeInTheDocument()
+    // getByRole com nome exato: distingue do botão "Salvar preço teto" (mobile,
+    // Step 6) que também consome onSave e reaproveita texto parecido — mas só monta
+    // no desktop quando isMobile=false (default do polyfill em test-setup.ts).
+    expect(screen.getByRole('button', { name: '＋ Salvar Preço Teto' })).toBeInTheDocument()
   })
 
   it('shows "Atualizar" text when isSaved=true', () => {
@@ -108,8 +129,17 @@ describe('DCFResultPanel', () => {
   it('calls onSave when save button clicked', () => {
     const onSave = vi.fn()
     renderPanel({ results: baseResult, ticker: 'PETR4', onSave })
-    fireEvent.click(screen.getByText(/Salvar Preço Teto/i))
+    fireEvent.click(screen.getByRole('button', { name: '＋ Salvar Preço Teto' }))
     expect(onSave).toHaveBeenCalledTimes(1)
+  })
+
+  it('calls onSave when the mobile "Salvar preço teto" button is clicked (Step 6)', () => {
+    mockMatchMedia(true)
+    const onSave = vi.fn()
+    renderPanel({ results: baseResult, ticker: 'PETR4', onSave })
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar preço teto' }))
+    expect(onSave).toHaveBeenCalledTimes(1)
+    mockMatchMedia(false)
   })
 
   it('shows current price from assumptions', () => {
@@ -191,5 +221,24 @@ describe('export HTML button', () => {
   it('does not render export button when results is null', () => {
     renderPanel({ results: null })
     expect(screen.queryByRole('button', { name: /exportar relatório/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('save button — montagem condicional mobile/desktop (useIsMobile, não md:hidden)', () => {
+  afterEach(() => {
+    mockMatchMedia(false)
+  })
+
+  it('no desktop, o botão de salvar aparece uma única vez (o de cima)', () => {
+    mockMatchMedia(false)
+    renderPanel({ results: baseResult, ticker: 'PETR4' })
+    expect(screen.getAllByRole('button', { name: /salvar preço teto/i })).toHaveLength(1)
+  })
+
+  it('no mobile, o botão de salvar aparece uma única vez (o de baixo)', () => {
+    mockMatchMedia(true)
+    renderPanel({ results: baseResult, ticker: 'PETR4' })
+    expect(screen.getAllByRole('button', { name: /salvar preço teto/i })).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Salvar preço teto' })).toBeInTheDocument()
   })
 })

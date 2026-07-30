@@ -6,10 +6,17 @@ const fBRL = (v: number) => fBRLFormatter.format(v)
 interface CarteiraKPIsProps {
   totalInvested: number | null
   totalValue: number | null
+  /**
+   * Posições abertas: ativos de renda variável com quantidade > 0, mais os
+   * títulos de renda fixa. Inclui a RF porque os outros três KPIs desta linha
+   * (investido, valor atual, retorno) também a incluem — contar só a renda
+   * variável descreveria uma carteira diferente da dos vizinhos.
+   */
+  positions: number
   loading: boolean
 }
 
-export function CarteiraKPIs({ totalInvested, totalValue, loading }: CarteiraKPIsProps) {
+export function CarteiraKPIs({ totalInvested, totalValue, positions, loading }: CarteiraKPIsProps) {
   const retorno =
     totalInvested != null && totalValue != null && totalInvested > 0
       ? (totalValue - totalInvested) / totalInvested
@@ -19,7 +26,7 @@ export function CarteiraKPIs({ totalInvested, totalValue, loading }: CarteiraKPI
     retorno == null ? 'text-text-muted' : retorno >= 0 ? 'text-green' : 'text-red'
 
   return (
-    <div className="flex gap-3 mt-5 flex-wrap">
+    <div className="grid grid-cols-2 gap-2.5 mt-5 md:flex md:gap-3 md:flex-wrap">
       <KPICard label="Total Investido" loading={loading}>
         {totalInvested != null ? fBRL(totalInvested) : '—'}
       </KPICard>
@@ -33,8 +40,10 @@ export function CarteiraKPIs({ totalInvested, totalValue, loading }: CarteiraKPI
       >
         {retorno != null ? (retorno >= 0 ? '+' : '') + fPct(retorno) : '—'}
       </KPICard>
+      {/* loading={false}: a contagem vem das operações no localStorage, não das
+          cotações — está disponível na hora, sem esperar a rede. */}
       <KPICard label="Posições" loading={false}>
-        {/* count is always available */}—
+        {positions}
       </KPICard>
     </div>
   )

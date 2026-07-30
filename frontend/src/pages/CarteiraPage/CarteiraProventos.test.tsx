@@ -90,3 +90,108 @@ describe('CarteiraProventos — CSV import', () => {
     expect(checkboxes[1].checked).toBe(true) // XPLG11 row is new
   })
 })
+
+// Mesmo padrão de CarteiraAtivos.test.tsx (Task 21) — sobrescreve o polyfill global de
+// matchMedia (test-setup.ts, default matches:false = desktop) para provar montagem
+// condicional via useIsMobile(), não CSS. getByText SEM escopo de container é o detector
+// de duplicata.
+function mockMatchMedia(matches: boolean) {
+  window.matchMedia = ((query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia
+}
+
+const ONE_PROVENTO = [
+  { id: 'p1', date: '2024-06-01', ticker: 'WEGE3', type: 'dividendo' as const, qty: 100, valuePerShare: 0.5 },
+]
+
+describe('CarteiraProventos — montagem condicional mobile/desktop da lista principal (useIsMobile, não CSS)', () => {
+  afterEach(() => {
+    mockMatchMedia(false)
+  })
+
+  it('no mobile, a lista de cards está no DOM e a tabela não', () => {
+    mockMatchMedia(true)
+    render(
+      <CarteiraProventos
+        proventos={ONE_PROVENTO}
+        onAdd={() => {}}
+        onDelete={() => {}}
+        onImport={() => {}}
+        {...DEFAULT_PROPS}
+      />
+    )
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.getByText('WEGE3')).toBeInTheDocument()
+    expect(screen.getByText('Remover')).toBeInTheDocument()
+  })
+
+  it('no desktop, a tabela está no DOM e a lista de cards não', () => {
+    mockMatchMedia(false)
+    render(
+      <CarteiraProventos
+        proventos={ONE_PROVENTO}
+        onAdd={() => {}}
+        onDelete={() => {}}
+        onImport={() => {}}
+        {...DEFAULT_PROPS}
+      />
+    )
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByText('WEGE3')).toBeInTheDocument()
+    expect(screen.queryByText('Remover')).not.toBeInTheDocument()
+  })
+})
+
+describe('CarteiraProventos — montagem condicional mobile/desktop do preview de importação CSV (useIsMobile, não CSS)', () => {
+  afterEach(() => {
+    mockMatchMedia(false)
+  })
+
+  it('no mobile, o preview de importação mostra cards e não a tabela', async () => {
+    mockMatchMedia(true)
+    render(
+      <CarteiraProventos
+        proventos={[]}
+        onAdd={() => {}}
+        onDelete={() => {}}
+        onImport={() => {}}
+        {...DEFAULT_PROPS}
+      />
+    )
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [makeCsvFile(SAMPLE_CSV)] } })
+    await waitFor(() => expect(screen.getByText('WEGE3')).toBeInTheDocument())
+
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.getByText('XPLG11')).toBeInTheDocument()
+    expect(screen.getByText('Selecionar todos')).toBeInTheDocument()
+  })
+
+  it('no desktop, o preview de importação mostra a tabela e não cards', async () => {
+    mockMatchMedia(false)
+    render(
+      <CarteiraProventos
+        proventos={[]}
+        onAdd={() => {}}
+        onDelete={() => {}}
+        onImport={() => {}}
+        {...DEFAULT_PROPS}
+      />
+    )
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [makeCsvFile(SAMPLE_CSV)] } })
+    await waitFor(() => expect(screen.getByText('WEGE3')).toBeInTheDocument())
+
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByText('XPLG11')).toBeInTheDocument()
+    expect(screen.queryByText('Selecionar todos')).not.toBeInTheDocument()
+  })
+})
