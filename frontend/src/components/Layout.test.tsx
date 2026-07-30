@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { Layout } from './Layout'
 
 function renderLayout(initialEntries: string[] = ['/']) {
@@ -117,5 +117,40 @@ describe('Layout route title', () => {
   it('mostra o título correto para /fiis', () => {
     renderLayout(['/fiis'])
     expect(screen.getByRole('heading', { name: 'Ranking de FIIs' })).toBeInTheDocument()
+  })
+})
+
+describe('Layout welcome modal — destino do "Começar"', () => {
+  // Sonda que expõe a rota atual, para assertar navegação de verdade em vez
+  // de estado interno.
+  function LocationProbe() {
+    const { pathname } = useLocation()
+    return <span data-testid="rota">{pathname}</span>
+  }
+
+  function renderComSonda(initialEntries: string[]) {
+    return render(
+      <MemoryRouter initialEntries={initialEntries}>
+        <Layout>
+          <LocationProbe />
+        </Layout>
+      </MemoryRouter>
+    )
+  }
+
+  it('"Começar" leva para a Home, não para a calculadora vazia', () => {
+    localStorage.clear()
+    renderComSonda(['/carteira'])
+    expect(screen.getByTestId('rota')).toHaveTextContent('/carteira')
+    fireEvent.click(screen.getByText('Começar'))
+    expect(screen.getByTestId('rota')).toHaveTextContent('/')
+    expect(screen.getByTestId('rota')).not.toHaveTextContent('/dcf')
+  })
+
+  it('"Pular" preserva a rota em que o usuário estava', () => {
+    localStorage.clear()
+    renderComSonda(['/carteira'])
+    fireEvent.click(screen.getByText('Pular'))
+    expect(screen.getByTestId('rota')).toHaveTextContent('/carteira')
   })
 })
