@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { DCFTable } from './DCFTable'
 import type { DCFResult, DCFHistoryEntry } from '../../engines/dcf-engine'
 import type { NullableDCFAssumptions } from '../../stores/dcfStore'
@@ -68,6 +69,36 @@ describe('DCFTable — largura no mobile', () => {
     const wrapper = container.querySelector('table')?.parentElement
     expect(wrapper?.className).toContain('md:overflow-hidden')
     expect(wrapper?.className).toContain('rounded-[14px]')
+  })
+})
+
+describe('DCFTable — digitação nas células editáveis', () => {
+  // Mesmo bug do painel de premissas: a célula era não-controlada com
+  // key={value}, então o React remontava o input a cada atualização e o texto
+  // digitado era substituído pelo formatado. Aqui havia um debounce de 400ms
+  // que só adiava o estrago para a primeira pausa — pior nos números longos,
+  // que são exatamente os desta tabela (lucro líquido em bilhões).
+  it('um número longo digitado inteiro permanece no campo', async () => {
+    const user = userEvent.setup()
+    const { container } = renderTable()
+    const input = container.querySelector('table input') as HTMLInputElement
+
+    await user.clear(input)
+    await user.type(input, '52941905486')
+
+    expect(input).toHaveValue('52941905486')
+  })
+
+  it('digitação parcial não é reformatada no meio do caminho', async () => {
+    const user = userEvent.setup()
+    const { container } = renderTable()
+    const input = container.querySelector('table input') as HTMLInputElement
+
+    await user.clear(input)
+    await user.type(input, '5')
+    expect(input).toHaveValue('5')
+    await user.type(input, '2')
+    expect(input).toHaveValue('52')
   })
 })
 

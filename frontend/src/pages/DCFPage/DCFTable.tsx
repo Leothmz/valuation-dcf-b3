@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Calculator } from 'lucide-react'
 import { fShort, fPct, fInputLL, fInputPctSigned } from '../../engines/formatters'
 import { parseLL, parsePct } from '../../engines/parsers'
@@ -35,7 +35,6 @@ export function DCFTable({
   onYearGrowthChange,
 }: DCFTableProps) {
   const r = results
-  const activeInputs = useRef<Set<HTMLInputElement>>(new Set())
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedLLChange = useCallback(
@@ -191,7 +190,6 @@ export function DCFTable({
                           <EditableCell
                             value={fInputLL(pv.cf)}
                             isOverridden={isOverridden}
-                            activeInputs={activeInputs}
                             onChange={(raw) => debouncedLLChange(pv.year, raw)}
                             onCommit={(raw) => {
                               const parsed = parseLL(raw)
@@ -206,7 +204,6 @@ export function DCFTable({
                           <EditableCell
                             value={fInputPctSigned(pv.g)}
                             isOverridden={isOverridden}
-                            activeInputs={activeInputs}
                             onChange={(raw) => debouncedGChange(pv.year, raw)}
                             onCommit={(raw) => {
                               const g = parsePct(raw)
@@ -252,30 +249,35 @@ export function DCFTable({
 interface EditableCellProps {
   value: string
   isOverridden: boolean
-  activeInputs: React.RefObject<Set<HTMLInputElement>>
   onChange: (raw: string) => void
   onCommit: (raw: string) => void
   colorInherit?: boolean
 }
 
-function EditableCell({ value, isOverridden, activeInputs, onChange, onCommit, colorInherit }: EditableCellProps) {
-  const ref = useRef<HTMLInputElement>(null)
+function EditableCell({ value, isOverridden, onChange, onCommit, colorInherit }: EditableCellProps) {
+  // Rascunho: enquanto o usuário digita, o input mostra exatamente o que ele
+  // escreveu; `value` (já formatado pelo engine) só volta a mandar no blur.
+  //
+  // Antes o input era não-controlado com `key={value}`: cada tecla gravava no
+  // store, o `value` mudava, a key mudava e o React DESMONTAVA e remontava o
+  // input. Voltava um DOM novo com o texto reformatado e o cursor no fim —
+  // digitar "12" virava "1,00" e depois "12,00". O debounce de 400ms só adiava
+  // isso para a primeira pausa, o que piorava justamente nos números longos.
+  const [draft, setDraft] = useState<string | null>(null)
 
   return (
     <input
-      ref={ref}
       type="text"
       inputMode="decimal"
-      defaultValue={value}
-      key={value}
-      onFocus={() => { if (ref.current) activeInputs.current?.add(ref.current) }}
-      onBlur={() => {
-        if (ref.current) {
-          activeInputs.current?.delete(ref.current)
-          onCommit(ref.current.value)
-        }
+      value={draft ?? value}
+      onBlur={(e) => {
+        setDraft(null)
+        onCommit(e.target.value)
       }}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => {
+        setDraft(e.target.value)
+        onChange(e.target.value)
+      }}
       className={`bg-transparent border rounded-[6px] font-mono text-[16px] md:text-[13px]
                   px-[6px] py-1 text-right min-w-[4ch] outline-none
                   hover:border-border hover:bg-bg-3
