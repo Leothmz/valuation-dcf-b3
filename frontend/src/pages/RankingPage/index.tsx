@@ -22,6 +22,7 @@ import { useIsMobile } from '../../hooks/useMediaQuery'
 import { FilterChips } from './FilterChips'
 import { RankingTable } from './RankingTable'
 import { RankingMobileList } from './RankingMobileList'
+import { MethodExplainer } from './MethodExplainer'
 
 const MAX_COMPARE = 3
 
@@ -417,8 +418,17 @@ export function RankingPage() {
             : `${totalLoaded} tickers carregados · exibindo ${showing}${updatedAtLabel}`}
         </p>
 
-        {/* Method tabs — pills fixas no desktop, faixa rolável no mobile */}
-        <ScrollableTabs ariaLabel="Método de ranking" tabs={METHOD_TABS} active={method} onSelect={setMethod} />
+        {/* Method tabs — pills fixas no desktop, faixa rolável no mobile.
+            O explicador fica ao lado do tablist, não dentro das pills: botão
+            dentro de role="tab" quebraria o roving tabindex do ScrollableTabs. */}
+        <div className="flex items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <ScrollableTabs ariaLabel="Método de ranking" tabs={METHOD_TABS} active={method} onSelect={setMethod} />
+          </div>
+          <div className="shrink-0">
+            <MethodExplainer method={method} />
+          </div>
+        </div>
       </div>
 
       {/* Busca — decisão de UX (Task 23): diferente do "Adicionar ticker" (ação
