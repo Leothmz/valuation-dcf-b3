@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRankingStore } from '../../stores'
+import { useWatchlistStore } from '../../stores/watchlistStore'
 import { useBatchFundamentals } from '../../api/stocks'
 import type { FundamentalsData } from '../../api/stocks'
 import { B3_TICKERS } from '../../data/b3Tickers'
@@ -58,7 +59,9 @@ export interface RankedRow extends StockData {
   fairPrice?: number | null
   bazinFairPrice: number | null
   grahamFairPrice: number | null
+  lynchFairPrice?: number | null
   lynchVal: number | null
+  savedFairPrice?: number | null
   joelVal: number | null
   setor?: string
   subsetor?: string
@@ -97,6 +100,7 @@ export function RankingPage() {
     setSortDir,
   } = useRankingStore()
 
+  const watchlistEntries = useWatchlistStore((st) => st.entries)
   const navigate = useNavigate()
   const isMobile = useIsMobile()
   const [sectorTab, setSectorTab] = useState<SectorTab>('')
@@ -186,8 +190,14 @@ export function RankingPage() {
       ...s,
       bazinFairPrice:  bazinScored[i]?.fairPrice ?? null,
       grahamFairPrice: grahamScored[i]?.fairPrice ?? null,
+      // calcLynchScore calcula fairPrice (LPA × crescimento × 100) e o valor era
+      // descartado: a coluna mostra o PEG. Ele é o terceiro preço da faixa.
+      lynchFairPrice:  lynchScored[i]?.fairPrice ?? null,
       lynchVal:        (lynchScored[i] as { _peg?: number | null })?._peg ?? null,
       joelVal:         (joelScored[i] as { _earningsYield?: number | null })?._earningsYield ?? null,
+      // Teto que o usuário salvou na DCF — o único preço da faixa que é opinião
+      // própria dele, e não de um método de terceiro.
+      savedFairPrice:  watchlistEntries[s.ticker]?.fairPrice ?? null,
       isCustom:        customTickers.includes(s.ticker),
     }))
 
@@ -206,7 +216,9 @@ export function RankingPage() {
     const rankedWithVals = ranked.map((s, i) => ({
       bazinFairPrice:  stocksWithVals[i]?.bazinFairPrice  ?? null,
       grahamFairPrice: stocksWithVals[i]?.grahamFairPrice ?? null,
+      lynchFairPrice:  stocksWithVals[i]?.lynchFairPrice  ?? null,
       lynchVal:        stocksWithVals[i]?.lynchVal        ?? null,
+      savedFairPrice:  stocksWithVals[i]?.savedFairPrice  ?? null,
       joelVal:         stocksWithVals[i]?.joelVal         ?? null,
       ...s,
     })) as (typeof stocksWithVals[0] & { score: number | null; fairPrice?: number | null })[]
@@ -241,7 +253,7 @@ export function RankingPage() {
     }
 
     return result
-  }, [rawStocks, method, filterConfig, weights, sortCol, sortDir, sectorTab, favorites, search, customTickers])
+  }, [rawStocks, method, filterConfig, weights, sortCol, sortDir, sectorTab, favorites, search, customTickers, watchlistEntries])
 
   function handleSort(col: string) {
     if (sortCol === col) {
