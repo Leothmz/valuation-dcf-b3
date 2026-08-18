@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { X, Download, BellRing } from 'lucide-react'
+import { X, Download, BellRing, Bookmark } from 'lucide-react'
+import { EmptyState } from '../../components/EmptyState'
 import { useWatchlistStore } from '../../stores'
 import { useBatchQuotes } from '../../api/stocks'
 import { isPriceInBuyRange, shouldRecordAlert } from '../../engines/alert-engine'
@@ -196,40 +197,16 @@ export function WatchlistPage() {
   }
 
   // ── Empty state ─────────────────────────────────────────────────────────────
+  // Mesmo componente da Carteira vazia: o padrão daqui (ícone + explicação + CTA)
+  // era o bom, e virou o compartilhado.
   if (tickers.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-[90px] px-6 gap-3 text-center">
-        <div style={{ opacity: 0.15, color: 'var(--color-cyan)' }}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="52"
-            height="52"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
-          </svg>
-        </div>
-        <p className="text-[17px] font-semibold text-text-sec">Nenhum valuation salvo ainda</p>
-        <p className="text-[14px] text-text-sec max-w-[300px] leading-relaxed">
-          Calcule o valuation de uma ação e clique em "Salvar Preço Teto" para acompanhar aqui.
-        </p>
-        <Link
-          to="/dcf"
-          className="mt-4 inline-flex items-center gap-1 px-4 py-[7px] rounded-[10px] text-[13px] font-semibold"
-          style={{
-            background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-            color: '#060910',
-            boxShadow: '0 2px 8px rgba(6,182,212,.2)',
-          }}
-        >
-          + Calcular primeiro valuation
-        </Link>
-      </div>
+      <EmptyState
+        icon={Bookmark}
+        title="Nenhum valuation salvo ainda"
+        description={'Calcule o valuation de uma ação e clique em "Salvar Preço Teto" para acompanhar aqui.'}
+        action={{ label: '+ Calcular primeiro valuation', onClick: () => navigate('/dcf') }}
+      />
     )
   }
 

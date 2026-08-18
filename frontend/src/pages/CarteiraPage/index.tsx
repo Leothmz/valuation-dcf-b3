@@ -11,6 +11,7 @@ import {
   buildHistoricalPriceMap,
   buildAssetTWRRMap,
 } from '../../engines/portfolio-engine'
+import { EmptyState } from '../../components/EmptyState'
 import { CarteiraKPIs } from './CarteiraKPIs'
 import { CarteiraVisaoGeral } from './CarteiraVisaoGeral'
 import { CarteiraAtivos } from './CarteiraAtivos'
@@ -251,12 +252,28 @@ export function CarteiraPage() {
         {/* Tab content */}
         <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           {tab === 'visao' && (
-            <CarteiraVisaoGeral
-              holdings={holdings}
-              quotes={quotes}
-              rfValue={rfValue}
-              loading={quotesLoading && holdings.length > 0}
-            />
+            totalAtivos === 0 ? (
+              /* Carteira vazia mostrava três cards de conteúdo zerado ("Sem
+                 posições", "—", "—") e nenhuma saída, enquanto a /watchlist
+                 vazia já fazia o certo: ícone, explicação e um CTA. Mesmo
+                 produto, dois padrões — e o pior deles na rota mais complexa. */
+              <EmptyState
+                icon={Briefcase}
+                title="Nenhum ativo na carteira"
+                description="Registre sua primeira operação de compra para acompanhar posições, proventos, metas de alocação e IR."
+                action={{
+                  label: 'Registrar primeira operação',
+                  onClick: () => setTab('operacoes'),
+                }}
+              />
+            ) : (
+              <CarteiraVisaoGeral
+                holdings={holdings}
+                quotes={quotes}
+                rfValue={rfValue}
+                loading={quotesLoading && holdings.length > 0}
+              />
+            )
           )}
           {tab === 'ativos' && (
             <CarteiraAtivos
