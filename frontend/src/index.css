@@ -15,7 +15,10 @@
   /* Text */
   --color-text-base: #f0f4f8;
   --color-text-sec: #94a3b8;
-  --color-text-muted: #4a5568;
+  /* 4,64:1 sobre bg-2 e 5,54:1 sobre bg-1 — cumpre WCAG AA para texto normal.
+     Era #4a5568 (2,39:1), que reprovava até o piso de texto grande e carregava
+     283 usos de rotulagem. Piso provado em engines/contrast.test.ts. */
+  --color-text-muted: #7c8aa3;
 
   /* Cyan accent */
   --color-cyan: #06b6d4;
