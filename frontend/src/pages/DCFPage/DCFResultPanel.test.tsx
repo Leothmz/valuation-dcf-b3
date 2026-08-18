@@ -286,4 +286,22 @@ describe('save button — montagem condicional mobile/desktop (useIsMobile, não
     expect(screen.getByText('75% do EV')).toBeInTheDocument()
     expect(screen.queryByText('Market Cap Projetado')).not.toBeInTheDocument()
   })
+
+  describe('layout wide (coluna direita do desktop)', () => {
+    it('por padrão mantém o divisor de topo', () => {
+      renderPanel({ results: baseResult, ticker: 'PETR4' })
+      expect(screen.getByRole('separator')).toBeInTheDocument()
+    })
+
+    it('em layout wide não renderiza o divisor de topo', () => {
+      renderPanel({ results: baseResult, ticker: 'PETR4', layout: 'wide' })
+      expect(screen.queryByRole('separator')).not.toBeInTheDocument()
+    })
+
+    it('em layout wide continua mostrando o preço teto e o upside', () => {
+      renderPanel({ results: baseResult, ticker: 'PETR4', layout: 'wide' })
+      expect(screen.getAllByText(/R\$\s*40/).length).toBeGreaterThan(0)
+      expect(screen.getByText(/\+25,00%/)).toBeInTheDocument()
+    })
+  })
 })

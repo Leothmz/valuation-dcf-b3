@@ -21,6 +21,14 @@ interface DCFResultPanelProps {
   onSetScenario: (key: 'bear' | 'base' | 'bull', value: number | null) => void
   onExportHTML: () => Promise<void>
   isExporting: boolean
+  /**
+   * 'column' — painel estreito (390px) empilhado sob as premissas: o layout
+   * original, ainda usado pelo mobile.
+   * 'wide' — topo da coluna direita no desktop, com ~700px+ de largura. Sem
+   * divisor de topo (não está separando nada, está abrindo a coluna) e com o
+   * preço teto e o upside lado a lado em vez de empilhados.
+   */
+  layout?: 'column' | 'wide'
 }
 
 export function DCFResultPanel({
@@ -39,6 +47,7 @@ export function DCFResultPanel({
   onSetScenario,
   onExportHTML,
   isExporting,
+  layout = 'column',
 }: DCFResultPanelProps) {
   const r = results
   const gordonError = r && 'error' in r && r.error === 'gordon'
@@ -55,7 +64,7 @@ export function DCFResultPanel({
 
   return (
     <div>
-      <hr className="border-none border-t border-border my-5" />
+      {layout === 'column' && <hr className="border-none border-t border-border my-5" />}
 
       <div className="flex items-center justify-between mb-[14px]">
         <div className="text-[11px] font-semibold text-text-muted tracking-[0.12em] uppercase">
@@ -173,7 +182,7 @@ export function DCFResultPanel({
           encolhia abaixo do min-content de valores monetários grandes (ver achado sobre
           fShort no CLAUDE.md — não abrevia, é alias de fBRL.format), estourando o card
           e, por consequência, o documento em mobile. */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className={`grid gap-2 ${layout === 'wide' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2'}`}>
         <div className="min-w-0 bg-bg-3 border border-border rounded-[10px] px-3 py-2.5">
           <div className="text-[11px] text-text-muted uppercase tracking-[0.06em] font-medium mb-1.5">
             Preço Atual
