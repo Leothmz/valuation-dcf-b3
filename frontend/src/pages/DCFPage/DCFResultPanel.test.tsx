@@ -241,4 +241,49 @@ describe('save button — montagem condicional mobile/desktop (useIsMobile, não
     expect(screen.getAllByRole('button', { name: /salvar preço teto/i })).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Salvar preço teto' })).toBeInTheDocument()
   })
+
+  describe('avisos de premissa e valor terminal', () => {
+    it('mostra o aviso de payout acima de 100% junto do preço teto', () => {
+      renderPanel({
+        results: baseResult,
+        ticker: 'PETR4',
+        assumptions: { ...baseAssumptions, payout: 1.2589 },
+      })
+      expect(screen.getByText(/Payout de 125,9%/)).toBeInTheDocument()
+    })
+
+    it('mostra o aviso de crescimento negativo', () => {
+      renderPanel({
+        results: baseResult,
+        ticker: 'PETR4',
+        assumptions: { ...baseAssumptions, g: -0.0784 },
+      })
+      expect(screen.getByText(/Crescimento estimado negativo/)).toBeInTheDocument()
+    })
+
+    it('mostra o peso do valor terminal quando a perpetuidade passa de 50% do EV', () => {
+      renderPanel({
+        results: { ...baseResult, pvTV: 57_000_000, ev: 100_000_000 },
+        ticker: 'PETR4',
+      })
+      expect(screen.getByText(/57% do valor vem do valor terminal/)).toBeInTheDocument()
+    })
+
+    it('não mostra aviso nenhum num cenário saudável', () => {
+      // baseResult tem pvTV/ev = 75%, que por si só dispara o aviso de valor
+      // terminal — o cenário saudável precisa de uma perpetuidade menor.
+      renderPanel({
+        results: { ...baseResult, pvTV: 12_000_000, ev: 40_000_000 },
+        ticker: 'PETR4',
+      })
+      expect(screen.queryByRole('note')).not.toBeInTheDocument()
+    })
+  })
+
+  it('mostra o VPL da perpetuidade com o percentual do EV, sem repetir o EV', () => {
+    renderPanel({ results: baseResult, ticker: 'PETR4' })
+    expect(screen.getByText('VPL da Perpetuidade')).toBeInTheDocument()
+    expect(screen.getByText('75% do EV')).toBeInTheDocument()
+    expect(screen.queryByText('Market Cap Projetado')).not.toBeInTheDocument()
+  })
 })
