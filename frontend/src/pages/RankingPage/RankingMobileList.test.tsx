@@ -87,9 +87,9 @@ describe('RankingMobileList', () => {
 
   it('revela o detalhe ao expandir a linha', () => {
     setup()
-    expect(screen.queryByText('Preço Teto')).not.toBeInTheDocument()
+    expect(screen.queryByText(/preço teto · faixa dos métodos/i)).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'PETR4' }))
-    expect(screen.getByText('Preço Teto')).toBeInTheDocument()
+    expect(screen.getByText(/preço teto · faixa dos métodos/i)).toBeInTheDocument()
     expect(screen.getByText('P/L')).toBeInTheDocument()
     expect(screen.getByText('DY')).toBeInTheDocument()
     expect(screen.getByText('ROE')).toBeInTheDocument()
@@ -127,7 +127,7 @@ describe('RankingMobileList', () => {
     )
     fireEvent.keyDown(screen.getByRole('button', { name: 'Remover PETR4' }), { key: 'Enter' })
     // Sem stopPropagation no onKeyDown, o Enter borbulharia até a linha e a expandiria.
-    expect(screen.queryByText('Preço Teto')).not.toBeInTheDocument()
+    expect(screen.queryByText(/preço teto · faixa dos métodos/i)).not.toBeInTheDocument()
   })
 
   it('em modo comparar, mostra círculo de seleção e chama onToggleCompare', () => {

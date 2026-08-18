@@ -518,6 +518,7 @@ export function RankingPage() {
               compareSelection={compareSelection}
               onToggleCompare={toggleCompareSelection}
               maxCompare={MAX_COMPARE}
+              method={method}
             />
           </div>
         )}
