@@ -1,4 +1,5 @@
 import { Skeleton } from '../../components/Skeleton'
+import { HeroMetric } from '../../components/HeroMetric'
 import { fBRL as fBRLFormatter, fPct } from '../../engines/formatters'
 
 const fBRL = (v: number) => fBRLFormatter.format(v)
@@ -22,29 +23,36 @@ export function CarteiraKPIs({ totalInvested, totalValue, positions, loading }: 
       ? (totalValue - totalInvested) / totalInvested
       : null
 
-  const retornoColor =
-    retorno == null ? 'text-text-muted' : retorno >= 0 ? 'text-green' : 'text-red'
-
   return (
-    <div className="grid grid-cols-2 gap-2.5 mt-5 md:flex md:gap-3 md:flex-wrap">
-      <KPICard label="Total Investido" loading={loading}>
-        {totalInvested != null ? fBRL(totalInvested) : '—'}
-      </KPICard>
-      <KPICard label="Valor Atual" loading={loading}>
-        {totalValue != null ? fBRL(totalValue) : '—'}
-      </KPICard>
-      <KPICard
-        label="Retorno Total"
-        loading={loading}
-        valueClass={retornoColor}
-      >
-        {retorno != null ? (retorno >= 0 ? '+' : '') + fPct(retorno) : '—'}
-      </KPICard>
-      {/* loading={false}: a contagem vem das operações no localStorage, não das
-          cotações — está disponível na hora, sem esperar a rede. */}
-      <KPICard label="Posições" loading={false}>
-        {positions}
-      </KPICard>
+    <div className="mt-5 flex flex-col gap-2.5">
+      {/* Número principal da rota: quatro KPIs de peso igual não diziam qual
+          importa. O patrimônio atual é a resposta da Carteira; o retorno é o
+          delta dele, não um card irmão. Mesmo tratamento do card de preço teto
+          da /dcf (ver components/HeroMetric.tsx). */}
+      <HeroMetric
+        eyebrow="Patrimônio Total"
+        value={totalValue != null ? fBRL(totalValue) : '—'}
+        delta={
+          retorno != null
+            ? { text: (retorno >= 0 ? '+' : '') + fPct(retorno), positive: retorno >= 0 }
+            : undefined
+        }
+        note={retorno != null ? 'sobre o total investido' : undefined}
+      />
+
+      <div className="grid grid-cols-2 gap-2.5 md:flex md:gap-3 md:flex-wrap">
+        <KPICard label="Total Investido" loading={loading}>
+          {totalInvested != null ? fBRL(totalInvested) : '—'}
+        </KPICard>
+        {/* "Valor Atual" e "Retorno Total" saíram daqui: viraram o valor e o delta
+            do HeroMetric acima. Mantê-los era exibir o mesmo número duas vezes na
+            mesma tela — o mesmo defeito que EV/Market Cap tinha na /dcf. */}
+        {/* loading={false}: a contagem vem das operações no localStorage, não das
+            cotações — está disponível na hora, sem esperar a rede. */}
+        <KPICard label="Posições" loading={false}>
+          {positions}
+        </KPICard>
+      </div>
     </div>
   )
 }

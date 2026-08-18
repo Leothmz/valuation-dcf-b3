@@ -7,9 +7,11 @@ describe('CarteiraKPIs', () => {
     expect(screen.getByText('Total Investido')).toBeInTheDocument()
   })
 
-  it('renders "Valor Atual" label', () => {
+  it('o valor atual aparece uma vez só, como número principal', () => {
     render(<CarteiraKPIs totalInvested={10000} totalValue={12000} positions={3} loading={false} />)
-    expect(screen.getByText('Valor Atual')).toBeInTheDocument()
+    // Antes existia um KPI "Valor Atual" com o mesmo número do hero — duplicata removida.
+    expect(screen.queryByText('Valor Atual')).not.toBeInTheDocument()
+    expect(screen.getByText('Patrimônio Total')).toBeInTheDocument()
   })
 
   it('formats totalInvested in pt-BR BRL', () => {
@@ -23,20 +25,13 @@ describe('CarteiraKPIs', () => {
   })
 
   it('shows positive return as green with + prefix', () => {
-    const { container } = render(
-      <CarteiraKPIs totalInvested={10000} totalValue={12000} positions={3} loading={false} />
-    )
-    const retornoValue = container.querySelector('.text-green')
-    expect(retornoValue).toBeInTheDocument()
-    expect(retornoValue?.textContent).toMatch(/^\+/)
+    render(<CarteiraKPIs totalInvested={10000} totalValue={12000} positions={3} loading={false} />)
+    expect(screen.getByText('+20,00%')).toHaveStyle({ color: 'var(--color-green)' })
   })
 
   it('shows negative return as red', () => {
-    const { container } = render(
-      <CarteiraKPIs totalInvested={10000} totalValue={8000} positions={3} loading={false} />
-    )
-    const retornoValue = container.querySelector('.text-red')
-    expect(retornoValue).toBeInTheDocument()
+    render(<CarteiraKPIs totalInvested={10000} totalValue={8000} positions={3} loading={false} />)
+    expect(screen.getByText('-20,00%')).toHaveStyle({ color: 'var(--color-red)' })
   })
 
   it('shows skeleton elements when loading=true', () => {
@@ -53,10 +48,10 @@ describe('CarteiraKPIs', () => {
     expect(dashes.length).toBeGreaterThanOrEqual(2)
   })
 
-  it('shows dash for return when totalInvested is 0', () => {
+  it('sem base de cálculo (investido = 0), o hero não mostra delta', () => {
     render(<CarteiraKPIs totalInvested={0} totalValue={5000} positions={3} loading={false} />)
-    const dashes = screen.getAllByText('—')
-    expect(dashes.length).toBeGreaterThan(0)
+    expect(screen.getByText('Patrimônio Total')).toBeInTheDocument()
+    expect(screen.queryByText('sobre o total investido')).not.toBeInTheDocument()
   })
 })
 
@@ -81,5 +76,25 @@ describe('CarteiraKPIs — Posições (regressão)', () => {
     // KPICard de Posições passa loading={false} mesmo quando os outros carregam.
     render(<CarteiraKPIs totalInvested={10000} totalValue={12000} positions={7} loading={true} />)
     expect(screen.getByText('Posições').parentElement).toHaveTextContent('7')
+  })
+})
+
+describe('CarteiraKPIs — número principal da rota', () => {
+  it('promove o patrimônio atual a número principal, com o retorno como delta', () => {
+    render(<CarteiraKPIs totalInvested={10000} totalValue={12000} positions={3} loading={false} />)
+    expect(screen.getByText('Patrimônio Total')).toBeInTheDocument()
+    expect(screen.getByText(/R\$\s*12\.000/)).toBeInTheDocument()
+    expect(screen.getByText('+20,00%')).toBeInTheDocument()
+  })
+
+  it('o delta fica vermelho quando a carteira está no prejuízo', () => {
+    render(<CarteiraKPIs totalInvested={10000} totalValue={9000} positions={3} loading={false} />)
+    expect(screen.getByText('-10,00%')).toHaveStyle({ color: 'var(--color-red)' })
+  })
+
+  it('sem retorno calculável, o patrimônio aparece sem delta', () => {
+    render(<CarteiraKPIs totalInvested={0} totalValue={0} positions={0} loading={false} />)
+    expect(screen.getByText('Patrimônio Total')).toBeInTheDocument()
+    expect(screen.queryByText(/%$/)).not.toBeInTheDocument()
   })
 })
