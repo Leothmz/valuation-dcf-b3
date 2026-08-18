@@ -61,3 +61,22 @@ describe('CompareTable — realce', () => {
     expect(within(linhaDY).getByText('9,04%')).toBeInTheDocument()
   })
 })
+
+describe('CompareTable — o realce não imita linha de grade', () => {
+  it('a célula vencedora não usa borda lateral', () => {
+    const { container } = render(
+      <CompareTable tickers={['PETR4', 'VALE3', 'ITUB4']} rows={rows} isLoading={false} />
+    )
+    const comBorda = Array.from(container.querySelectorAll('td')).filter((td) =>
+      (td.getAttribute('style') ?? '').includes('border-left')
+    )
+    expect(comBorda).toHaveLength(0)
+  })
+
+  it('o realce envolve o próprio valor, não a célula inteira', () => {
+    render(<CompareTable tickers={['PETR4', 'VALE3', 'ITUB4']} rows={rows} isLoading={false} />)
+    const selo = screen.getAllByLabelText('Melhor valor da linha')[0]
+    expect(selo.tagName).toBe('SPAN')
+    expect(selo).toHaveTextContent('9,04%')
+  })
+})

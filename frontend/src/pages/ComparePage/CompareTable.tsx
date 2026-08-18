@@ -26,12 +26,25 @@ export function CompareTable({ tickers, rows, isLoading }: CompareTableProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Legenda: sem ela a cor era um julgamento sem critério declarado — e com
-          3 tickers, cada linha pintava um verde e um vermelho, tingindo 2/3 da
-          tabela. Realce que aparece em toda parte deixa de ser realce. */}
+      {/* Legenda: sem ela a cor é um julgamento sem critério declarado. Antes cada
+          linha pintava uma célula de verde e outra de vermelho (2/3 da tabela
+          tingida, e com a semântica trocada — verde/vermelho são direção de valor
+          no resto do app). A primeira tentativa de correção usou uma borda
+          esquerda de 2px na célula vencedora, mas a barra encostava na coluna
+          vizinha e imitava linha de grade. O selo marca o próprio número. */}
       <div className="flex items-center gap-2 text-[11px] text-text-sec">
-        <span aria-hidden className="inline-block w-[3px] h-3 rounded-full" style={{ background: 'var(--color-cyan)' }} />
-        marca o melhor valor de cada linha entre os tickers selecionados
+        <span
+          aria-hidden
+          className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold"
+          style={{
+            background: 'var(--color-cyan-dim)',
+            color: 'var(--color-cyan)',
+            border: '1px solid rgba(6,182,212,0.25)',
+          }}
+        >
+          valor
+        </span>
+        destacado assim = melhor valor de cada linha entre os tickers selecionados
       </div>
 
       <div className="border border-border rounded-[14px] overflow-hidden" style={{ boxShadow: '0 4px 16px rgba(0,0,0,.5)' }}>
@@ -75,22 +88,23 @@ export function CompareTable({ tickers, rows, isLoading }: CompareTableProps) {
                     <td
                       key={i}
                       className="min-w-[88px] py-[10px] px-3 text-right align-middle font-mono text-[11px] md:text-[13px]"
-                      style={{
-                        color: isBest ? 'var(--color-cyan)' : 'var(--color-text-base)',
-                        borderLeft: isBest ? '2px solid var(--color-cyan)' : '2px solid transparent',
-                      }}
+                      style={{ color: 'var(--color-text-base)' }}
                     >
-                      <span className="inline-flex items-center justify-end gap-1.5">
-                        {cell.value}
-                        {isBest && (
-                          <span
-                            aria-label="Melhor valor da linha"
-                            role="img"
-                            className="inline-block w-[5px] h-[5px] rounded-full shrink-0"
-                            style={{ background: 'var(--color-cyan)' }}
-                          />
-                        )}
-                      </span>
+                      {isBest ? (
+                        <span
+                          aria-label="Melhor valor da linha"
+                          className="inline-block rounded-full px-2.5 py-0.5 font-semibold"
+                          style={{
+                            background: 'var(--color-cyan-dim)',
+                            color: 'var(--color-cyan)',
+                            border: '1px solid rgba(6,182,212,0.25)',
+                          }}
+                        >
+                          {cell.value}
+                        </span>
+                      ) : (
+                        cell.value
+                      )}
                     </td>
                   )
                 })}
