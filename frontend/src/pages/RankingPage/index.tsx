@@ -124,7 +124,7 @@ export function RankingPage() {
     [customTickers]
   )
 
-  const { data: rawStocks, isLoading } = useBatchFundamentals(allTickers)
+  const { data: rawStocks, isLoading, dataUpdatedAt } = useBatchFundamentals(allTickers)
 
   function handleAddTicker() {
     const t = newTicker.trim().toUpperCase()
@@ -258,6 +258,13 @@ export function RankingPage() {
   // contador do botão, senão um filtro ativo fica invisível.
   const activeControlCount = countActiveFilters(filterConfig) + (sectorTab !== '' ? 1 : 0)
 
+  // Fundamentos ficam 6h em cache e cotações 5min: sem dizer quando o dado foi
+  // buscado, "R$ 38,42" parece sempre de agora. Numa ferramenta de decisão de
+  // compra, há quanto tempo o preço é verdade é informação de primeira classe.
+  const updatedAtLabel = dataUpdatedAt
+    ? ` · atualizado às ${new Date(dataUpdatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+    : ''
+
   // Mesmo elemento reaproveitado no BottomSheet (mobile) e no painel fixo (desktop) —
   // evita duplicar o JSX de props idênticas nos dois lugares. Inclui também o
   // "Adicionar ticker" + chips de customs (Finding 2 da Task 23: o Step 7 da Task 12
@@ -356,7 +363,7 @@ export function RankingPage() {
         <div className="text-[11px] font-semibold text-text-muted tracking-[0.08em] uppercase mb-2">
           Setor
         </div>
-        <ScrollableTabs ariaLabel="Setor" tabs={SECTOR_TABS} active={sectorTab} onSelect={setSectorTab} />
+        <ScrollableTabs ariaLabel="Setor" fadeColor="var(--color-bg-2)" tabs={SECTOR_TABS} active={sectorTab} onSelect={setSectorTab} />
       </div>
     </div>
   )
@@ -395,7 +402,7 @@ export function RankingPage() {
         <p className="text-[12px] md:text-[13px] text-text-muted mt-0.5 mb-3 md:mb-5">
           {isLoading
             ? `Carregando ${allTickers.length} tickers…`
-            : `${totalLoaded} tickers carregados · exibindo ${showing}`}
+            : `${totalLoaded} tickers carregados · exibindo ${showing}${updatedAtLabel}`}
         </p>
 
         {/* Method tabs — pills fixas no desktop, faixa rolável no mobile */}

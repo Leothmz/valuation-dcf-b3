@@ -32,23 +32,42 @@ interface RankingMobileListProps {
   maxCompare?: number
 }
 
+interface HeroMetricResult {
+  text: string
+  /** 'neutral' existe para pontuação: verde/vermelho são direção de valor. */
+  tone: 'positive' | 'negative' | 'neutral'
+}
+
 /**
  * No Joel a métrica-herói é o Earnings Yield (`row.joelVal`, sem sinal — é sempre
  * positivo por construção, só calculado quando P/L > 0); nos demais métodos é o
  * upside contra o preço teto do método ativo (`row.fairPrice`), com sinal.
  * Fórmula do upside confirmada em engines/ranking-scores.ts: (fair - price) / fair.
  */
-function heroMetric(row: Row, method: RankingMethod): { text: string; positive: boolean } | null {
+export function heroMetric(row: Row, method: RankingMethod): HeroMetricResult | null {
   if (method === 'joel') {
     const ey = row.joelVal
     if (ey == null) return null
-    return { text: fPct(ey), positive: ey >= 0 }
+    return { text: fPct(ey), tone: ey >= 0 ? 'positive' : 'negative' }
   }
   const fair = row.fairPrice
   const price = row.price
-  if (fair == null || price == null || fair === 0) return null
-  const upside = (fair - price) / fair
-  return { text: fPctSigned(upside), positive: upside >= 0 }
+  if (fair != null && price != null && fair !== 0) {
+    const upside = (fair - price) / fair
+    return { text: fPctSigned(upside), tone: upside >= 0 ? 'positive' : 'negative' }
+  }
+
+  // Thomaz é o método default e só tem fairPrice quando o usuário salvou um
+  // valuation daquele ticker (calcThomazScore lê do watchlistMap). Sem isso, a
+  // linha ficava com ticker + cotação e nada dizendo por que o 1º é o 1º —
+  // numa tela de ranking. O score (0–100) é o critério real da ordenação.
+  if (method === 'thomaz' && typeof row.score === 'number') {
+    // Tom neutro de propósito: score é pontuação, não direção de valor — verde
+    // e vermelho significam alta/baixa no resto do app.
+    return { text: `${Math.round(row.score)} pts`, tone: 'neutral' }
+  }
+
+  return null
 }
 
 export function RankingMobileList({
@@ -122,7 +141,12 @@ export function RankingMobileList({
               {hero && (
                 <span
                   className="font-mono text-[12px] font-bold shrink-0"
-                  style={{ color: hero.positive ? 'var(--color-green)' : 'var(--color-red)' }}
+                  style={{
+                    color:
+                      hero.tone === 'positive' ? 'var(--color-green)'
+                      : hero.tone === 'negative' ? 'var(--color-red)'
+                      : 'var(--color-cyan)',
+                  }}
                 >
                   {hero.text}
                 </span>
