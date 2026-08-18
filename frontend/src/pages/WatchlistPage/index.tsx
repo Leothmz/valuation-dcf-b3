@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { X, Download, BellRing, Bookmark } from 'lucide-react'
 import { EmptyState } from '../../components/EmptyState'
+import { HeroMetric } from '../../components/HeroMetric'
+import { fBRL, fPctSigned } from '../../engines/formatters'
 import { useWatchlistStore } from '../../stores'
 import { useBatchQuotes } from '../../api/stocks'
 import { isPriceInBuyRange, shouldRecordAlert } from '../../engines/alert-engine'
@@ -110,6 +112,11 @@ export function WatchlistPage() {
       if (b.upside !== null) return 1
       return new Date(b.entry.savedAt).getTime() - new Date(a.entry.savedAt).getTime()
     })
+
+  // rows já vem ordenada por upside decrescente; a melhor é a primeira com upside.
+  const bestOpportunity = rows.find((r) => r.upside != null) as
+    | { entry: { ticker: string; fairPrice: number }; upside: number }
+    | undefined
 
   function handleDelete(ticker: string, e: React.MouseEvent) {
     e.stopPropagation()
@@ -233,6 +240,19 @@ export function WatchlistPage() {
           >
             <X size={16} />
           </button>
+        </div>
+      )}
+
+      {/* Número principal da rota: a lista respondia "o que eu salvei", não "o que
+          está barato agora". `rows` já vem ordenada por upside decrescente, então
+          a melhor oportunidade é a primeira com upside calculável. */}
+      {bestOpportunity && (
+        <div className="mb-5">
+          <HeroMetric
+            eyebrow="Melhor Oportunidade Salva"
+            value={fPctSigned(bestOpportunity.upside)}
+            note={`${bestOpportunity.entry.ticker} · teto ${fBRL.format(bestOpportunity.entry.fairPrice)} · upside contra a cotação de agora`}
+          />
         </div>
       )}
 

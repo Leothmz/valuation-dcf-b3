@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { WatchlistPage } from './index'
@@ -513,7 +513,8 @@ describe('Watchlist mobile — padrão C (cards) e menu acessível', () => {
     renderPage()
     expect(screen.queryByText('Salvo em')).not.toBeInTheDocument()
     // upside = (50 - 40) / 50 = 0.20 -> "+20,00%"
-    expect(screen.getByText('+20,00%')).toBeInTheDocument()
+    // O hero da página também mostra o melhor upside; aqui o alvo é o card da linha.
+    expect(screen.getAllByText('+20,00%').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Preço teto').length).toBeGreaterThan(0)
   })
 
@@ -522,7 +523,9 @@ describe('Watchlist mobile — padrão C (cards) e menu acessível', () => {
     mockMatchMedia(true)
     renderPage()
     // PETR4: fairPrice 50, price 40 -> +20,00% (verde)
-    expect(screen.getByText('+20,00%').style.color).toBe('var(--color-green)')
+    // Escopado ao card da linha: o hero da página mostra o mesmo upside em ciano.
+    const cardPETR4 = screen.getByRole('button', { name: 'PETR4' })
+    expect(within(cardPETR4).getByText('+20,00%').style.color).toBe('var(--color-green)')
     // VALE3: fairPrice 80, price 90 -> (80-90)/80 = -0.125 -> -12,50% (vermelho)
     expect(screen.getByText('-12,50%').style.color).toBe('var(--color-red)')
   })
@@ -533,12 +536,52 @@ describe('Watchlist mobile — padrão C (cards) e menu acessível', () => {
     renderPage()
     fireEvent.click(screen.getByRole('button', { name: 'PETR4' }))
     expect(screen.getByText('Salvo em')).toBeInTheDocument()
-    expect(screen.getAllByText('+20,00%')).toHaveLength(1)
+    // 2 = o do hero da página + o do card; o que não pode é aparecer duas vezes dentro do card.
+    expect(screen.getAllByText('+20,00%')).toHaveLength(2)
   })
 
   it('exportar CSV vira ícone com aria-label acessível no header', () => {
     setupTwoEntries()
     renderPage()
     expect(screen.getByRole('button', { name: 'Exportar CSV' })).toBeInTheDocument()
+  })
+})
+
+describe('WatchlistPage — número principal da rota', () => {
+  beforeEach(() => {
+    mockUseWatchlist.mockReturnValue({
+      entries: {
+        PETR4: makeEntry('PETR4', { fairPrice: 50 }),
+        VALE3: makeEntry('VALE3', { name: 'Vale SA', fairPrice: 100 }),
+      },
+      remove: vi.fn(),
+      toggleAlert: vi.fn(),
+      recordAlertFired: vi.fn(),
+      save: vi.fn(),
+      clear: vi.fn(),
+      has: vi.fn(),
+    } as ReturnType<typeof useWatchlistStore>)
+  })
+
+  it('destaca a melhor oportunidade salva: maior upside contra o preço teto', () => {
+    // PETR4: teto 50, preço 40 → upside 20%. VALE3: teto 100, preço 40 → 60%.
+    mockUseBatchQuotes.mockReturnValue({
+      data: [
+        { ticker: 'PETR4', price: 40, changePercent: 0 },
+        { ticker: 'VALE3', price: 40, changePercent: 0 },
+      ] as LiveQuote[],
+      isLoading: false,
+      dataUpdatedAt: 0,
+    } as ReturnType<typeof useBatchQuotes>)
+
+    renderPage()
+    expect(screen.getByText('Melhor Oportunidade Salva')).toBeInTheDocument()
+    expect(screen.getByText('+60,00%')).toBeInTheDocument()
+    expect(screen.getByText(/VALE3 · teto/)).toBeInTheDocument()
+  })
+
+  it('sem cotação ao vivo, não inventa oportunidade', () => {
+    renderPage()
+    expect(screen.queryByText('Melhor Oportunidade Salva')).not.toBeInTheDocument()
   })
 })
