@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { RankingPage } from './index'
 import type { FundamentalsData } from '../../api/stocks'
@@ -82,5 +83,38 @@ describe('RankingPage — montagem condicional mobile/desktop (useIsMobile, não
     // Mesma lógica: se a RankingMobileList também estivesse montada, haveria dois
     // elementos com texto "PETR4" e getByText lançaria em vez de resolver.
     expect(screen.getByText('PETR4')).toBeInTheDocument()
+  })
+})
+
+describe('RankingPage — controles secundários atrás do botão Filtros', () => {
+  it('no desktop, o painel de filtros começa fechado e o botão mostra o contador', () => {
+    mockMatchMedia(false)
+    renderPage()
+    const botao = screen.getByRole('button', { name: /filtros/i })
+    expect(botao).toHaveAttribute('aria-expanded', 'false')
+    // "Adicionar ticker…" só existe dentro do painel de filtros.
+    expect(screen.queryByPlaceholderText('Adicionar ticker…')).not.toBeInTheDocument()
+  })
+
+  it('no desktop, clicar em Filtros revela adicionar ticker e a faixa de setores', async () => {
+    mockMatchMedia(false)
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: /filtros/i }))
+    expect(screen.getByPlaceholderText('Adicionar ticker…')).toBeInTheDocument()
+    expect(screen.getByRole('tablist', { name: 'Setor' })).toBeInTheDocument()
+  })
+
+  it('a faixa de setores não fica solta no fluxo principal quando os filtros estão fechados', () => {
+    mockMatchMedia(false)
+    renderPage()
+    expect(screen.queryByRole('tablist', { name: 'Setor' })).not.toBeInTheDocument()
+    // O tablist de método continua sempre visível: é a decisão primária da tela.
+    expect(screen.getByRole('tablist', { name: 'Método de ranking' })).toBeInTheDocument()
+  })
+
+  it('a busca continua sempre visível, fora do painel de filtros', () => {
+    mockMatchMedia(false)
+    renderPage()
+    expect(screen.getByPlaceholderText('Buscar ticker ou empresa…')).toBeInTheDocument()
   })
 })

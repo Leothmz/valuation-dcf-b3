@@ -254,7 +254,9 @@ export function RankingPage() {
 
   const totalLoaded = rawStocks?.length ?? 0
   const showing = rankedRows.length
-  const activeFilterCount = countActiveFilters(filterConfig)
+  // Setor conta junto: escondido dentro do painel, ele precisa aparecer no
+  // contador do botão, senão um filtro ativo fica invisível.
+  const activeControlCount = countActiveFilters(filterConfig) + (sectorTab !== '' ? 1 : 0)
 
   // Mesmo elemento reaproveitado no BottomSheet (mobile) e no painel fixo (desktop) —
   // evita duplicar o JSX de props idênticas nos dois lugares. Inclui também o
@@ -265,6 +267,43 @@ export function RankingPage() {
   // real em 375px mesmo depois do fix do Layout.tsx).
   const filterChipsEl = (
     <div className="flex flex-col gap-3">
+      {/* Ordenação mora com os filtros: no mobile ela ocupava uma faixa inteira
+          acima da lista, e é decisão eventual — não a cada varredura. */}
+      {isMobile && (
+      <div className="flex gap-2 items-end">
+        <div className="flex-1 min-w-0">
+          <label htmlFor="ranking-sort" className="block text-[11px] text-text-muted mb-1">
+            Ordenar por
+          </label>
+        <select
+          id="ranking-sort"
+          value={sortCol}
+          onChange={(e) => setSortCol(e.target.value)}
+          className="w-full min-h-[44px] rounded-[9px] border border-border px-3 text-[16px] text-text-base"
+          style={{ background: 'var(--color-bg-2)' }}
+        >
+          <option value="rank">Posição</option>
+          <option value="ticker">Ticker</option>
+          <option value="price">Cotação</option>
+          <option value="dy">DY</option>
+          <option value="pl">P/L</option>
+          <option value="roe">ROE</option>
+          <option value="margemLiquida">Margem Líquida</option>
+          <option value="dividaLiquidaEbit">DL/EBITDA</option>
+        </select>
+        </div>
+        <button
+          onClick={() => setSortDir(sortDir === 'desc' ? 'asc' : 'desc')}
+          aria-label={sortDir === 'desc' ? 'Ordem decrescente' : 'Ordem crescente'}
+          className="min-w-[44px] min-h-[44px] rounded-[9px] border border-border text-text-sec cursor-pointer"
+          style={{ background: 'var(--color-bg-2)' }}
+        >
+          {sortDir === 'desc' ? '↓' : '↑'}
+        </button>
+      </div>
+
+      )}
+
       <div className="flex items-center gap-2">
         <input
           type="text"
@@ -309,7 +348,36 @@ export function RankingPage() {
         onChange={setFilterConfig}
         onReset={resetFilterConfig}
       />
+
+      {/* Setor entra aqui em vez de ficar solto acima da tabela: é filtro, e
+          filtro mora com os outros filtros. Tirar essa faixa do fluxo principal
+          foi o que devolveu ~60px de altura antes da primeira linha de dado. */}
+      <div>
+        <div className="text-[11px] font-semibold text-text-muted tracking-[0.08em] uppercase mb-2">
+          Setor
+        </div>
+        <ScrollableTabs ariaLabel="Setor" tabs={SECTOR_TABS} active={sectorTab} onSelect={setSectorTab} />
+      </div>
     </div>
+  )
+
+  const filtersButton = (
+    <button
+      onClick={() => setFiltersOpen((v) => !v)}
+      aria-expanded={filtersOpen}
+      className="flex items-center justify-between gap-3 min-h-[44px] px-3 rounded-[9px] border border-border text-[13px] text-text-sec cursor-pointer hover:border-cyan hover:text-cyan transition-colors"
+      style={{ background: 'var(--color-bg-2)' }}
+    >
+      Filtros
+      {activeControlCount > 0 && (
+        <span
+          className="rounded-full px-2 py-0.5 text-[10px] font-extrabold"
+          style={{ background: 'var(--color-cyan)', color: '#04121a' }}
+        >
+          {activeControlCount}
+        </span>
+      )}
+    </button>
   )
 
   return (
@@ -317,11 +385,14 @@ export function RankingPage() {
       {/* Hero header — só título + contador (Step 7 da Task 12). Adicionar ticker,
           chips de customs e busca migraram para fora daqui (ver filterChipsEl acima
           e a barra de busca abaixo, sempre visível nos dois viewports). */}
-      <div className="rounded-[16px] border border-border p-6">
-        <h1 className="text-[24px] font-bold text-text-base leading-tight">
+      {/* Hero enxuto: sem moldura e com tipos menores no mobile. A moldura de 16px
+          com p-6 custava ~48px de altura só em respiro, numa tela cujo conteúdo é
+          uma lista — o título não precisa de card. */}
+      <div className="md:rounded-[16px] md:border md:border-border md:p-6">
+        <h1 className="text-[19px] md:text-[24px] font-bold text-text-base leading-tight">
           Ranking de Ações · B3
         </h1>
-        <p className="text-[13px] text-text-muted mt-1 mb-5">
+        <p className="text-[12px] md:text-[13px] text-text-muted mt-0.5 mb-3 md:mb-5">
           {isLoading
             ? `Carregando ${allTickers.length} tickers…`
             : `${totalLoaded} tickers carregados · exibindo ${showing}`}
@@ -334,65 +405,23 @@ export function RankingPage() {
       {/* Busca — decisão de UX (Task 23): diferente do "Adicionar ticker" (ação
           eventual, foi para dentro do sheet de Filtros), buscar é ação frequente;
           fica sempre visível nos dois viewports em vez de atrás de um toque extra
-          no botão Filtros. */}
-      <input
-        type="text"
-        className="w-full rounded-[10px] border border-border bg-bg-3 text-text-base text-[15px] md:text-[13px] px-[14px] py-[9px] md:py-[7px] outline-none placeholder-text-muted focus:border-cyan"
-        placeholder="Buscar ticker ou empresa…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        aria-label="Buscar ticker ou empresa"
-      />
-
-      {/* Mobile toolbar: ordenação + filtros + comparar */}
-      {/* O select sozinho mostrava só "Posição", sem dizer que era o critério de
-          ordenação — o rótulo visível tira a adivinhação (e vira <label> de verdade). */}
-      <div className="md:hidden flex gap-2 items-end">
-        <div className="flex-1 min-w-0">
-          <label htmlFor="ranking-sort" className="block text-[11px] text-text-muted mb-1">
-            Ordenar por
-          </label>
-        <select
-          id="ranking-sort"
-          value={sortCol}
-          onChange={(e) => setSortCol(e.target.value)}
-          className="w-full min-h-[44px] rounded-[9px] border border-border px-3 text-[16px] text-text-base"
-          style={{ background: 'var(--color-bg-2)' }}
-        >
-          <option value="rank">Posição</option>
-          <option value="ticker">Ticker</option>
-          <option value="price">Cotação</option>
-          <option value="dy">DY</option>
-          <option value="pl">P/L</option>
-          <option value="roe">ROE</option>
-          <option value="margemLiquida">Margem Líquida</option>
-          <option value="dividaLiquidaEbit">DL/EBITDA</option>
-        </select>
-        </div>
-        <button
-          onClick={() => setSortDir(sortDir === 'desc' ? 'asc' : 'desc')}
-          aria-label={sortDir === 'desc' ? 'Ordem decrescente' : 'Ordem crescente'}
-          className="min-w-[44px] min-h-[44px] rounded-[9px] border border-border text-text-sec cursor-pointer"
-          style={{ background: 'var(--color-bg-2)' }}
-        >
-          {sortDir === 'desc' ? '↓' : '↑'}
-        </button>
+          no botão Filtros. No desktop divide a linha com o botão Filtros. */}
+      <div className="flex gap-2 items-center">
+        <input
+          type="text"
+          className="flex-1 min-w-0 rounded-[10px] border border-border bg-bg-3 text-text-base text-[15px] md:text-[13px] px-[14px] py-[9px] md:py-[7px] outline-none placeholder-text-muted focus:border-cyan"
+          placeholder="Buscar ticker ou empresa…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Buscar ticker ou empresa"
+        />
+        {!isMobile && filtersButton}
       </div>
 
-      <div className="md:hidden flex gap-2">
-        <button
-          onClick={() => setFiltersOpen(true)}
-          className="flex-1 flex items-center justify-between min-h-[44px] px-3 rounded-[9px] border border-border text-[13px] text-text-sec cursor-pointer"
-          style={{ background: 'var(--color-bg-2)' }}
-        >
-          Filtros
-          {activeFilterCount > 0 && (
-            <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold"
-                  style={{ background: 'var(--color-cyan)', color: '#04121a' }}>
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
+
+      {isMobile && (
+      <div className="flex gap-2">
+        <div className="flex-1 flex [&>button]:w-full">{filtersButton}</div>
         <button
           onClick={() => setCompareMode((v) => !v)}
           aria-pressed={compareMode}
@@ -406,26 +435,32 @@ export function RankingPage() {
           Comparar
         </button>
       </div>
+      )}
 
-      {/* Filter chips — uma instância só: dentro do BottomSheet no mobile, no painel fixo
-          no desktop. Nunca as duas montadas ao mesmo tempo (evita duplicata no DOM). */}
+      {/* Filter chips — uma instância só: dentro do BottomSheet no mobile, no painel
+          colapsável no desktop. Nunca as duas montadas ao mesmo tempo. */}
       {isMobile ? (
         <BottomSheet isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtros">
           {filterChipsEl}
         </BottomSheet>
       ) : (
-        <div
-          className="rounded-[12px] border border-border px-4 py-3"
-          style={{ background: 'var(--color-bg-2)' }}
-        >
-          {filterChipsEl}
-        </div>
+        <>
+          {/* No desktop o painel era fixo e sempre aberto: com o hero, a busca, os
+              11 chips, o "adicionar ticker" e a faixa de setores, a primeira linha
+              de dado só começava a ~460px de altura em 1440x900 (≈8 linhas visíveis).
+              Agora ele responde ao botão que divide a linha com a busca. */}
+          {filtersOpen && (
+            <div
+              className="rounded-[12px] border border-border px-4 py-3"
+              style={{ background: 'var(--color-bg-2)' }}
+            >
+              {filterChipsEl}
+            </div>
+          )}
+        </>
       )}
 
-      {/* Sector tabs + lista/tabela */}
       <div>
-        <ScrollableTabs ariaLabel="Setor" tabs={SECTOR_TABS} active={sectorTab} onSelect={setSectorTab} />
-
         {/* Montagem condicional (não CSS): lista compacta OU tabela, nunca as duas ao mesmo
             tempo — evita renderizar ~centenas de linhas em dobro e duplicatas no DOM. */}
         {isMobile ? (
