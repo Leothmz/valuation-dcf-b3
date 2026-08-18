@@ -1,5 +1,6 @@
-import { Settings2, FileDown } from 'lucide-react'
+import { Settings2, FileDown, AlertTriangle } from 'lucide-react'
 import { fBRL, fShort, fPct, fShares } from '../../engines/formatters'
+import { buildDCFWarnings } from '../../engines/dcf-warnings'
 import type { DCFResult, DCFGordonError } from '../../engines/dcf-engine'
 import type { NullableDCFAssumptions, ScenarioState } from '../../stores/dcfStore'
 import { useIsMobile } from '../../hooks/useMediaQuery'
@@ -47,6 +48,10 @@ export function DCFResultPanel({
   const otherLbl = dcfMethod === 'buffett' ? 'Clássico FCD' : 'Buffett (10%)'
 
   const showSave = ticker && r && !('error' in r)
+  const warnings = buildDCFWarnings(
+    { payout: assumptions.payout, g: assumptions.g },
+    r && !('error' in r) ? r : null
+  )
 
   return (
     <div>
@@ -103,6 +108,30 @@ export function DCFResultPanel({
         )}
       </div>
 
+      {/* Avisos que qualificam o teto sem bloquear o cálculo. Âmbar, não vermelho:
+          não é erro de entrada (esse é o de Gordon, acima) — é o número saindo
+          apoiado em premissa anômala. Ficam colados no card do preço teto porque
+          é lá que a decisão é lida. */}
+      {warnings.length > 0 && (
+        <div className="flex flex-col gap-1.5 mb-3">
+          {warnings.map((w) => (
+            <div
+              key={w.id}
+              role="note"
+              className="flex items-start gap-2 rounded-[10px] px-3 py-2 text-[12px] leading-snug"
+              style={{
+                background: 'var(--color-amber-dim)',
+                border: '1px solid rgba(245,158,11,.25)',
+                color: 'var(--color-text-base)',
+              }}
+            >
+              <AlertTriangle size={14} className="shrink-0 mt-[1px] text-amber" />
+              <span>{w.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Save + Export buttons — botão de salvar existe uma única vez por viewport:
           no desktop é este (topo do painel); no mobile é o de baixo, perto das métricas
           secundárias (ver mais abaixo). Montagem condicional via useIsMobile(), nunca
@@ -154,14 +183,21 @@ export function DCFResultPanel({
           </div>
         </div>
         <div className="min-w-0 bg-bg-3 border border-border rounded-[10px] px-3 py-2.5">
+          {/* Era "Market Cap Projetado" (fairPrice × shares), que é aritmeticamente
+              o mesmo EV do card ao lado — dois dos quatro slots gastos no mesmo
+              número. Trocado pelo peso da perpetuidade, que é informação nova e
+              é justamente o que o aviso de valor terminal cita. */}
           <div className="text-[11px] text-text-muted uppercase tracking-[0.06em] font-medium mb-1.5">
-            Market Cap Projetado
+            VPL da Perpetuidade
           </div>
           <div className="text-[11px] md:text-[14px] font-semibold font-mono">
-            {r && !('error' in r) && assumptions.shares
-              ? fShort(r.fairPrice * assumptions.shares)
-              : '—'}
+            {r && !('error' in r) ? fShort(r.pvTV) : '—'}
           </div>
+          {r && !('error' in r) && r.ev > 0 && (
+            <div className="text-[11px] text-text-muted mt-0.5">
+              {Math.round((r.pvTV / r.ev) * 100)}% do EV
+            </div>
+          )}
         </div>
         <div className="min-w-0 bg-bg-3 border border-border rounded-[10px] px-3 py-2.5">
           <div className="text-[11px] text-text-muted uppercase tracking-[0.06em] font-medium mb-1.5">
