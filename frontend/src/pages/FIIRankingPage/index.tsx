@@ -205,7 +205,7 @@ export function FIIRankingPage() {
         <div className="text-[11px] font-semibold text-text-muted tracking-[0.08em] uppercase mb-2">
           Segmento
         </div>
-        <ScrollableTabs ariaLabel="Segmento" tabs={SEGMENT_TABS} active={segment} onSelect={setSegment} />
+        <ScrollableTabs ariaLabel="Segmento" fadeColor="var(--color-bg-2)" tabs={SEGMENT_TABS} active={segment} onSelect={setSegment} />
       </div>
     </div>
   )

@@ -13,9 +13,8 @@ describe('fBRL', () => {
 })
 
 describe('fShort', () => {
-  it('formats a number as BRL currency', () => {
-    const result = fShort(1234.56)
-    expect(result).toContain('1.234')
+  it('abrevia a partir de mil — antes era um alias de fBRL.format e não abreviava nada', () => {
+    expect(fShort(1234.56)).toBe('R$ 1,2 mil')
   })
 })
 
@@ -76,5 +75,32 @@ describe('fPctSigned', () => {
 
   it('usa 2 casas por padrão', () => {
     expect(fPctSigned(0.1425)).toBe('+14,25%')
+  })
+})
+
+describe('fShort — abreviação de verdade', () => {
+  // Intl usa espaço não-quebrável antes do número; normalizar mantém o teste legível.
+  const norm = (s: string) => s.replace(/ /g, ' ')
+
+  it('abrevia bilhões com uma casa decimal', () => {
+    expect(fShort(690_769_356_620.44)).toBe('R$ 690,8 bi')
+    expect(fShort(1_778_452_568.85)).toBe('R$ 1,8 bi')
+  })
+
+  it('abrevia milhões e milhares', () => {
+    expect(fShort(583_800_000)).toBe('R$ 583,8 mi')
+    expect(fShort(12_500)).toBe('R$ 12,5 mil')
+  })
+
+  it('mantém valores abaixo de mil por extenso, com centavos', () => {
+    expect(norm(fShort(942.7))).toBe('R$ 942,70')
+  })
+
+  it('preserva o sinal negativo', () => {
+    expect(fShort(-2_400_000)).toBe('-R$ 2,4 mi')
+  })
+
+  it('trata o zero sem abreviar', () => {
+    expect(norm(fShort(0))).toBe('R$ 0,00')
   })
 })

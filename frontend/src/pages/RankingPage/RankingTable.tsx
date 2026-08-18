@@ -101,25 +101,25 @@ export function RankingTable({
               <TH col="dividaLiquidaEbit" sortCol={sortCol} sortDir={sortDir} onSort={onSort}>DL/EBITDA</TH>
               <th
                 className="bg-bg-2 border-b border-border text-[11px] font-semibold tracking-[.08em] uppercase py-3 px-3 text-right whitespace-nowrap"
-                style={{ color: 'var(--color-cyan)' }}
+                style={{ color: 'var(--color-text-sec)' }}
               >
                 Bazin
               </th>
               <th
                 className="bg-bg-2 border-b border-border text-[11px] font-semibold tracking-[.08em] uppercase py-3 px-3 text-right whitespace-nowrap"
-                style={{ color: 'var(--color-purple)' }}
+                style={{ color: 'var(--color-text-sec)' }}
               >
                 Graham
               </th>
               <th
                 className="bg-bg-2 border-b border-border text-[11px] font-semibold tracking-[.08em] uppercase py-3 px-3 text-right whitespace-nowrap"
-                style={{ color: 'var(--color-green)' }}
+                style={{ color: 'var(--color-text-sec)' }}
               >
                 P. Lynch
               </th>
               <th
                 className="bg-bg-2 border-b border-border text-[11px] font-semibold tracking-[.08em] uppercase py-3 px-3 text-right whitespace-nowrap"
-                style={{ color: 'var(--color-amber)' }}
+                style={{ color: 'var(--color-text-sec)' }}
               >
                 Joel EY
               </th>
@@ -270,13 +270,13 @@ export function RankingTable({
 
                   {/* Lynch PEG */}
                   <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
-                    style={{ color: 'var(--color-green)' }}>
+                    style={{ color: 'var(--color-text-base)' }}>
                     {s.lynchVal != null ? fNum(s.lynchVal, 2) : '—'}
                   </td>
 
                   {/* Joel Earnings Yield */}
                   <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
-                    style={{ color: 'var(--color-amber)' }}>
+                    style={{ color: 'var(--color-text-base)' }}>
                     {s.joelVal != null ? fPct(s.joelVal) : '—'}
                   </td>
                 </tr>

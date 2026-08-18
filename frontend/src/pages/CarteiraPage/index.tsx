@@ -245,7 +245,7 @@ export function CarteiraPage() {
             tabs={TABS.map(({ key, label }) => ({ key, label }))}
             active={tab}
             onSelect={setTab}
-            ariaLabel="Seções da carteira"
+            ariaLabel="Seções da carteira" fadeColor="var(--color-bg-2)"
           />
         </div>
 
