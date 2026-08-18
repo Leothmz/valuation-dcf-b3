@@ -2,8 +2,10 @@ import { Link } from 'react-router-dom'
 import { Star, X } from 'lucide-react'
 import { ExpandableRow } from '../../components/ExpandableRow'
 import { PositionBadge } from './PositionBadge'
+import { RankDetail } from './RankDetail'
 import { fBRL, fPct, fPctSigned, fNum } from '../../engines/formatters'
 import type { RankingMethod } from '../../stores/rankingStore'
+import type { RankedRow } from './index'
 
 interface Row {
   ticker: string
@@ -153,12 +155,10 @@ export function RankingMobileList({
               )}
             </>
           }>
-            <div className="flex items-baseline justify-between py-1">
-              <span className="text-[12px] text-text-sec">Preço Teto</span>
-              <span className="font-mono text-[14px] font-bold text-text-base">
-                {row.fairPrice != null ? fBRL.format(row.fairPrice) : '—'}
-              </span>
-            </div>
+            {/* A faixa substitui a linha solta de "Preço Teto", que mostrava só o
+                teto do método ativo (e ficava vazia no Thomaz sem valuation
+                salvo). Mesmo componente do detalhe do desktop. */}
+            <RankDetail row={row as unknown as RankedRow} method={method} />
 
             <div className="grid grid-cols-3 gap-1.5 mt-2">
               {[
