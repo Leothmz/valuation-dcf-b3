@@ -196,3 +196,26 @@
     to   { opacity: 1; }
   }
 }
+
+@layer utilities {
+  /* Respiração da taxa de desconto no fundo da Home (DiscountField).
+     Duas camadas pré-calculadas — 9% e 21% — trocando de lugar em 26s. Nada se
+     desloca: o que muda é quanto o futuro vale, que é a única coisa que esse
+     fundo tem para dizer. Só `opacity` anima, então roda na composição. */
+  @keyframes pv-breathe-a {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0; }
+  }
+  @keyframes pv-breathe-b {
+    0%, 100% { opacity: 0; }
+    50%      { opacity: 1; }
+  }
+  .pv-breathe-a { animation: pv-breathe-a 26s ease-in-out infinite; }
+  .pv-breathe-b { animation: pv-breathe-b 26s ease-in-out infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* O componente já monta uma camada só nesse caso; isto é a rede de segurança
+       para quem alterna a preferência com a página aberta. */
+    .pv-breathe-a, .pv-breathe-b { animation: none; opacity: 1; }
+  }
+}

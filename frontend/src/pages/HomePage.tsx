@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useInView } from '../hooks/useInView'
+import { DiscountField } from './DiscountField'
 import {
   TrendingUp,
   Calculator,
@@ -123,14 +124,16 @@ export function HomePage() {
 
   return (
     <div
-      className="min-h-screen overflow-y-auto"
+      className="relative min-h-screen overflow-y-auto"
       style={{
         background:
           'radial-gradient(ellipse at 30% -20%, rgba(6,182,212,.08) 0%, transparent 60%), ' +
           'radial-gradient(ellipse at 90% 10%, rgba(168,85,247,.06) 0%, transparent 50%), #0b0f17',
       }}
     >
-      <div className="max-w-[860px] mx-auto px-4 py-8 md:px-10 md:py-14">
+      <DiscountField />
+
+      <div className="relative max-w-[860px] mx-auto px-4 py-8 md:px-10 md:py-14">
         {/* Hero */}
         <section className="mb-16">
           <div
