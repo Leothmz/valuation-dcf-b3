@@ -8,6 +8,7 @@ import { NotificationProvider } from './Notification'
 import { GlobalSearch } from './GlobalSearch'
 import { ShortcutsPanel } from './ShortcutsPanel'
 import { WelcomeModal } from './WelcomeModal'
+import { LightCurrent } from './LightCurrent'
 import { useKeyBinding, useEscapeToClose } from '../hooks/useKeyBinding'
 
 interface LayoutProps {
@@ -61,6 +62,13 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-bg-1">
+      {/* A corrente de luz é do app inteiro, não só da Home: sair de uma tela e
+          entrar em outra sem trocar de fundo é o que faz a navegação parecer
+          contínua. Na Home ela é protagonista; nas telas de dado fica quase
+          imperceptível para não disputar com tabela. O pulso responde à
+          navegação — a corrente reage a você ter trocado de página. */}
+      <LightCurrent intensity={pathname === '/' ? 'hero' : 'ambient'} pulseOn={pathname} />
+
       <Sidebar
         onOpenSearch={() => setIsSearchOpen(true)}
         isDrawerOpen={isDrawerOpen}
@@ -82,7 +90,11 @@ export function Layout({ children }: LayoutProps) {
             onOpenDrawer={() => setIsDrawerOpen(true)}
           />
         )}
-        {children}
+        {/* key na rota: o React remonta a árvore e a animação de entrada roda de
+            novo a cada navegação. Sem isso o conteúdo trocaria no seco. */}
+        <div key={pathname} className="route-in">
+          {children}
+        </div>
       </main>
       <SupportButton />
       <BottomNav />

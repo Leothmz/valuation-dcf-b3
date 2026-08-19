@@ -218,7 +218,7 @@ export function CarteiraPage() {
   }
 
   return (
-    <div className="min-h-screen overflow-y-auto" style={{ background: '#0b0f17' }}>
+    <div className="min-h-screen overflow-y-auto">
       <div className="p-4 md:p-6 max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3 mb-1">

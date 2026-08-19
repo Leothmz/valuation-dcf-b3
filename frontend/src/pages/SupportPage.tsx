@@ -77,7 +77,7 @@ export function SupportPage() {
       className="min-h-screen overflow-y-auto"
       style={{
         background:
-          'radial-gradient(ellipse at 30% -20%, rgba(6,182,212,.08) 0%, transparent 60%), #0b0f17',
+          'radial-gradient(ellipse at 30% -20%, rgba(6,182,212,.08) 0%, transparent 60%)',
       }}
     >
       <div className="max-w-[680px] mx-auto px-4 py-4 md:px-10 md:py-14">

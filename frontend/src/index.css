@@ -197,25 +197,46 @@
   }
 }
 
+
 @layer utilities {
-  /* Respiração da taxa de desconto no fundo da Home (DiscountField).
-     Duas camadas pré-calculadas — 9% e 21% — trocando de lugar em 26s. Nada se
-     desloca: o que muda é quanto o futuro vale, que é a única coisa que esse
-     fundo tem para dizer. Só `opacity` anima, então roda na composição. */
-  @keyframes pv-breathe-a {
-    0%, 100% { opacity: 1; }
-    50%      { opacity: 0; }
+  /* A corrente de luz do fundo (LightCurrent).
+     O feixe atravessa a tela da esquerda (hoje) para a direita (futuro). Quem
+     o apaga no caminho é a máscara de desconto aplicada no container — aqui só
+     existe deslocamento, para a animação rodar na composição. */
+  @keyframes light-travel {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(150vw, 0, 0); }
   }
-  @keyframes pv-breathe-b {
-    0%, 100% { opacity: 0; }
-    50%      { opacity: 1; }
+  .light-travel {
+    animation-name: light-travel;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
   }
-  .pv-breathe-a { animation: pv-breathe-a 26s ease-in-out infinite; }
-  .pv-breathe-b { animation: pv-breathe-b 26s ease-in-out infinite; }
 
   @media (prefers-reduced-motion: reduce) {
-    /* O componente já monta uma camada só nesse caso; isto é a rede de segurança
-       para quem alterna a preferência com a página aberta. */
-    .pv-breathe-a, .pv-breathe-b { animation: none; opacity: 1; }
+    .light-travel { animation: none; }
+  }
+
+  /* Transição entre rotas: o conteúdo chega, não pisca. Curto de propósito —
+     navegação é caminho, não destino; 260ms some na percepção e ainda tira a
+     dureza do corte. */
+  @keyframes route-in {
+    from { opacity: 0; transform: translate3d(0, 8px, 0); }
+    to   { opacity: 1; transform: none; }
+  }
+  .route-in { animation: route-in 260ms var(--ease-out-expo) both; }
+
+  /* Ao trocar de rota a corrente ganha um pulso curto de brilho e volta ao
+     repouso, como água mexida. É o mesmo elemento respondendo à navegação. */
+  @keyframes light-pulse {
+    0%   { opacity: .9; }
+    22%  { opacity: 1; }
+    100% { opacity: .9; }
+  }
+  .light-pulse { animation: light-pulse 900ms var(--ease-out-expo); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .route-in { animation-name: fade-only; animation-duration: var(--dur-state); }
+    .light-pulse { animation: none; }
   }
 }
