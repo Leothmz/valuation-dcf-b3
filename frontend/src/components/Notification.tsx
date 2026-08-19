@@ -38,7 +38,7 @@ export function NotificationProvider() {
       {toasts.map(toast => (
         <div
           key={toast.id}
-          className={`px-4 py-3 rounded-lg text-sm font-medium shadow-lg transition-all ${
+          className={`u-toast-in px-4 py-3 rounded-lg text-sm font-medium shadow-lg ${
             toast.type === 'success' ? 'bg-green text-bg-1' :
             toast.type === 'error' ? 'bg-red text-white' :
             'bg-amber text-bg-1'

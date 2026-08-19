@@ -25,8 +25,8 @@ export function EmptyState({ icon: Icon, title, description, action }: EmptyStat
       {action && (
         <button
           onClick={action.onClick}
-          className="mt-3 min-h-[44px] h-[42px] px-[18px] rounded-[10px] text-bg-0 font-semibold text-[13px]
-                     cursor-pointer border-none transition-all hover:opacity-90 hover:-translate-y-px"
+          className="u-lift mt-3 min-h-[44px] h-[42px] px-[18px] rounded-[10px] text-bg-0 font-semibold text-[13px]
+                     cursor-pointer border-none hover:opacity-90"
           style={{ background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' }}
         >
           {action.label}

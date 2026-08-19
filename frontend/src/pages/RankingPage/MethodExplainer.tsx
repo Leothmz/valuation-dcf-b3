@@ -61,7 +61,7 @@ export function MethodExplainer({ method }: MethodExplainerProps) {
         <div
           role="dialog"
           aria-label={info.title}
-          className="absolute right-0 top-full mt-2 z-40 w-[360px] rounded-[12px] border p-4"
+          className="u-layer-in absolute right-0 top-full mt-2 z-40 w-[360px] rounded-[12px] border p-4"
           style={{
             background: 'var(--color-bg-2)',
             borderColor: 'var(--color-bg-4)',
