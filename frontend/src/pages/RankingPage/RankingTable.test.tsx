@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { RankingTable } from './RankingTable'
 import type { RankedRow } from './index'
@@ -142,12 +143,14 @@ describe('RankingTable', () => {
     expect(onToggleCompare).toHaveBeenCalledWith('PETR4')
   })
 
-  it('disables unchecked checkboxes when maxCompare is reached', () => {
+  it('a seleção não trava em maxCompare — o limite virou do botão Comparar', () => {
+    // Antes o checkbox desabilitava ao atingir 3 selecionados. A seleção passou
+    // a servir também "Salvar tetos" e "Exportar CSV", onde 3 não faz sentido.
     const rows = [makeRow({ ticker: 'PETR4' }), makeRow({ ticker: 'VALE3', rank: 2 })]
-    renderTable(rows, { onToggleCompare: noop, compareSelection: ['VALE3', 'ITUB4'], maxCompare: 2 })
+    renderTable(rows, { onToggleCompare: noop, compareSelection: ['VALE3', 'ITUB4', 'BBAS3'], maxCompare: 3 })
     const checkboxes = screen.getAllByRole('checkbox')
-    expect(checkboxes[0]).toBeDisabled() // PETR4 not selected, limit reached
-    expect(checkboxes[1]).not.toBeDisabled() // VALE3 already selected, stays enabled
+    expect(checkboxes[0]).toBeEnabled()
+    expect(checkboxes[1]).toBeEnabled()
   })
 
   it('shows all table headers', () => {
@@ -156,5 +159,42 @@ describe('RankingTable', () => {
     expect(screen.getByText(/Cotação/i)).toBeInTheDocument()
     expect(screen.getByText(/DY/i)).toBeInTheDocument()
     expect(screen.getByText(/P\/L/i)).toBeInTheDocument()
+  })
+})
+
+describe('RankingTable — linha expandida', () => {
+  it('cada linha tem um botão de detalhe', () => {
+    renderTable([makeRow(), makeRow({ ticker: 'VALE3', rank: 2 })], { method: 'thomaz' })
+    expect(screen.getAllByRole('button', { name: /detalhe de/i })).toHaveLength(2)
+  })
+
+  it('o detalhe começa fechado', () => {
+    renderTable([makeRow()], { method: 'thomaz' })
+    expect(screen.queryByText(/por que este rank/i)).not.toBeInTheDocument()
+  })
+
+  it('expandir mostra faixa e atribuição sem navegar para a DCF', async () => {
+    const user = userEvent.setup()
+    renderTable([makeRow()], { method: 'thomaz' })
+    await user.click(screen.getByRole('button', { name: /detalhe de PETR4/i }))
+    expect(screen.getByText(/por que este rank/i)).toBeInTheDocument()
+    expect(screen.getByText(/preço teto · faixa dos métodos/i)).toBeInTheDocument()
+  })
+
+  it('o botão anuncia o estado', async () => {
+    const user = userEvent.setup()
+    renderTable([makeRow()], { method: 'thomaz' })
+    const botao = screen.getByRole('button', { name: /detalhe de PETR4/i })
+    expect(botao).toHaveAttribute('aria-expanded', 'false')
+    await user.click(botao)
+    expect(botao).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('abrir um detalhe fecha o anterior — uma linha por vez', async () => {
+    const user = userEvent.setup()
+    renderTable([makeRow(), makeRow({ ticker: 'VALE3', rank: 2 })], { method: 'thomaz' })
+    await user.click(screen.getByRole('button', { name: /detalhe de PETR4/i }))
+    await user.click(screen.getByRole('button', { name: /detalhe de VALE3/i }))
+    expect(screen.getAllByText(/por que este rank/i)).toHaveLength(1)
   })
 })

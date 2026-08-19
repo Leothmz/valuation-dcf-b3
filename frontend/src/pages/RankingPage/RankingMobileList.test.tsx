@@ -87,9 +87,9 @@ describe('RankingMobileList', () => {
 
   it('revela o detalhe ao expandir a linha', () => {
     setup()
-    expect(screen.queryByText('Preço Teto')).not.toBeInTheDocument()
+    expect(screen.queryByText(/preço teto · faixa dos métodos/i)).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'PETR4' }))
-    expect(screen.getByText('Preço Teto')).toBeInTheDocument()
+    expect(screen.getByText(/preço teto · faixa dos métodos/i)).toBeInTheDocument()
     expect(screen.getByText('P/L')).toBeInTheDocument()
     expect(screen.getByText('DY')).toBeInTheDocument()
     expect(screen.getByText('ROE')).toBeInTheDocument()
@@ -127,7 +127,7 @@ describe('RankingMobileList', () => {
     )
     fireEvent.keyDown(screen.getByRole('button', { name: 'Remover PETR4' }), { key: 'Enter' })
     // Sem stopPropagation no onKeyDown, o Enter borbulharia até a linha e a expandiria.
-    expect(screen.queryByText('Preço Teto')).not.toBeInTheDocument()
+    expect(screen.queryByText(/preço teto · faixa dos métodos/i)).not.toBeInTheDocument()
   })
 
   it('em modo comparar, mostra círculo de seleção e chama onToggleCompare', () => {
@@ -137,16 +137,20 @@ describe('RankingMobileList', () => {
     expect(onToggleCompare).toHaveBeenCalledWith('PETR4')
   })
 
-  it('em modo comparar, desabilita seleção de novos tickers ao atingir maxCompare', () => {
+  it('a seleção não tem teto: ela alimenta comparar, salvar tetos e exportar', () => {
+    // O limite de 3 é da tela de comparação e passou a viver no botão Comparar
+    // da barra flutuante — travar a seleção impedia exportar 20 linhas por causa
+    // de uma restrição que nem se aplica a exportar.
     const onToggleCompare = vi.fn()
     setup({
       compareMode: true,
-      compareSelection: ['ITUB4', 'VALE3'],
+      compareSelection: ['ITUB4', 'VALE3', 'BBAS3'],
       onToggleCompare,
-      maxCompare: 2,
     })
     const btn = screen.getByRole('button', { name: 'Selecionar PETR4 para comparar' })
-    expect(btn).toBeDisabled()
+    expect(btn).toBeEnabled()
+    fireEvent.click(btn)
+    expect(onToggleCompare).toHaveBeenCalledWith('PETR4')
   })
 
   it('sem compareMode, não mostra círculo de seleção', () => {

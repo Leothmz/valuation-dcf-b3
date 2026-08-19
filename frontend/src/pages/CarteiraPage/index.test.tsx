@@ -72,3 +72,24 @@ describe('CarteiraPage — FAB aciona o modal certo por aba (estado elevado, Tas
     expect(screen.queryByRole('button', { name: /Adicionar/ })).not.toBeInTheDocument()
   })
 })
+
+describe('CarteiraPage — estado vazio', () => {
+  it('a Visão Geral vazia oferece um CTA em vez de três cards zerados', () => {
+    render(<CarteiraPage />)
+    expect(screen.getByText('Nenhum ativo na carteira')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Registrar primeira operação' })).toBeInTheDocument()
+    // Os cards de conteúdo vazio saem de cena enquanto não há posição.
+    expect(screen.queryByText('ALOCAÇÃO POR CLASSE')).not.toBeInTheDocument()
+  })
+
+  it('o CTA leva para a aba Operações', () => {
+    render(<CarteiraPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar primeira operação' }))
+    expect(screen.getByRole('tab', { name: 'Operações' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('os KPIs continuam visíveis: são a moldura da página, não conteúdo', () => {
+    render(<CarteiraPage />)
+    expect(screen.getByText('Total Investido')).toBeInTheDocument()
+  })
+})

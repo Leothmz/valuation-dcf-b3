@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRankingStore } from '../../stores'
+import { useWatchlistStore } from '../../stores/watchlistStore'
 import { useBatchFundamentals } from '../../api/stocks'
 import type { FundamentalsData } from '../../api/stocks'
 import { B3_TICKERS } from '../../data/b3Tickers'
@@ -21,6 +22,10 @@ import { useIsMobile } from '../../hooks/useMediaQuery'
 import { FilterChips } from './FilterChips'
 import { RankingTable } from './RankingTable'
 import { RankingMobileList } from './RankingMobileList'
+import { MethodExplainer } from './MethodExplainer'
+import { buildBulkWatchlistEntries } from '../../engines/ranking-bulk-save'
+import { buildRankingCSV } from '../../engines/ranking-export'
+import { notify } from '../../components/Notification'
 
 const MAX_COMPARE = 3
 
@@ -58,7 +63,9 @@ export interface RankedRow extends StockData {
   fairPrice?: number | null
   bazinFairPrice: number | null
   grahamFairPrice: number | null
+  lynchFairPrice?: number | null
   lynchVal: number | null
+  savedFairPrice?: number | null
   joelVal: number | null
   setor?: string
   subsetor?: string
@@ -97,6 +104,8 @@ export function RankingPage() {
     setSortDir,
   } = useRankingStore()
 
+  const watchlistEntries = useWatchlistStore((st) => st.entries)
+  const saveToWatchlist = useWatchlistStore((st) => st.save)
   const navigate = useNavigate()
   const isMobile = useIsMobile()
   const [sectorTab, setSectorTab] = useState<SectorTab>('')
@@ -106,12 +115,37 @@ export function RankingPage() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [compareMode, setCompareMode] = useState(false)
 
+  // A seleção passou a servir três ações (comparar, salvar tetos, exportar) e
+  // deixou de ter teto de 3: o limite é da tela de comparação, não da seleção —
+  // travar em 3 impedia exportar 20 linhas por causa de uma restrição alheia.
   function toggleCompareSelection(ticker: string) {
     setCompareSelection((prev) =>
-      prev.includes(ticker)
-        ? prev.filter((t) => t !== ticker)
-        : prev.length < MAX_COMPARE ? [...prev, ticker] : prev
+      prev.includes(ticker) ? prev.filter((t) => t !== ticker) : [...prev, ticker]
     )
+  }
+
+  function handleBulkSave() {
+    const { entries, skipped } = buildBulkWatchlistEntries(rankedRows, compareSelection)
+    entries.forEach((e) => saveToWatchlist(e))
+    const salvos = entries.length
+    const parte1 = `${salvos} teto${salvos === 1 ? '' : 's'} salvo${salvos === 1 ? '' : 's'} em Meus Valuations`
+    const parte2 = skipped.length
+      ? ` · ${skipped.length} sem preço calculável (${skipped.join(', ')})`
+      : ''
+    notify(parte1 + parte2, salvos > 0 ? 'success' : 'warning')
+    setCompareSelection([])
+  }
+
+  function handleExportCSV() {
+    const selecionadas = rankedRows.filter((r) => compareSelection.includes(r.ticker))
+    const csv = buildRankingCSV(selecionadas, method)
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `ranking-${method}-${new Date().toISOString().slice(0, 10)}.csv`
+    anchor.click()
+    URL.revokeObjectURL(url)
   }
 
   function handleCompareGo() {
@@ -124,7 +158,7 @@ export function RankingPage() {
     [customTickers]
   )
 
-  const { data: rawStocks, isLoading } = useBatchFundamentals(allTickers)
+  const { data: rawStocks, isLoading, dataUpdatedAt } = useBatchFundamentals(allTickers)
 
   function handleAddTicker() {
     const t = newTicker.trim().toUpperCase()
@@ -186,8 +220,14 @@ export function RankingPage() {
       ...s,
       bazinFairPrice:  bazinScored[i]?.fairPrice ?? null,
       grahamFairPrice: grahamScored[i]?.fairPrice ?? null,
+      // calcLynchScore calcula fairPrice (LPA × crescimento × 100) e o valor era
+      // descartado: a coluna mostra o PEG. Ele é o terceiro preço da faixa.
+      lynchFairPrice:  lynchScored[i]?.fairPrice ?? null,
       lynchVal:        (lynchScored[i] as { _peg?: number | null })?._peg ?? null,
       joelVal:         (joelScored[i] as { _earningsYield?: number | null })?._earningsYield ?? null,
+      // Teto que o usuário salvou na DCF — o único preço da faixa que é opinião
+      // própria dele, e não de um método de terceiro.
+      savedFairPrice:  watchlistEntries[s.ticker]?.fairPrice ?? null,
       isCustom:        customTickers.includes(s.ticker),
     }))
 
@@ -206,7 +246,9 @@ export function RankingPage() {
     const rankedWithVals = ranked.map((s, i) => ({
       bazinFairPrice:  stocksWithVals[i]?.bazinFairPrice  ?? null,
       grahamFairPrice: stocksWithVals[i]?.grahamFairPrice ?? null,
+      lynchFairPrice:  stocksWithVals[i]?.lynchFairPrice  ?? null,
       lynchVal:        stocksWithVals[i]?.lynchVal        ?? null,
+      savedFairPrice:  stocksWithVals[i]?.savedFairPrice  ?? null,
       joelVal:         stocksWithVals[i]?.joelVal         ?? null,
       ...s,
     })) as (typeof stocksWithVals[0] & { score: number | null; fairPrice?: number | null })[]
@@ -241,7 +283,7 @@ export function RankingPage() {
     }
 
     return result
-  }, [rawStocks, method, filterConfig, weights, sortCol, sortDir, sectorTab, favorites, search, customTickers])
+  }, [rawStocks, method, filterConfig, weights, sortCol, sortDir, sectorTab, favorites, search, customTickers, watchlistEntries])
 
   function handleSort(col: string) {
     if (sortCol === col) {
@@ -254,7 +296,16 @@ export function RankingPage() {
 
   const totalLoaded = rawStocks?.length ?? 0
   const showing = rankedRows.length
-  const activeFilterCount = countActiveFilters(filterConfig)
+  // Setor conta junto: escondido dentro do painel, ele precisa aparecer no
+  // contador do botão, senão um filtro ativo fica invisível.
+  const activeControlCount = countActiveFilters(filterConfig) + (sectorTab !== '' ? 1 : 0)
+
+  // Fundamentos ficam 6h em cache e cotações 5min: sem dizer quando o dado foi
+  // buscado, "R$ 38,42" parece sempre de agora. Numa ferramenta de decisão de
+  // compra, há quanto tempo o preço é verdade é informação de primeira classe.
+  const updatedAtLabel = dataUpdatedAt
+    ? ` · atualizado às ${new Date(dataUpdatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+    : ''
 
   // Mesmo elemento reaproveitado no BottomSheet (mobile) e no painel fixo (desktop) —
   // evita duplicar o JSX de props idênticas nos dois lugares. Inclui também o
@@ -265,6 +316,43 @@ export function RankingPage() {
   // real em 375px mesmo depois do fix do Layout.tsx).
   const filterChipsEl = (
     <div className="flex flex-col gap-3">
+      {/* Ordenação mora com os filtros: no mobile ela ocupava uma faixa inteira
+          acima da lista, e é decisão eventual — não a cada varredura. */}
+      {isMobile && (
+      <div className="flex gap-2 items-end">
+        <div className="flex-1 min-w-0">
+          <label htmlFor="ranking-sort" className="block text-[11px] text-text-muted mb-1">
+            Ordenar por
+          </label>
+        <select
+          id="ranking-sort"
+          value={sortCol}
+          onChange={(e) => setSortCol(e.target.value)}
+          className="w-full min-h-[44px] rounded-[9px] border border-border px-3 text-[16px] text-text-base"
+          style={{ background: 'var(--color-bg-2)' }}
+        >
+          <option value="rank">Posição</option>
+          <option value="ticker">Ticker</option>
+          <option value="price">Cotação</option>
+          <option value="dy">DY</option>
+          <option value="pl">P/L</option>
+          <option value="roe">ROE</option>
+          <option value="margemLiquida">Margem Líquida</option>
+          <option value="dividaLiquidaEbit">DL/EBITDA</option>
+        </select>
+        </div>
+        <button
+          onClick={() => setSortDir(sortDir === 'desc' ? 'asc' : 'desc')}
+          aria-label={sortDir === 'desc' ? 'Ordem decrescente' : 'Ordem crescente'}
+          className="min-w-[44px] min-h-[44px] rounded-[9px] border border-border text-text-sec cursor-pointer"
+          style={{ background: 'var(--color-bg-2)' }}
+        >
+          {sortDir === 'desc' ? '↓' : '↑'}
+        </button>
+      </div>
+
+      )}
+
       <div className="flex items-center gap-2">
         <input
           type="text"
@@ -309,7 +397,36 @@ export function RankingPage() {
         onChange={setFilterConfig}
         onReset={resetFilterConfig}
       />
+
+      {/* Setor entra aqui em vez de ficar solto acima da tabela: é filtro, e
+          filtro mora com os outros filtros. Tirar essa faixa do fluxo principal
+          foi o que devolveu ~60px de altura antes da primeira linha de dado. */}
+      <div>
+        <div className="text-[11px] font-semibold text-text-muted tracking-[0.08em] uppercase mb-2">
+          Setor
+        </div>
+        <ScrollableTabs ariaLabel="Setor" fadeColor="var(--color-bg-2)" tabs={SECTOR_TABS} active={sectorTab} onSelect={setSectorTab} />
+      </div>
     </div>
+  )
+
+  const filtersButton = (
+    <button
+      onClick={() => setFiltersOpen((v) => !v)}
+      aria-expanded={filtersOpen}
+      className="flex items-center justify-between gap-3 min-h-[44px] px-3 rounded-[9px] border border-border text-[13px] text-text-sec cursor-pointer hover:border-cyan hover:text-cyan transition-colors"
+      style={{ background: 'var(--color-bg-2)' }}
+    >
+      Filtros
+      {activeControlCount > 0 && (
+        <span
+          className="rounded-full px-2 py-0.5 text-[10px] font-extrabold"
+          style={{ background: 'var(--color-cyan)', color: '#04121a' }}
+        >
+          {activeControlCount}
+        </span>
+      )}
+    </button>
   )
 
   return (
@@ -317,82 +434,55 @@ export function RankingPage() {
       {/* Hero header — só título + contador (Step 7 da Task 12). Adicionar ticker,
           chips de customs e busca migraram para fora daqui (ver filterChipsEl acima
           e a barra de busca abaixo, sempre visível nos dois viewports). */}
-      <div className="rounded-[16px] border border-border p-6">
-        <h1 className="text-[24px] font-bold text-text-base leading-tight">
+      {/* Hero enxuto: sem moldura e com tipos menores no mobile. A moldura de 16px
+          com p-6 custava ~48px de altura só em respiro, numa tela cujo conteúdo é
+          uma lista — o título não precisa de card. */}
+      <div className="md:rounded-[16px] md:border md:border-border md:p-6">
+        <h1 className="text-[19px] md:text-[24px] font-bold text-text-base leading-tight">
           Ranking de Ações · B3
         </h1>
-        <p className="text-[13px] text-text-muted mt-1 mb-5">
+        <p
+          className="text-[12px] md:text-[13px] text-text-muted mt-0.5 mb-3 md:mb-5"
+          title="Fundamentos: yfinance com fallback brapi, cache de 6h. Cotações: cache de 5 min."
+        >
           {isLoading
             ? `Carregando ${allTickers.length} tickers…`
-            : `${totalLoaded} tickers carregados · exibindo ${showing}`}
+            : `${totalLoaded} tickers carregados · exibindo ${showing}${updatedAtLabel} · fonte yfinance`}
         </p>
 
-        {/* Method tabs — pills fixas no desktop, faixa rolável no mobile */}
-        <ScrollableTabs ariaLabel="Método de ranking" tabs={METHOD_TABS} active={method} onSelect={setMethod} />
+        {/* Method tabs — pills fixas no desktop, faixa rolável no mobile.
+            O explicador fica ao lado do tablist, não dentro das pills: botão
+            dentro de role="tab" quebraria o roving tabindex do ScrollableTabs. */}
+        <div className="flex items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <ScrollableTabs ariaLabel="Método de ranking" tabs={METHOD_TABS} active={method} onSelect={setMethod} />
+          </div>
+          <div className="shrink-0">
+            <MethodExplainer method={method} />
+          </div>
+        </div>
       </div>
 
       {/* Busca — decisão de UX (Task 23): diferente do "Adicionar ticker" (ação
           eventual, foi para dentro do sheet de Filtros), buscar é ação frequente;
           fica sempre visível nos dois viewports em vez de atrás de um toque extra
-          no botão Filtros. */}
-      <input
-        type="text"
-        className="w-full rounded-[10px] border border-border bg-bg-3 text-text-base text-[15px] md:text-[13px] px-[14px] py-[9px] md:py-[7px] outline-none placeholder-text-muted focus:border-cyan"
-        placeholder="Buscar ticker ou empresa…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        aria-label="Buscar ticker ou empresa"
-      />
-
-      {/* Mobile toolbar: ordenação + filtros + comparar */}
-      {/* O select sozinho mostrava só "Posição", sem dizer que era o critério de
-          ordenação — o rótulo visível tira a adivinhação (e vira <label> de verdade). */}
-      <div className="md:hidden flex gap-2 items-end">
-        <div className="flex-1 min-w-0">
-          <label htmlFor="ranking-sort" className="block text-[11px] text-text-muted mb-1">
-            Ordenar por
-          </label>
-        <select
-          id="ranking-sort"
-          value={sortCol}
-          onChange={(e) => setSortCol(e.target.value)}
-          className="w-full min-h-[44px] rounded-[9px] border border-border px-3 text-[16px] text-text-base"
-          style={{ background: 'var(--color-bg-2)' }}
-        >
-          <option value="rank">Posição</option>
-          <option value="ticker">Ticker</option>
-          <option value="price">Cotação</option>
-          <option value="dy">DY</option>
-          <option value="pl">P/L</option>
-          <option value="roe">ROE</option>
-          <option value="margemLiquida">Margem Líquida</option>
-          <option value="dividaLiquidaEbit">DL/EBITDA</option>
-        </select>
-        </div>
-        <button
-          onClick={() => setSortDir(sortDir === 'desc' ? 'asc' : 'desc')}
-          aria-label={sortDir === 'desc' ? 'Ordem decrescente' : 'Ordem crescente'}
-          className="min-w-[44px] min-h-[44px] rounded-[9px] border border-border text-text-sec cursor-pointer"
-          style={{ background: 'var(--color-bg-2)' }}
-        >
-          {sortDir === 'desc' ? '↓' : '↑'}
-        </button>
+          no botão Filtros. No desktop divide a linha com o botão Filtros. */}
+      <div className="flex gap-2 items-center">
+        <input
+          type="text"
+          className="flex-1 min-w-0 rounded-[10px] border border-border bg-bg-3 text-text-base text-[15px] md:text-[13px] px-[14px] py-[9px] md:py-[7px] outline-none placeholder-text-muted focus:border-cyan"
+          placeholder="Buscar ticker ou empresa…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Buscar ticker ou empresa"
+        />
+        {!isMobile && filtersButton}
       </div>
 
-      <div className="md:hidden flex gap-2">
-        <button
-          onClick={() => setFiltersOpen(true)}
-          className="flex-1 flex items-center justify-between min-h-[44px] px-3 rounded-[9px] border border-border text-[13px] text-text-sec cursor-pointer"
-          style={{ background: 'var(--color-bg-2)' }}
-        >
-          Filtros
-          {activeFilterCount > 0 && (
-            <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold"
-                  style={{ background: 'var(--color-cyan)', color: '#04121a' }}>
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
+
+      {isMobile && (
+      <div className="flex gap-2">
+        <div className="flex-1 flex [&>button]:w-full">{filtersButton}</div>
         <button
           onClick={() => setCompareMode((v) => !v)}
           aria-pressed={compareMode}
@@ -406,26 +496,32 @@ export function RankingPage() {
           Comparar
         </button>
       </div>
+      )}
 
-      {/* Filter chips — uma instância só: dentro do BottomSheet no mobile, no painel fixo
-          no desktop. Nunca as duas montadas ao mesmo tempo (evita duplicata no DOM). */}
+      {/* Filter chips — uma instância só: dentro do BottomSheet no mobile, no painel
+          colapsável no desktop. Nunca as duas montadas ao mesmo tempo. */}
       {isMobile ? (
         <BottomSheet isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtros">
           {filterChipsEl}
         </BottomSheet>
       ) : (
-        <div
-          className="rounded-[12px] border border-border px-4 py-3"
-          style={{ background: 'var(--color-bg-2)' }}
-        >
-          {filterChipsEl}
-        </div>
+        <>
+          {/* No desktop o painel era fixo e sempre aberto: com o hero, a busca, os
+              11 chips, o "adicionar ticker" e a faixa de setores, a primeira linha
+              de dado só começava a ~460px de altura em 1440x900 (≈8 linhas visíveis).
+              Agora ele responde ao botão que divide a linha com a busca. */}
+          {filtersOpen && (
+            <div
+              className="rounded-[12px] border border-border px-4 py-3"
+              style={{ background: 'var(--color-bg-2)' }}
+            >
+              {filterChipsEl}
+            </div>
+          )}
+        </>
       )}
 
-      {/* Sector tabs + lista/tabela */}
       <div>
-        <ScrollableTabs ariaLabel="Setor" tabs={SECTOR_TABS} active={sectorTab} onSelect={setSectorTab} />
-
         {/* Montagem condicional (não CSS): lista compacta OU tabela, nunca as duas ao mesmo
             tempo — evita renderizar ~centenas de linhas em dobro e duplicatas no DOM. */}
         {isMobile ? (
@@ -454,6 +550,7 @@ export function RankingPage() {
               compareSelection={compareSelection}
               onToggleCompare={toggleCompareSelection}
               maxCompare={MAX_COMPARE}
+              method={method}
             />
           </div>
         )}
@@ -469,11 +566,28 @@ export function RankingPage() {
           </span>
           <button
             onClick={handleCompareGo}
-            disabled={compareSelection.length < 2}
+            disabled={compareSelection.length < 2 || compareSelection.length > MAX_COMPARE}
+            title={compareSelection.length > MAX_COMPARE ? `Comparar aceita no máximo ${MAX_COMPARE} tickers` : undefined}
             className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
             style={{ background: 'var(--color-cyan-dim)', color: 'var(--color-cyan)', border: '1px solid var(--color-border-glow)' }}
           >
             Comparar
+          </button>
+          {/* Salvar e exportar não têm limite de 3: o teto de comparação é da
+              tela de comparar, não da seleção. */}
+          <button
+            onClick={handleBulkSave}
+            className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer border border-border text-text-sec hover:text-text-base hover:border-cyan transition-colors"
+            style={{ background: 'none' }}
+          >
+            Salvar tetos
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer border border-border text-text-sec hover:text-text-base hover:border-cyan transition-colors"
+            style={{ background: 'none' }}
+          >
+            Exportar CSV
           </button>
           <button
             onClick={() => setCompareSelection([])}

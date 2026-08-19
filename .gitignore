@@ -27,6 +27,8 @@ node_modules/
 CLAUDE.md
 .superpowers/
 docs/superpowers/
+.agents/
+skills-lock.json
 
 # OS
 .DS_Store

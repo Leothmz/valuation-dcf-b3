@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-18T00:00:00.000Z",
+  "title": "Design System: Valuation DCF · B3",
+  "extensions": {
+    "colorMeta": {
+      "cyan": {
+        "role": "primary",
+        "displayName": "Cyan de Instrumento",
+        "canonical": "#06b6d4",
+        "tonalRamp": ["#062a31", "#083f49", "#0a5563", "#0b6b7d", "#0891b2", "#06b6d4", "#3fcbe0", "#8ee2ef"]
+      },
+      "cyan-deep": {
+        "role": "primary",
+        "displayName": "Cyan Profundo",
+        "canonical": "#0891b2",
+        "tonalRamp": ["#05222a", "#063440", "#084655", "#09586b", "#0a7593", "#0891b2", "#2aaecd", "#7fd3e6"]
+      },
+      "green": {
+        "role": "secondary",
+        "displayName": "Verde de Confirmação",
+        "canonical": "#10b981",
+        "tonalRamp": ["#052e21", "#06452f", "#075c3e", "#08734d", "#059669", "#10b981", "#4bd3a4", "#98e8ca"]
+      },
+      "red": {
+        "role": "secondary",
+        "displayName": "Vermelho de Alerta",
+        "canonical": "#ef4444",
+        "tonalRamp": ["#3b0d0d", "#571313", "#731919", "#8f2020", "#c62f2f", "#ef4444", "#f47c7c", "#f9b4b4"]
+      },
+      "amber": {
+        "role": "secondary",
+        "displayName": "Âmbar de Intervenção",
+        "canonical": "#f59e0b",
+        "tonalRamp": ["#3d2703", "#5a3a05", "#774d07", "#946009", "#d97706", "#f59e0b", "#f8bd55", "#fbdb9f"]
+      },
+      "purple": {
+        "role": "tertiary",
+        "displayName": "Roxo de FII",
+        "canonical": "#8b5cf6",
+        "tonalRamp": ["#231640", "#33205e", "#432b7c", "#53359a", "#7141e8", "#8b5cf6", "#b193f9", "#d5c6fc"]
+      },
+      "rose": {
+        "role": "tertiary",
+        "displayName": "Rosa de Apoio",
+        "canonical": "#f43f5e",
+        "tonalRamp": ["#3d0f18", "#5a1624", "#771d30", "#94243c", "#c62f4d", "#f43f5e", "#f8798e", "#fbb2bf"]
+      },
+      "bg-0": {
+        "role": "neutral",
+        "displayName": "Poço",
+        "canonical": "#060910",
+        "tonalRamp": ["#060910", "#0b0f17", "#111827", "#1a2233", "#1f2a3f", "#2b3a52", "#4a5568", "#94a3b8"]
+      },
+      "bg-1": { "role": "neutral", "displayName": "Base do App", "canonical": "#0b0f17" },
+      "bg-2": { "role": "neutral", "displayName": "Superfície de Card", "canonical": "#111827" },
+      "bg-3": { "role": "neutral", "displayName": "Superfície Elevada", "canonical": "#1a2233" },
+      "bg-4": { "role": "neutral", "displayName": "Realce", "canonical": "#1f2a3f" },
+      "border": { "role": "neutral", "displayName": "Borda", "canonical": "#1e2d42" },
+      "border-muted": { "role": "neutral", "displayName": "Borda Discreta", "canonical": "#151e2d" },
+      "text-base": { "role": "neutral", "displayName": "Texto Base", "canonical": "#f0f4f8" },
+      "text-sec": { "role": "neutral", "displayName": "Texto Secundário", "canonical": "#94a3b8" },
+      "text-muted": { "role": "neutral", "displayName": "Texto Discreto", "canonical": "#4a5568" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "O preço teto. Uma vez por tela, mono 40px em ciano — o único número desse tamanho no app." },
+      "headline": { "displayName": "Headline", "purpose": "Título de modal e de seção principal." },
+      "title": { "displayName": "Title", "purpose": "Título de card, título de rota no header mobile, valor em destaque de DataCard." },
+      "body": { "displayName": "Body", "purpose": "Tamanho dominante (13px): descrição, rótulo de campo, texto de tabela, item de navegação." },
+      "data": { "displayName": "Data", "purpose": "Todo valor numérico auditável, em JetBrains Mono. 16px no mobile para bloquear o zoom do iOS." },
+      "label": { "displayName": "Label", "purpose": "Cabeçalho de tabela e eyebrow de card. Único uso de caixa alta no sistema." }
+    },
+    "shadows": [
+      { "name": "flutuante", "value": "0 8px 32px rgba(0,0,0,.6)", "purpose": "Modais centrados (boas-vindas, atalhos de teclado)." },
+      { "name": "suspenso", "value": "0 14px 34px -10px rgba(0,0,0,.9)", "purpose": "Popover ancorado (seletor de ranking na bottom nav)." },
+      { "name": "assentado", "value": "0 4px 16px rgba(0,0,0,.5)", "purpose": "Container da tabela de ranking — única superfície não-flutuante com sombra." },
+      { "name": "halo-busca", "value": "0 0 40px rgba(6,182,212,0.1), 0 25px 50px rgba(0,0,0,0.5)", "purpose": "Paleta de busca global (Ctrl+K)." },
+      { "name": "halo-resultado", "value": "0 0 20px rgba(6,182,212,0.15)", "purpose": "Card de preço teto, e só ele." },
+      { "name": "halo-podio", "value": "0 0 12px rgba(16,185,129,.4)", "purpose": "Medalhas de 1º/2º/3º no ranking, na cor da posição." },
+      { "name": "realce-acao", "value": "0 2px 8px rgba(6,182,212,0.2)", "purpose": "Botão primário; vira verde quando o valuation está salvo." },
+      { "name": "foco-input", "value": "0 0 0 2px rgba(6,182,212,0.08)", "purpose": "Anel de foco do input, junto da borda ciano." }
+    ],
+    "motion": [
+      { "name": "cor", "value": "150ms", "purpose": "Transição padrão de cor (hover de nav, item de lista, botão-ícone)." },
+      { "name": "acao", "value": "200ms", "purpose": "Botões e elevação no hover (transform, box-shadow, border-color)." },
+      { "name": "shell", "value": "220ms ease-in-out", "purpose": "Largura da sidebar, fade dos rótulos e deslize da gaveta mobile." },
+      { "name": "shimmer", "value": "1.8s infinite", "purpose": "Skeleton de carregamento (gradiente varrendo bg-3 → bg-4 → bg-3)." },
+      { "name": "heartbeat", "value": "2.4s ease-in-out infinite", "purpose": "Pulso do coração em 'Apoiar o Projeto'. Desligado sob prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botão Primário",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "A única ação principal da tela. Gradiente ciano, texto quase preto, sobe 1px no hover.",
+      "html": "<button class=\"ds-btn-primary\">Salvar Preço Teto</button>",
+      "css": ".ds-btn-primary { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: var(--color-bg-0, #060910); font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 600; height: 42px; padding: 0 18px; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 2px 8px rgba(6,182,212,0.2); transition: transform 200ms, opacity 200ms; } .ds-btn-primary:hover { opacity: .9; transform: translateY(-1px); } .ds-btn-primary:focus-visible { outline: 2px solid #06b6d4; outline-offset: 2px; }"
+    },
+    {
+      "name": "Botão Fantasma",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Ação secundária: borda de 1px e nada mais até o hover.",
+      "html": "<button class=\"ds-btn-ghost\">Pular</button>",
+      "css": ".ds-btn-ghost { background: none; color: var(--color-text-sec, #94a3b8); font-family: 'Inter', system-ui, sans-serif; font-size: 13px; height: 42px; padding: 0 18px; border: 1px solid var(--color-border, #1e2d42); border-radius: 10px; cursor: pointer; transition: background 150ms, color 150ms; } .ds-btn-ghost:hover { background: var(--color-bg-3, #1a2233); color: var(--color-text-base, #f0f4f8); } .ds-btn-ghost:focus-visible { outline: 2px solid #06b6d4; outline-offset: 2px; }"
+    },
+    {
+      "name": "Pill de Aba",
+      "kind": "chip",
+      "refersTo": "tab-pill",
+      "description": "Aba do ScrollableTabs: faixa rolável no mobile, flex-wrap no desktop. Ativa em ciano a 15%.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\" aria-label=\"Métodos\"><button class=\"ds-tab ds-tab-active\" role=\"tab\" aria-selected=\"true\" tabindex=\"0\">Thomaz</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">Bazin</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">Graham</button></div>",
+      "css": ".ds-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; } .ds-tabs::-webkit-scrollbar { display: none; } .ds-tab { flex-shrink: 0; min-height: 44px; min-width: 44px; padding: 0 16px; border-radius: 9999px; font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; background: var(--color-bg-3, #1a2233); color: var(--color-text-sec, #94a3b8); border: 1px solid var(--color-border, #1e2d42); transition: background 150ms, color 150ms, border-color 150ms; } .ds-tab-active { background: rgba(6,182,212,.15); color: var(--color-cyan, #06b6d4); border-color: rgba(6,182,212,.4); } .ds-tab:focus-visible { outline: 2px solid #06b6d4; outline-offset: 2px; }"
+    },
+    {
+      "name": "Campo de Premissa",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Input numérico da calculadora: mono alinhado à direita, borda transparente em repouso, ciano no foco. A variante âmbar marca valor sobrescrito pelo usuário.",
+      "html": "<div class=\"ds-field-row\"><span class=\"ds-field-label\">ROE</span><input class=\"ds-input\" value=\"18,40\" inputmode=\"decimal\" aria-label=\"ROE\"><input class=\"ds-input ds-input-override\" value=\"12,00\" inputmode=\"decimal\" aria-label=\"Payout (sobrescrito)\"></div>",
+      "css": ".ds-field-row { display: flex; align-items: center; gap: 8px; } .ds-field-label { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 500; color: var(--color-text-base, #f0f4f8); } .ds-input { background: var(--color-bg-3, #1a2233); color: var(--color-text-base, #f0f4f8); font-family: 'JetBrains Mono', monospace; font-size: 13px; text-align: right; min-width: 56px; padding: 6px 8px; border: 1px solid transparent; border-radius: 6px; outline: none; transition: border-color 150ms, box-shadow 150ms; } .ds-input:focus { border-color: var(--color-cyan, #06b6d4); box-shadow: 0 0 0 2px rgba(6,182,212,0.08); } .ds-input-override { border-color: var(--color-amber, #f59e0b); background: rgba(245,158,11,0.05); }"
+    },
+    {
+      "name": "Card de Preço Teto",
+      "kind": "custom",
+      "refersTo": "card-surface",
+      "description": "A assinatura do produto: eyebrow em label maiúsculo, preço em mono 40px ciano, upside em pill verde/vermelha com sinal explícito.",
+      "html": "<div class=\"ds-fairprice\"><div class=\"ds-eyebrow\">Preço Teto · Valor Intrínseco</div><div class=\"ds-fairprice-value\">R$ 42,17</div><div class=\"ds-fairprice-alt\">Clássico FCD: R$ 38,90</div><div class=\"ds-fairprice-foot\"><span class=\"ds-upside\">+18,42%</span><span class=\"ds-fairprice-note\">vs. preço atual</span></div></div>",
+      "css": ".ds-fairprice { background: linear-gradient(to bottom right, rgba(6,182,212,0.06), rgba(6,182,212,0.02)); border: 1px solid rgba(6,182,212,0.2); border-radius: 14px; padding: 18px; box-shadow: 0 0 20px rgba(6,182,212,0.15); } .ds-eyebrow { font-family: 'Inter', system-ui, sans-serif; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--color-text-muted, #4a5568); margin-bottom: 6px; } .ds-fairprice-value { font-family: 'JetBrains Mono', monospace; font-size: 40px; font-weight: 700; color: var(--color-cyan, #06b6d4); margin: 6px 0; } .ds-fairprice-alt { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; color: var(--color-text-muted, #4a5568); margin-bottom: 4px; } .ds-fairprice-foot { display: flex; align-items: center; gap: 8px; } .ds-upside { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; padding: 4px 14px; border-radius: 9999px; background: rgba(16,185,129,0.12); color: var(--color-green, #10b981); border: 1px solid rgba(16,185,129,0.25); } .ds-fairprice-note { font-family: 'Inter', system-ui, sans-serif; font-size: 11px; color: var(--color-text-muted, #4a5568); }"
+    },
+    {
+      "name": "DataCard",
+      "kind": "card",
+      "refersTo": "card-surface",
+      "description": "Substitui a tabela inteira no mobile (Padrão B): um card por linha, rótulo à esquerda e valor mono à direita. Borda muda de cor quando o dado muda de estado.",
+      "html": "<div class=\"ds-datacard\"><div class=\"ds-datacard-head\"><span class=\"ds-datacard-title\">PETR4</span><span class=\"ds-badge-green\">Faixa de compra</span></div><div class=\"ds-datacard-row\"><span class=\"ds-datacard-label\">Cotação</span><span class=\"ds-datacard-value\">R$ 38,42</span></div><div class=\"ds-datacard-row\"><span class=\"ds-datacard-label\">Preço teto</span><span class=\"ds-datacard-value ds-emph\">R$ 42,17</span></div></div>",
+      "css": ".ds-datacard { background: var(--color-bg-2, #111827); border: 1px solid rgba(16,185,129,.4); border-radius: 11px; padding: 12px; } .ds-datacard-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; } .ds-datacard-title { font-family: 'Inter', system-ui, sans-serif; font-size: 14px; font-weight: 700; color: var(--color-text-base, #f0f4f8); } .ds-badge-green { font-family: 'Inter', system-ui, sans-serif; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; background: rgba(16,185,129,0.12); color: var(--color-green, #10b981); border: 1px solid rgba(16,185,129,0.25); } .ds-datacard-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 4px 0; } .ds-datacard-label { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; color: var(--color-text-sec, #94a3b8); } .ds-datacard-value { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--color-text-base, #f0f4f8); text-align: right; } .ds-emph { font-size: 16px; font-weight: 700; }"
+    },
+    {
+      "name": "Item de Navegação",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Item da sidebar: ícone 16px + rótulo 13px. Ativo com texto ciano, fundo cyan-dim e barra esquerda de 2px.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item ds-nav-item-active\" href=\"#\" aria-current=\"page\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"2\" width=\"16\" height=\"20\" rx=\"2\"/><line x1=\"8\" y1=\"6\" x2=\"16\" y2=\"6\"/><line x1=\"8\" y1=\"14\" x2=\"8\" y2=\"14\"/><line x1=\"12\" y1=\"14\" x2=\"12\" y2=\"14\"/><line x1=\"16\" y1=\"14\" x2=\"16\" y2=\"14\"/></svg><span>Calculadora</span></a><a class=\"ds-nav-item\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z\"/></svg><span>Meus Valuations</span></a></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 4px; padding: 8px; background: rgba(11,15,23,0.95); border-right: 1px solid var(--color-border, #1e2d42); width: 224px; } .ds-nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; color: var(--color-text-sec, #94a3b8); transition: background 150ms, color 150ms; } .ds-nav-item:hover { background: var(--color-bg-3, #1a2233); color: var(--color-text-base, #f0f4f8); } .ds-nav-item-active { color: var(--color-cyan, #06b6d4); background: rgba(6,182,212,0.12); border-left: 2px solid var(--color-cyan, #06b6d4); }"
+    },
+    {
+      "name": "Badge de Pódio",
+      "kind": "custom",
+      "refersTo": "button-primary",
+      "description": "Posição no ranking: gradiente + glow na cor da colocação para o top 3, número discreto do 4º em diante.",
+      "html": "<div class=\"ds-podium\"><span class=\"ds-rank ds-rank-1\">1</span><span class=\"ds-rank ds-rank-2\">2</span><span class=\"ds-rank ds-rank-3\">3</span><span class=\"ds-rank ds-rank-rest\">4</span></div>",
+      "css": ".ds-podium { display: flex; gap: 8px; align-items: center; } .ds-rank { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: #fff; } .ds-rank-1 { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 0 12px rgba(16,185,129,.4); } .ds-rank-2 { background: linear-gradient(135deg, #06b6d4, #0891b2); box-shadow: 0 0 12px rgba(6,182,212,.3); } .ds-rank-3 { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 0 12px rgba(245,158,11,.3); } .ds-rank-rest { background: none; color: var(--color-text-muted, #4a5568); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Laboratório de Valuation",
+    "overview": "Este não é um app que mostra números — é uma bancada onde o usuário gira botões e vê o resultado recalcular. A premissa (ROE, payout, taxa de desconto, perpetuidade) é o instrumento; o preço teto é a leitura. Toda a linguagem visual existe para separar essas duas coisas com clareza absoluta: ciano é o que a máquina calculou, âmbar é o que a mão humana mexeu, e o resto do sistema fica calado.\n\nA superfície é escura por decisão permanente, não por moda: cinco níveis de fundo empilhados (#060910 → #1f2a3f) fazem o trabalho que sombras fariam num tema claro, e uma borda de 1px (#1e2d42) separa o que a camada tonal não separa sozinha. Densidade é alta e intencional — 13px é o tamanho de corpo dominante, tabelas chegam a 12 colunas, e nenhum espaço em branco existe só para \"respirar\". O usuário veio decidir uma compra, não contemplar layout.\n\nComponentes têm presença física: o botão primário carrega gradiente ciano e sobe 1px no hover, cards de resultado brilham baixo, o pódio do ranking tem medalha com glow. Mas essa presença é rara e posicional — vale para a ação principal e para o número principal da tela. Um botão secundário é uma borda de 1px e nada mais.",
+    "keyCharacteristics": [
+      "Dark-only permanente — não existe tema claro, e a paleta de frontend/src/index.css é a fonte única",
+      "Cor é semântica antes de ser estética: ciano = resultado, verde = confirmação/alta, vermelho = alerta/baixa, âmbar = intervenção manual, roxo = território FII",
+      "Duas famílias tipográficas com fronteira rígida: Inter para interface, JetBrains Mono para todo número auditável",
+      "Profundidade por camada tonal; sombra é exceção reservada ao que flutua de verdade",
+      "Mobile-first real (390px), com montagem condicional de árvore em vez de CSS escondendo duas",
+      "Alvo de toque mínimo 44×44px em toda superfície interativa do mobile"
+    ],
+    "rules": [
+      { "name": "A Regra do Âmbar", "body": "Âmbar significa uma coisa só: o usuário sobrescreveu este valor. Nunca use âmbar como cor de destaque, de gráfico ou de call-to-action. Quando um campo fica âmbar, o botão de restaurar precisa existir ao lado dele.", "section": "colors" },
+      { "name": "A Regra do Sinal", "body": "Verde e vermelho são direção de valor (subiu/desceu, lucro/prejuízo, dentro/fora da faixa) ou estado de sistema (sucesso/erro). Nunca são preenchimento decorativo nem paleta de gráfico categórico.", "section": "colors" },
+      { "name": "A Regra do 12%", "body": "Todo acento tem uma variante -dim a 12% de opacidade sobre fundo escuro. Fundo de acento sempre usa a -dim; o hex sólido é reservado a texto, ícone, borda e à única ação primária da tela.", "section": "colors" },
+      { "name": "A Regra do Mono", "body": "Se o usuário pode comparar, somar ou auditar o valor, ele vem em JetBrains Mono. Se ele só lê, vem em Inter. Nunca aplique mono em frase corrida — o app não é um terminal retrô.", "section": "typography" },
+      { "name": "A Regra do Rótulo Maiúsculo", "body": "Caixa alta existe apenas no papel Label (11px, semibold, tracking ≥0.08em, cor discreta). Título, botão e valor nunca são maiúsculos.", "section": "typography" },
+      { "name": "A Regra do Dígito Inteiro", "body": "Valor monetário nunca é truncado com reticências. Em tela estreita, reduza o tamanho da fonte antes de cortar qualquer dígito — número cortado num app de valuation é risco de leitura errada, e no mobile não existe hover para revelar o resto.", "section": "typography" },
+      { "name": "A Regra do min-w-0", "body": "Todo ancestral em fluxo de uma faixa rolável precisa de min-w-0 até a raiz do layout. Item de flex e de grid tem min-width: auto por padrão e não encolhe abaixo do min-content dos filhos — sem min-w-0 o overflow-x-auto nunca engata e a faixa vaza para document.documentElement.scrollWidth. Teste: em 390px, scrollWidth tem que ser exatamente 390.", "section": "layout" },
+      { "name": "A Regra da Árvore Única", "body": "Quando mobile e desktop renderizam estruturas diferentes, quem escolhe é o hook useIsMobile() — nunca hidden md:block / md:hidden. CSS esconde, mas monta as duas árvores no DOM: texto duplicado, role duplicado e queries de teste estourando.", "section": "layout" },
+      { "name": "A Regra dos 44px", "body": "Toda superfície interativa do mobile tem no mínimo 44×44px. Linha expansível usa 52px; item de bottom nav, 56px.", "section": "layout" },
+      { "name": "A Regra do Plano em Repouso", "body": "Card, linha, painel e input não têm sombra. Se você quer separar duas superfícies, suba um nível tonal (bg-2 → bg-3) ou coloque uma borda. Sombra é resposta a flutuar, não a existir.", "section": "elevation" },
+      { "name": "A Regra do Glow Escasso", "body": "Glow colorido marca o número principal da tela e o topo do ranking. Se uma tela tiver mais de dois elementos com glow, um deles está errado.", "section": "elevation" },
+      { "name": "A Regra do Raio Crescente", "body": "Quanto maior a superfície, maior o raio: 6px input, 8px badge, 10px botão e linha, 14px card e tabela, 20px modal, full para pill.", "section": "shapes" },
+      { "name": "A Regra da Borda Semântica", "body": "Quando um card muda de borda para verde/âmbar/vermelho, é porque o dado mudou de estado — não porque está em hover ou selecionado. Seleção usa fundo -dim + cor de texto.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do usar useIsMobile() para escolher qual árvore montar quando mobile e desktop têm estruturas diferentes; CSS só para diferença de estilo.",
+      "Do garantir min-w-0 em todo ancestral em fluxo de uma faixa rolável, e verificar em 390px que document.documentElement.scrollWidth === 390.",
+      "Do aplicar mono (JetBrains) em todo valor que o usuário compara, soma ou audita — e só nele.",
+      "Do reservar âmbar para valor sobrescrito pelo usuário, sempre acompanhado do botão de restaurar.",
+      "Do dar 44×44px mínimos a qualquer alvo de toque no mobile.",
+      "Do implementar o contrato completo de teclado (setas, Home/End, roving tabindex) sempre que usar role=\"tab\".",
+      "Do desenhar o estado de dado ausente (— em text-muted) como estado de primeira classe: as fontes públicas caem e campo vazio é rotina, não bug.",
+      "Do usar a variante -dim (12%) para qualquer fundo de acento; o hex sólido fica para texto, ícone, borda e a única ação primária da tela.",
+      "Do manter uma só ação primária com gradiente por tela."
+    ],
+    "donts": [
+      "Don't virar dashboard genérico de admin: card sem hierarquia, KPI tile enfileirado sem prioridade, gráfico decorativo que ninguém lê. Toda tela tem um número principal — deixe claro qual é.",
+      "Don't virar planilha crua: tudo em um tamanho de fonte só, linha zebrada, cor sem significado. Densidade alta é bem-vinda; densidade plana não.",
+      "Don't virar terminal retrô: nada de verde-fósforo, scanline, ASCII decorativo ou mono aplicado a texto corrido. O ciano é frio e limpo, não nostálgico.",
+      "Don't introduzir tema claro, nem prefers-color-scheme — dark-only é compromisso de produto, e index.css é a fonte única da paleta.",
+      "Don't truncar valor monetário com reticências; reduza a fonte antes.",
+      "Don't colocar sombra em card, linha ou input em repouso — suba um nível tonal ou use borda.",
+      "Don't usar verde/vermelho como paleta de gráfico categórico ou preenchimento decorativo; eles significam direção de valor.",
+      "Don't esconder árvore mobile e desktop com hidden md:block / md:hidden quando as duas contêm o mesmo texto ou role.",
+      "Don't ter mais de dois elementos com glow colorido na mesma tela."
+    ]
+  }
+}

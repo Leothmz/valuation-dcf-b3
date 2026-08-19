@@ -1,64 +1,82 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { CompareTable } from './CompareTable'
 import type { CompareRow } from './CompareTable'
 
-function makeRows(): CompareRow[] {
-  return [
-    {
-      label: 'DY',
-      cells: [
-        { value: '8,00%', highlight: 'best' },
-        { value: '4,00%', highlight: 'worst' },
-      ],
-    },
-    {
-      label: 'Cotação',
-      cells: [
-        { value: 'R$ 35,50', highlight: null },
-        { value: 'R$ 60,00', highlight: null },
-      ],
-    },
-  ]
+const rows: CompareRow[] = [
+  {
+    label: 'DY',
+    cells: [
+      { value: '6,99%', highlight: 'worst' },
+      { value: '7,85%', highlight: null },
+      { value: '9,04%', highlight: 'best' },
+    ],
+  },
+  {
+    label: 'P/L',
+    cells: [
+      { value: '4,1', highlight: 'best' },
+      { value: '27,4', highlight: 'worst' },
+      { value: '9,1', highlight: null },
+    ],
+  },
+]
+
+function renderTable() {
+  return render(
+    <CompareTable tickers={['PETR4', 'VALE3', 'ITUB4']} rows={rows} isLoading={false} />
+  )
 }
 
-describe('CompareTable', () => {
-  it('shows loading message', () => {
-    render(<CompareTable tickers={['PETR4', 'VALE3']} rows={[]} isLoading={true} />)
-    expect(screen.getByText(/Carregando dados/i)).toBeInTheDocument()
+describe('CompareTable — realce', () => {
+  it('marca a melhor célula de cada linha de forma acessível', () => {
+    renderTable()
+    expect(screen.getAllByLabelText('Melhor valor da linha')).toHaveLength(2)
   })
 
-  it('renders ticker columns', () => {
-    render(<CompareTable tickers={['PETR4', 'VALE3']} rows={makeRows()} isLoading={false} />)
-    expect(screen.getByText('PETR4')).toBeInTheDocument()
-    expect(screen.getByText('VALE3')).toBeInTheDocument()
+  it('não marca a pior célula — o destaque é só do vencedor', () => {
+    renderTable()
+    expect(screen.queryByLabelText('Pior valor da linha')).not.toBeInTheDocument()
   })
 
-  it('renders metric rows with values', () => {
-    render(<CompareTable tickers={['PETR4', 'VALE3']} rows={makeRows()} isLoading={false} />)
-    // O rótulo aparece duas vezes no DOM por design (Task 16): um <span md:hidden>
-    // com a versão curta e um <span hidden md:inline> com a versão longa, pra
-    // trocar via CSS conforme o breakpoint — não é duplicação acidental.
-    expect(screen.getAllByText('DY').length).toBe(2)
-    expect(screen.getByText('8,00%')).toBeInTheDocument()
-    expect(screen.getByText('4,00%')).toBeInTheDocument()
+  it('mostra a legenda explicando o que a marca significa', () => {
+    renderTable()
+    expect(screen.getByText(/melhor valor de cada linha/i)).toBeInTheDocument()
   })
 
-  it('highlights best cell green and worst cell red', () => {
-    render(<CompareTable tickers={['PETR4', 'VALE3']} rows={makeRows()} isLoading={false} />)
-    const best = screen.getByText('8,00%')
-    const worst = screen.getByText('4,00%')
-    expect(best).toHaveStyle({ color: 'var(--color-green)' })
-    expect(worst).toHaveStyle({ color: 'var(--color-red)' })
+  it('não pinta as células de verde ou vermelho — essas cores significam direção no resto do app', () => {
+    const { container } = renderTable()
+    const tinted = Array.from(container.querySelectorAll('td')).filter((td) => {
+      const bg = td.getAttribute('style') ?? ''
+      return bg.includes('green-dim') || bg.includes('red-dim')
+    })
+    expect(tinted).toHaveLength(0)
   })
 
-  it('renders shortLabel hidden on desktop and label hidden on mobile', () => {
-    const rows: CompareRow[] = [
-      { label: 'Bazin · Preço Teto', shortLabel: 'Bazin', cells: [{ value: 'R$ 10,00', highlight: null }, { value: 'R$ 12,00', highlight: null }] },
-    ]
-    render(<CompareTable tickers={['PETR4', 'VALE3']} rows={rows} isLoading={false} />)
-    const short = screen.getByText('Bazin')
-    const long = screen.getByText('Bazin · Preço Teto')
-    expect(short.className).toContain('md:hidden')
-    expect(long.className).toContain('hidden md:inline')
+  it('mantém todos os valores legíveis na cor base', () => {
+    renderTable()
+    // O rótulo é renderizado duas vezes (versão curta e longa, alternadas por CSS),
+    // então getAllByText — o alvo aqui são os valores, não o rótulo.
+    const linhaDY = screen.getAllByText('DY')[0].closest('tr')!
+    expect(within(linhaDY).getByText('6,99%')).toBeInTheDocument()
+    expect(within(linhaDY).getByText('9,04%')).toBeInTheDocument()
+  })
+})
+
+describe('CompareTable — o realce não imita linha de grade', () => {
+  it('a célula vencedora não usa borda lateral', () => {
+    const { container } = render(
+      <CompareTable tickers={['PETR4', 'VALE3', 'ITUB4']} rows={rows} isLoading={false} />
+    )
+    const comBorda = Array.from(container.querySelectorAll('td')).filter((td) =>
+      (td.getAttribute('style') ?? '').includes('border-left')
+    )
+    expect(comBorda).toHaveLength(0)
+  })
+
+  it('o realce envolve o próprio valor, não a célula inteira', () => {
+    render(<CompareTable tickers={['PETR4', 'VALE3', 'ITUB4']} rows={rows} isLoading={false} />)
+    const selo = screen.getAllByLabelText('Melhor valor da linha')[0]
+    expect(selo.tagName).toBe('SPAN')
+    expect(selo).toHaveTextContent('9,04%')
   })
 })

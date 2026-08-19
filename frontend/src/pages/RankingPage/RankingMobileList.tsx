@@ -2,8 +2,10 @@ import { Link } from 'react-router-dom'
 import { Star, X } from 'lucide-react'
 import { ExpandableRow } from '../../components/ExpandableRow'
 import { PositionBadge } from './PositionBadge'
+import { RankDetail } from './RankDetail'
 import { fBRL, fPct, fPctSigned, fNum } from '../../engines/formatters'
 import type { RankingMethod } from '../../stores/rankingStore'
+import type { RankedRow } from './index'
 
 interface Row {
   ticker: string
@@ -25,11 +27,17 @@ interface RankingMobileListProps {
   favorites: string[]
   onToggleFavorite: (ticker: string) => void
   onRemoveCustom: (ticker: string) => void
-  /** Step 9 — modo de seleção para comparação (opcional; usado pelo botão flutuante "Comparar"). */
+  /** Modo de seleção em lote (comparar, salvar tetos, exportar). */
   compareMode?: boolean
   compareSelection?: string[]
   onToggleCompare?: (ticker: string) => void
   maxCompare?: number
+}
+
+interface HeroMetricResult {
+  text: string
+  /** 'neutral' existe para pontuação: verde/vermelho são direção de valor. */
+  tone: 'positive' | 'negative' | 'neutral'
 }
 
 /**
@@ -38,22 +46,35 @@ interface RankingMobileListProps {
  * upside contra o preço teto do método ativo (`row.fairPrice`), com sinal.
  * Fórmula do upside confirmada em engines/ranking-scores.ts: (fair - price) / fair.
  */
-function heroMetric(row: Row, method: RankingMethod): { text: string; positive: boolean } | null {
+export function heroMetric(row: Row, method: RankingMethod): HeroMetricResult | null {
   if (method === 'joel') {
     const ey = row.joelVal
     if (ey == null) return null
-    return { text: fPct(ey), positive: ey >= 0 }
+    return { text: fPct(ey), tone: ey >= 0 ? 'positive' : 'negative' }
   }
   const fair = row.fairPrice
   const price = row.price
-  if (fair == null || price == null || fair === 0) return null
-  const upside = (fair - price) / fair
-  return { text: fPctSigned(upside), positive: upside >= 0 }
+  if (fair != null && price != null && fair !== 0) {
+    const upside = (fair - price) / fair
+    return { text: fPctSigned(upside), tone: upside >= 0 ? 'positive' : 'negative' }
+  }
+
+  // Thomaz é o método default e só tem fairPrice quando o usuário salvou um
+  // valuation daquele ticker (calcThomazScore lê do watchlistMap). Sem isso, a
+  // linha ficava com ticker + cotação e nada dizendo por que o 1º é o 1º —
+  // numa tela de ranking. O score (0–100) é o critério real da ordenação.
+  if (method === 'thomaz' && typeof row.score === 'number') {
+    // Tom neutro de propósito: score é pontuação, não direção de valor — verde
+    // e vermelho significam alta/baixa no resto do app.
+    return { text: `${Math.round(row.score)} pts`, tone: 'neutral' }
+  }
+
+  return null
 }
 
 export function RankingMobileList({
   rows, method, favorites, onToggleFavorite, onRemoveCustom,
-  compareMode = false, compareSelection = [], onToggleCompare, maxCompare = 3,
+  compareMode = false, compareSelection = [], onToggleCompare,
 }: RankingMobileListProps) {
   // Visibilidade é decidida pelo pai (RankingPage) via useIsMobile() — monta só quando
   // for o caso, nunca em paralelo com a RankingTable (evita render dobrado + duplicatas
@@ -66,7 +87,9 @@ export function RankingMobileList({
         const hero = heroMetric(row, method)
         const isFav = favorites.includes(row.ticker)
         const isSelectedForCompare = compareSelection.includes(row.ticker)
-        const compareDisabled = !isSelectedForCompare && compareSelection.length >= maxCompare
+        // Sem trava: a seleção alimenta comparar, salvar tetos e exportar. O limite
+              // de 3 é da tela de comparação e agora vive no botão Comparar.
+              const compareDisabled = false
 
         return (
           <ExpandableRow key={row.ticker} ariaLabel={row.ticker} summary={
@@ -122,19 +145,22 @@ export function RankingMobileList({
               {hero && (
                 <span
                   className="font-mono text-[12px] font-bold shrink-0"
-                  style={{ color: hero.positive ? 'var(--color-green)' : 'var(--color-red)' }}
+                  style={{
+                    color:
+                      hero.tone === 'positive' ? 'var(--color-green)'
+                      : hero.tone === 'negative' ? 'var(--color-red)'
+                      : 'var(--color-cyan)',
+                  }}
                 >
                   {hero.text}
                 </span>
               )}
             </>
           }>
-            <div className="flex items-baseline justify-between py-1">
-              <span className="text-[12px] text-text-sec">Preço Teto</span>
-              <span className="font-mono text-[14px] font-bold text-text-base">
-                {row.fairPrice != null ? fBRL.format(row.fairPrice) : '—'}
-              </span>
-            </div>
+            {/* A faixa substitui a linha solta de "Preço Teto", que mostrava só o
+                teto do método ativo (e ficava vazia no Thomaz sem valuation
+                salvo). Mesmo componente do detalhe do desktop. */}
+            <RankDetail row={row as unknown as RankedRow} method={method} />
 
             <div className="grid grid-cols-3 gap-1.5 mt-2">
               {[
