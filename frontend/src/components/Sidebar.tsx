@@ -65,8 +65,11 @@ export function Sidebar({ onOpenSearch, isDrawerOpen = false, onCloseDrawer }: S
                     md:hover:shadow-[8px_0_32px_-12px_rgba(0,0,0,.8)]
                     ${isDrawerOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
         style={{
-          background: 'rgba(11,15,23,0.95)',
-          backdropFilter: 'blur(12px)',
+          // Translúcida o bastante para a corrente de luz passar por trás, com o
+          // blur maior compensando: o vidro precisa continuar legível com um
+          // feixe ciano atravessando por baixo dos rótulos.
+          background: 'rgba(11,15,23,0.72)',
+          backdropFilter: 'blur(18px)',
         }}
       >
         {/* Logo */}
