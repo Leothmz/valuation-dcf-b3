@@ -441,10 +441,13 @@ export function RankingPage() {
         <h1 className="text-[19px] md:text-[24px] font-bold text-text-base leading-tight">
           Ranking de Ações · B3
         </h1>
-        <p className="text-[12px] md:text-[13px] text-text-muted mt-0.5 mb-3 md:mb-5">
+        <p
+          className="text-[12px] md:text-[13px] text-text-muted mt-0.5 mb-3 md:mb-5"
+          title="Fundamentos: yfinance com fallback brapi, cache de 6h. Cotações: cache de 5 min."
+        >
           {isLoading
             ? `Carregando ${allTickers.length} tickers…`
-            : `${totalLoaded} tickers carregados · exibindo ${showing}${updatedAtLabel}`}
+            : `${totalLoaded} tickers carregados · exibindo ${showing}${updatedAtLabel} · fonte yfinance`}
         </p>
 
         {/* Method tabs — pills fixas no desktop, faixa rolável no mobile.

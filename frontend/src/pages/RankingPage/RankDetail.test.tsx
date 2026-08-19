@@ -49,3 +49,29 @@ describe('RankDetail', () => {
     expect(screen.queryByText(/de 4 métodos/i)).not.toBeInTheDocument()
   })
 })
+
+describe('RankDetail — por que faltou', () => {
+  it('explica, por método, o preço que não saiu', () => {
+    const semLynch = {
+      ...row,
+      lynchFairPrice: null,
+      crescimentoLucros: null,
+    } as unknown as RankedRow
+    render(<RankDetail row={semLynch} method="thomaz" />)
+    // "Lynch" também aparece na lista de métodos que compõem a faixa — aqui o
+    // alvo é o motivo, que só existe na seção "Por que faltou".
+    expect(screen.getByText(/sem crescimento de lucros positivo/i)).toBeInTheDocument()
+    expect(screen.getByText('Lynch:')).toBeInTheDocument()
+  })
+
+  it('não explica nada quando os quatro preços existem', () => {
+    const completo = { ...row, savedFairPrice: 60 } as unknown as RankedRow
+    render(<RankDetail row={completo} method="thomaz" />)
+    expect(screen.queryByText(/por que faltou/i)).not.toBeInTheDocument()
+  })
+
+  it('diz que o teto salvo depende da calculadora', () => {
+    render(<RankDetail row={row} method="thomaz" />)
+    expect(screen.getByText(/ainda não salvou um preço teto/i)).toBeInTheDocument()
+  })
+})

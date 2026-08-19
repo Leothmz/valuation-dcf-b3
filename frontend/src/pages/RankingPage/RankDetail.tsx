@@ -1,5 +1,6 @@
 import { buildFairPriceRange } from '../../engines/fair-price-range'
 import { explainRank } from '../../engines/rank-attribution'
+import { explainGap } from '../../engines/data-gaps'
 import { fBRL } from '../../engines/formatters'
 import type { RankingMethod } from '../../stores/rankingStore'
 import type { RankedRow } from './index'
@@ -33,6 +34,21 @@ export function RankDetail({ row, method }: RankDetailProps) {
     row.price
   )
   const factors = explainRank(row, method)
+
+  // Cada preço que não saiu tem uma causa diferente — e "—" calado fazia as três
+  // parecerem a mesma coisa. Joel fica fora da lista: ele não falta, ele não se
+  // aplica (e isso está dito no explicador do método).
+  const gaps = (
+    [
+      ['Bazin', 'bazinFairPrice', row.bazinFairPrice],
+      ['Graham', 'grahamFairPrice', row.grahamFairPrice],
+      ['Lynch', 'lynchFairPrice', row.lynchFairPrice],
+      ['Teto salvo', 'savedFairPrice', row.savedFairPrice],
+    ] as const
+  )
+    .filter(([, , value]) => value == null)
+    .map(([label, field]) => ({ method: label as string, reason: explainGap(row, field) }))
+    .filter((g): g is { method: string; reason: string } => g.reason != null)
 
   return (
     <div className="flex flex-col gap-3">
@@ -72,6 +88,21 @@ export function RankDetail({ row, method }: RankDetailProps) {
           </div>
         )}
       </section>
+
+      {gaps.length > 0 && (
+        <section>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-muted mb-1.5">
+            Por que faltou
+          </div>
+          <ul className="flex flex-col gap-1">
+            {gaps.map((g) => (
+              <li key={g.method} className="text-[11px] leading-snug text-text-sec">
+                <span className="font-semibold text-text-base">{g.method}:</span> {g.reason}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section>
         <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-muted mb-1.5">
