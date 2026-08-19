@@ -23,6 +23,9 @@ import { FilterChips } from './FilterChips'
 import { RankingTable } from './RankingTable'
 import { RankingMobileList } from './RankingMobileList'
 import { MethodExplainer } from './MethodExplainer'
+import { buildBulkWatchlistEntries } from '../../engines/ranking-bulk-save'
+import { buildRankingCSV } from '../../engines/ranking-export'
+import { notify } from '../../components/Notification'
 
 const MAX_COMPARE = 3
 
@@ -102,6 +105,7 @@ export function RankingPage() {
   } = useRankingStore()
 
   const watchlistEntries = useWatchlistStore((st) => st.entries)
+  const saveToWatchlist = useWatchlistStore((st) => st.save)
   const navigate = useNavigate()
   const isMobile = useIsMobile()
   const [sectorTab, setSectorTab] = useState<SectorTab>('')
@@ -111,12 +115,37 @@ export function RankingPage() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [compareMode, setCompareMode] = useState(false)
 
+  // A seleção passou a servir três ações (comparar, salvar tetos, exportar) e
+  // deixou de ter teto de 3: o limite é da tela de comparação, não da seleção —
+  // travar em 3 impedia exportar 20 linhas por causa de uma restrição alheia.
   function toggleCompareSelection(ticker: string) {
     setCompareSelection((prev) =>
-      prev.includes(ticker)
-        ? prev.filter((t) => t !== ticker)
-        : prev.length < MAX_COMPARE ? [...prev, ticker] : prev
+      prev.includes(ticker) ? prev.filter((t) => t !== ticker) : [...prev, ticker]
     )
+  }
+
+  function handleBulkSave() {
+    const { entries, skipped } = buildBulkWatchlistEntries(rankedRows, compareSelection)
+    entries.forEach((e) => saveToWatchlist(e))
+    const salvos = entries.length
+    const parte1 = `${salvos} teto${salvos === 1 ? '' : 's'} salvo${salvos === 1 ? '' : 's'} em Meus Valuations`
+    const parte2 = skipped.length
+      ? ` · ${skipped.length} sem preço calculável (${skipped.join(', ')})`
+      : ''
+    notify(parte1 + parte2, salvos > 0 ? 'success' : 'warning')
+    setCompareSelection([])
+  }
+
+  function handleExportCSV() {
+    const selecionadas = rankedRows.filter((r) => compareSelection.includes(r.ticker))
+    const csv = buildRankingCSV(selecionadas, method)
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `ranking-${method}-${new Date().toISOString().slice(0, 10)}.csv`
+    anchor.click()
+    URL.revokeObjectURL(url)
   }
 
   function handleCompareGo() {
@@ -534,11 +563,28 @@ export function RankingPage() {
           </span>
           <button
             onClick={handleCompareGo}
-            disabled={compareSelection.length < 2}
+            disabled={compareSelection.length < 2 || compareSelection.length > MAX_COMPARE}
+            title={compareSelection.length > MAX_COMPARE ? `Comparar aceita no máximo ${MAX_COMPARE} tickers` : undefined}
             className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
             style={{ background: 'var(--color-cyan-dim)', color: 'var(--color-cyan)', border: '1px solid var(--color-border-glow)' }}
           >
             Comparar
+          </button>
+          {/* Salvar e exportar não têm limite de 3: o teto de comparação é da
+              tela de comparar, não da seleção. */}
+          <button
+            onClick={handleBulkSave}
+            className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer border border-border text-text-sec hover:text-text-base hover:border-cyan transition-colors"
+            style={{ background: 'none' }}
+          >
+            Salvar tetos
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer border border-border text-text-sec hover:text-text-base hover:border-cyan transition-colors"
+            style={{ background: 'none' }}
+          >
+            Exportar CSV
           </button>
           <button
             onClick={() => setCompareSelection([])}

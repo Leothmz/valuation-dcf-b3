@@ -27,7 +27,7 @@ interface RankingMobileListProps {
   favorites: string[]
   onToggleFavorite: (ticker: string) => void
   onRemoveCustom: (ticker: string) => void
-  /** Step 9 — modo de seleção para comparação (opcional; usado pelo botão flutuante "Comparar"). */
+  /** Modo de seleção em lote (comparar, salvar tetos, exportar). */
   compareMode?: boolean
   compareSelection?: string[]
   onToggleCompare?: (ticker: string) => void
@@ -74,7 +74,7 @@ export function heroMetric(row: Row, method: RankingMethod): HeroMetricResult | 
 
 export function RankingMobileList({
   rows, method, favorites, onToggleFavorite, onRemoveCustom,
-  compareMode = false, compareSelection = [], onToggleCompare, maxCompare = 3,
+  compareMode = false, compareSelection = [], onToggleCompare,
 }: RankingMobileListProps) {
   // Visibilidade é decidida pelo pai (RankingPage) via useIsMobile() — monta só quando
   // for o caso, nunca em paralelo com a RankingTable (evita render dobrado + duplicatas
@@ -87,7 +87,9 @@ export function RankingMobileList({
         const hero = heroMetric(row, method)
         const isFav = favorites.includes(row.ticker)
         const isSelectedForCompare = compareSelection.includes(row.ticker)
-        const compareDisabled = !isSelectedForCompare && compareSelection.length >= maxCompare
+        // Sem trava: a seleção alimenta comparar, salvar tetos e exportar. O limite
+              // de 3 é da tela de comparação e agora vive no botão Comparar.
+              const compareDisabled = false
 
         return (
           <ExpandableRow key={row.ticker} ariaLabel={row.ticker} summary={

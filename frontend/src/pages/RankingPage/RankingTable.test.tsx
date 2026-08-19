@@ -143,12 +143,14 @@ describe('RankingTable', () => {
     expect(onToggleCompare).toHaveBeenCalledWith('PETR4')
   })
 
-  it('disables unchecked checkboxes when maxCompare is reached', () => {
+  it('a seleção não trava em maxCompare — o limite virou do botão Comparar', () => {
+    // Antes o checkbox desabilitava ao atingir 3 selecionados. A seleção passou
+    // a servir também "Salvar tetos" e "Exportar CSV", onde 3 não faz sentido.
     const rows = [makeRow({ ticker: 'PETR4' }), makeRow({ ticker: 'VALE3', rank: 2 })]
-    renderTable(rows, { onToggleCompare: noop, compareSelection: ['VALE3', 'ITUB4'], maxCompare: 2 })
+    renderTable(rows, { onToggleCompare: noop, compareSelection: ['VALE3', 'ITUB4', 'BBAS3'], maxCompare: 3 })
     const checkboxes = screen.getAllByRole('checkbox')
-    expect(checkboxes[0]).toBeDisabled() // PETR4 not selected, limit reached
-    expect(checkboxes[1]).not.toBeDisabled() // VALE3 already selected, stays enabled
+    expect(checkboxes[0]).toBeEnabled()
+    expect(checkboxes[1]).toBeEnabled()
   })
 
   it('shows all table headers', () => {

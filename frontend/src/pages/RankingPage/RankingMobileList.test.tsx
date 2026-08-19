@@ -137,16 +137,20 @@ describe('RankingMobileList', () => {
     expect(onToggleCompare).toHaveBeenCalledWith('PETR4')
   })
 
-  it('em modo comparar, desabilita seleção de novos tickers ao atingir maxCompare', () => {
+  it('a seleção não tem teto: ela alimenta comparar, salvar tetos e exportar', () => {
+    // O limite de 3 é da tela de comparação e passou a viver no botão Comparar
+    // da barra flutuante — travar a seleção impedia exportar 20 linhas por causa
+    // de uma restrição que nem se aplica a exportar.
     const onToggleCompare = vi.fn()
     setup({
       compareMode: true,
-      compareSelection: ['ITUB4', 'VALE3'],
+      compareSelection: ['ITUB4', 'VALE3', 'BBAS3'],
       onToggleCompare,
-      maxCompare: 2,
     })
     const btn = screen.getByRole('button', { name: 'Selecionar PETR4 para comparar' })
-    expect(btn).toBeDisabled()
+    expect(btn).toBeEnabled()
+    fireEvent.click(btn)
+    expect(onToggleCompare).toHaveBeenCalledWith('PETR4')
   })
 
   it('sem compareMode, não mostra círculo de seleção', () => {
