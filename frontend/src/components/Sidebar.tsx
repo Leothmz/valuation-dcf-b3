@@ -59,7 +59,7 @@ export function Sidebar({ onOpenSearch, isDrawerOpen = false, onCloseDrawer }: S
         inert={isHiddenDrawer || undefined}
         className={`group fixed left-0 top-0 h-screen z-50 flex flex-col
                     border-r border-border overflow-hidden
-                    transition-[width,transform,box-shadow] duration-[220ms]
+                    transition-[width,transform,box-shadow] duration-[320ms]
                     [transition-timing-function:var(--ease-out-expo)]
                     w-56 md:w-[58px] md:hover:w-56
                     md:hover:shadow-[8px_0_32px_-12px_rgba(0,0,0,.8)]
@@ -78,7 +78,7 @@ export function Sidebar({ onOpenSearch, isDrawerOpen = false, onCloseDrawer }: S
             className="text-sm font-semibold whitespace-nowrap
                        opacity-100 md:opacity-0 md:group-hover:opacity-100
                        md:-translate-x-1 md:group-hover:translate-x-0
-                       transition-[opacity,transform] duration-[220ms] [transition-timing-function:var(--ease-out-expo)]
+                       transition-[opacity,transform] duration-[320ms] [transition-timing-function:var(--ease-out-expo)]
                        bg-gradient-to-r from-cyan to-blue-400 bg-clip-text text-transparent"
           >
             Valuation DCF
@@ -98,7 +98,7 @@ export function Sidebar({ onOpenSearch, isDrawerOpen = false, onCloseDrawer }: S
               className="text-sm font-medium
                          opacity-100 md:opacity-0 md:group-hover:opacity-100
                        md:-translate-x-1 md:group-hover:translate-x-0
-                       transition-[opacity,transform] duration-[220ms] [transition-timing-function:var(--ease-out-expo)]"
+                       transition-[opacity,transform] duration-[320ms] [transition-timing-function:var(--ease-out-expo)]"
             >
               Buscar
               <span className="ml-auto pl-4 text-[11px] text-text-muted font-mono">Ctrl+K</span>
@@ -127,7 +127,7 @@ export function Sidebar({ onOpenSearch, isDrawerOpen = false, onCloseDrawer }: S
                 className="text-sm font-medium
                            opacity-100 md:opacity-0 md:group-hover:opacity-100
                        md:-translate-x-1 md:group-hover:translate-x-0
-                       transition-[opacity,transform] duration-[220ms] [transition-timing-function:var(--ease-out-expo)]"
+                       transition-[opacity,transform] duration-[320ms] [transition-timing-function:var(--ease-out-expo)]"
               >
                 {label}
               </span>
