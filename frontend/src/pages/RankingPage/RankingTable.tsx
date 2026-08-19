@@ -5,6 +5,7 @@ import { fBRL, fPct } from '../../engines/formatters'
 import { SECTOR_PT } from '../../data/b3Tickers'
 import { PositionBadge } from './PositionBadge'
 import { RankDetail } from './RankDetail'
+import { explainGap } from '../../engines/data-gaps'
 import type { RankedRow } from './index'
 import type { RankingMethod } from '../../stores/rankingStore'
 
@@ -276,20 +277,24 @@ export function RankingTable({
 
                   {/* Bazin fair price */}
                   <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
-                    style={{ color: 'var(--color-cyan)' }}>
+                    style={{ color: 'var(--color-cyan)' }}
+                    title={explainGap(s, 'bazinFairPrice') ?? undefined}>
                     {s.bazinFairPrice != null ? fBRL.format(s.bazinFairPrice) : '—'}
                   </td>
 
                   {/* Graham fair price */}
                   <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
-                    style={{ color: 'var(--color-purple)' }}>
+                    style={{ color: 'var(--color-purple)' }}
+                    title={explainGap(s, 'grahamFairPrice') ?? undefined}>
                     {s.grahamFairPrice != null ? fBRL.format(s.grahamFairPrice) : '—'}
                   </td>
 
                   {/* Lynch PEG */}
                   <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
                     style={{ color: 'var(--color-text-base)' }}>
-                    {s.lynchVal != null ? fNum(s.lynchVal, 2) : '—'}
+                    {s.lynchVal != null ? fNum(s.lynchVal, 2) : (
+                      <span title={explainGap(s, 'lynchVal') ?? undefined}>—</span>
+                    )}
                   </td>
 
                   {/* Joel Earnings Yield */}
