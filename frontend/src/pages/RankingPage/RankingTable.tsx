@@ -153,7 +153,9 @@ export function RankingTable({
                 : 'var(--color-text-sec)'
 
               const isSelectedForCompare = compareSelection.includes(s.ticker)
-              const compareDisabled = !isSelectedForCompare && compareSelection.length >= maxCompare
+              // Sem trava: a seleção alimenta comparar, salvar tetos e exportar. O limite
+              // de 3 é da tela de comparação e agora vive no botão Comparar.
+              const compareDisabled = false
 
               return [
                 <tr
