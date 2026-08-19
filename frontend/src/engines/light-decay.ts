@@ -42,11 +42,12 @@ export function buildDecayStops(steps: number, rate: number): DecayStop[] {
 /**
  * Duração da travessia de cada feixe, em segundos.
  *
- * Valores distintos e propositalmente não múltiplos entre si: feixes com a mesma
- * duração andam em bloco e o fundo vira uma esteira. Faixa lenta (18–27s) porque
- * o movimento é atmosfera, não um evento que pede atenção.
+ * Um valor distinto por feixe e propositalmente não múltiplos entre si: durações
+ * iguais (ou proporcionais) fazem os feixes andarem em bloco e o fundo vira
+ * esteira. A faixa é lenta — 27s a 39s para atravessar a tela — porque o
+ * movimento é atmosfera, não um evento que pede atenção.
  */
 export function travelDuration(index: number): number {
-  const durations = [19, 23, 26, 21]
+  const durations = [29, 34, 39, 31, 36, 27]
   return durations[index % durations.length]
 }

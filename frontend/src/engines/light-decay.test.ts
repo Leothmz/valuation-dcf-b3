@@ -40,10 +40,15 @@ describe('travelDuration', () => {
     expect(travelDuration(0)).not.toBe(travelDuration(1))
   })
 
-  it('mantém a travessia numa faixa lenta e legível', () => {
-    for (let i = 0; i < 4; i++) {
-      expect(travelDuration(i)).toBeGreaterThanOrEqual(14)
-      expect(travelDuration(i)).toBeLessThanOrEqual(30)
+  it('mantém a travessia lenta: entre 26s e 42s por atravessada', () => {
+    for (let i = 0; i < 6; i++) {
+      expect(travelDuration(i)).toBeGreaterThanOrEqual(26)
+      expect(travelDuration(i)).toBeLessThanOrEqual(42)
     }
+  })
+
+  it('dá duração distinta a cada um dos seis feixes — nenhum par anda colado', () => {
+    const seis = [0, 1, 2, 3, 4, 5].map(travelDuration)
+    expect(new Set(seis).size).toBe(6)
   })
 })

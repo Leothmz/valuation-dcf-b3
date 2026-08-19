@@ -20,11 +20,19 @@ interface LightCurrentProps {
 // Horizonte suave: com taxa alta a luz morria antes do meio da tela e o
 // caminhar não era percebido. 9% deixa o feixe atravessar minguando.
 const RATE = 0.09
+/**
+ * Seis feixes, em alturas e tamanhos diferentes. Os atrasos negativos fazem cada
+ * um começar já no meio do próprio ciclo: sem isso todos partiriam juntos da
+ * borda esquerda no primeiro carregamento e a tela abriria vazia por alguns
+ * segundos, até a luz chegar.
+ */
 const BEAMS = [
-  { top: '6%', height: '30%', delay: '0s' },
-  { top: '34%', height: '38%', delay: '-7s' },
-  { top: '58%', height: '34%', delay: '-13s' },
-  { top: '76%', height: '30%', delay: '-4s' },
+  { top: '2%',  height: '26%', delay: '0s'   },
+  { top: '20%', height: '32%', delay: '-11s' },
+  { top: '38%', height: '36%', delay: '-6s'  },
+  { top: '54%', height: '30%', delay: '-18s' },
+  { top: '70%', height: '34%', delay: '-3s'  },
+  { top: '84%', height: '26%', delay: '-14s' },
 ]
 
 /**
