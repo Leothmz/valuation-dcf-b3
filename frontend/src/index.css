@@ -217,14 +217,14 @@
     .light-travel { animation: none; }
   }
 
-  /* Transição entre rotas: o conteúdo chega, não pisca. Curto de propósito —
-     navegação é caminho, não destino; 260ms some na percepção e ainda tira a
-     dureza do corte. */
+  /* Transição entre rotas: o conteúdo chega assentando. 520ms com desaceleração
+     exponencial — a maior parte do deslocamento acontece nos primeiros 150ms e o
+     resto é repouso, então a troca parece gradual sem parecer lenta. */
   @keyframes route-in {
-    from { opacity: 0; transform: translate3d(0, 8px, 0); }
+    from { opacity: 0; transform: translate3d(0, 14px, 0); }
     to   { opacity: 1; transform: none; }
   }
-  .route-in { animation: route-in 260ms var(--ease-out-expo) both; }
+  .route-in { animation: route-in 520ms var(--ease-out-expo) both; }
 
   /* Ao trocar de rota a corrente ganha um pulso curto de brilho e volta ao
      repouso, como água mexida. É o mesmo elemento respondendo à navegação. */
