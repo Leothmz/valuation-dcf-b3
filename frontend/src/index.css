@@ -43,6 +43,18 @@
   /* Fonts */
   --font-ui: 'Inter', -apple-system, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+
+  /* Movimento — duração pela consequência, não pelo gosto:
+     feedback imediato < mudança de estado < chegada de camada < entrada autoral. */
+  --dur-feedback: 130ms;
+  --dur-state: 200ms;
+  --dur-layer: 320ms;
+  --dur-entrance: 620ms;
+
+  /* Desaceleração exponencial: chegada confiante, sem quique. Elástico e bounce
+     ficam de fora de propósito — este é um app de decisão de compra. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Base styles */
@@ -87,5 +99,100 @@
   .animate-heartbeat { animation: heartbeat 2.4s ease-in-out infinite; }
   @media (prefers-reduced-motion: reduce) {
     .animate-heartbeat { animation: none; }
+  }
+}
+
+@layer utilities {
+  /* ── Movimento ──────────────────────────────────────────────────────────────
+     Regra desta camada: o estado FINAL é o padrão. A classe de animação só
+     descreve de onde o elemento chega. Script quebrado, CSS não carregado ou
+     IntersectionObserver ausente deixam a página legível, nunca vazia. */
+
+  /* Chegada de conteúdo — usada com useInView na Home. */
+  @keyframes rise-in {
+    from { opacity: 0; transform: translate3d(0, 14px, 0); }
+    to   { opacity: 1; transform: none; }
+  }
+  .u-rise {
+    animation: rise-in var(--dur-entrance) var(--ease-out-expo) both;
+  }
+
+  /* A fórmula se escrevendo: a linha é revelada da esquerda para a direita, como
+     alguém escrevendo a conta. Não é fade — é a matemática aparecendo, que é o
+     que o produto promete expor. */
+  @keyframes write-in {
+    from { clip-path: inset(0 100% 0 0); opacity: .35; }
+    to   { clip-path: inset(0 0 0 0);    opacity: 1; }
+  }
+  .u-write {
+    animation: write-in var(--dur-entrance) var(--ease-out-expo) both;
+  }
+
+  /* Camada que sobe (bottom sheet, toast do rodapé). */
+  @keyframes layer-up {
+    from { opacity: 0; transform: translate3d(0, 12px, 0); }
+    to   { opacity: 1; transform: none; }
+  }
+  .u-layer-up { animation: layer-up var(--dur-layer) var(--ease-out-expo) both; }
+
+  /* Camada que chega no lugar (modal, popover). Escala sutil: 0.98, não 0.9 —
+     modal que "estoura" na tela vira espetáculo, não confirmação. */
+  @keyframes layer-in {
+    from { opacity: 0; transform: scale(.98); }
+    to   { opacity: 1; transform: none; }
+  }
+  .u-layer-in { animation: layer-in var(--dur-layer) var(--ease-out-expo) both; }
+
+  /* Toast entrando pela direita, onde ele mora. */
+  @keyframes toast-in {
+    from { opacity: 0; transform: translate3d(16px, 0, 0); }
+    to   { opacity: 1; transform: none; }
+  }
+  .u-toast-in { animation: toast-in var(--dur-state) var(--ease-out-expo) both; }
+
+  /* Detalhe abrindo dentro de uma lista: cresce a partir do topo. */
+  @keyframes detail-open {
+    from { opacity: 0; transform: translate3d(0, -4px, 0); }
+    to   { opacity: 1; transform: none; }
+  }
+  .u-detail-open { animation: detail-open var(--dur-state) var(--ease-out-expo) both; }
+
+  /* Elevação no hover, unificada — antes eram 7 declarações soltas de
+     hover:-translate-y-px espalhadas pelas telas. */
+  .u-lift {
+    transition: transform var(--dur-feedback) var(--ease-out-expo),
+                box-shadow var(--dur-feedback) var(--ease-out-expo),
+                border-color var(--dur-feedback) var(--ease-standard);
+  }
+  .u-lift:hover { transform: translate3d(0, -2px, 0); }
+  .u-lift:active { transform: translate3d(0, 0, 0); transition-duration: 60ms; }
+
+  /* Atraso em cascata para irmãos que chegam como lista. Teto de 240ms no
+     conjunto: acima disso o último item parece travado, não coreografado. */
+  .u-stagger-1 { animation-delay: 60ms; }
+  .u-stagger-2 { animation-delay: 120ms; }
+  .u-stagger-3 { animation-delay: 180ms; }
+  .u-stagger-4 { animation-delay: 240ms; }
+
+  /* ── prefers-reduced-motion ────────────────────────────────────────────────
+     Reduzir não é desligar: o que carrega significado (opacidade, cor, estado)
+     continua; o que é deslocamento espacial some. Quem pediu menos movimento
+     ainda precisa ver que a ação foi reconhecida. */
+  @media (prefers-reduced-motion: reduce) {
+    .u-rise, .u-layer-up, .u-layer-in, .u-toast-in, .u-detail-open {
+      animation-name: fade-only;
+      animation-duration: var(--dur-state);
+    }
+    .u-write {
+      animation-name: fade-only;
+      animation-duration: var(--dur-state);
+    }
+    .u-lift:hover, .u-lift:active { transform: none; }
+    .u-stagger-1, .u-stagger-2, .u-stagger-3, .u-stagger-4 { animation-delay: 0ms; }
+  }
+
+  @keyframes fade-only {
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
 }

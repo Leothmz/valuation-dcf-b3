@@ -320,7 +320,7 @@ export function RankingTable({
 
                 expanded === s.ticker && (
                   <tr key={`${s.ticker}-detalhe`} className="border-b border-border-muted">
-                    <td colSpan={COLUMN_COUNT} className="px-4 py-3" style={{ background: 'var(--color-bg-1)' }}>
+                    <td colSpan={COLUMN_COUNT} className="u-detail-open px-4 py-3" style={{ background: 'var(--color-bg-1)' }}>
                       <RankDetail row={s} method={method} />
                     </td>
                   </tr>

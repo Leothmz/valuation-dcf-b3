@@ -34,7 +34,7 @@ export function WelcomeModal({ isOpen, onDismiss }: WelcomeModalProps) {
       onClick={(e) => { if (e.target === e.currentTarget) onDismiss() }}
     >
       <div
-        className="bg-bg-2 border border-border rounded-[20px] p-6 sm:p-8 w-[560px] max-w-full"
+        className="u-layer-in bg-bg-2 border border-border rounded-[20px] p-6 sm:p-8 w-[560px] max-w-full"
         style={{ boxShadow: '0 8px 32px rgba(0,0,0,.6)' }}
       >
         <div className="flex items-center gap-2 mb-2">
