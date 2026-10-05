@@ -21,6 +21,8 @@ interface GapRow {
   lpa?: number | null
   vpa?: number | null
   crescimentoLucros?: number | null
+  pegRatio?: number | null
+  pl?: number | null
   [key: string]: unknown
 }
 
@@ -46,10 +48,19 @@ export function explainGap(row: GapRow, field: GapField): string | null {
     }
 
     case 'lynchFairPrice':
-    case 'lynchVal':
+      if (!isPositive(row.lpa)) {
+        return isPositive(row.crescimentoLucros)
+          ? 'Sem LPA positivo — o preço teto de Lynch é LPA × crescimento, então não há base de lucro para calcular.'
+          : 'Sem LPA positivo e sem crescimento de lucros positivo, o método de Lynch não produz preço teto.'
+      }
       return isPositive(row.crescimentoLucros)
         ? null
-        : 'Sem crescimento de lucros positivo, o método de Lynch não produz preço nem PEG.'
+        : 'Sem crescimento de lucros positivo, o método de Lynch não produz preço teto.'
+
+    case 'lynchVal':
+      return isPositive(row.pegRatio) || (isPositive(row.pl) && isPositive(row.crescimentoLucros))
+        ? null
+        : 'Sem crescimento de lucros positivo ou P/L válido, o método de Lynch não produz PEG.'
 
     case 'joelFairPrice':
       // Não é dado faltando: a Magic Formula ordena, não avalia preço.

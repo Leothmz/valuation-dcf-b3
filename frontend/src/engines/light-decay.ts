@@ -26,6 +26,8 @@ export const HORIZON_YEARS = 14
  * A última parada é forçada a zero para a luz se apagar em vez de truncar na borda.
  */
 export function buildDecayStops(steps: number, rate: number): DecayStop[] {
+  if (steps <= 0) return [{ offset: 0, opacity: 0 }]
+
   const stops: DecayStop[] = []
   for (let i = 0; i <= steps; i++) {
     const progress = i / steps

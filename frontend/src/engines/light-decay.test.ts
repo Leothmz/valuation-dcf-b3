@@ -33,6 +33,10 @@ describe('buildDecayStops', () => {
   it('termina em zero — a luz se apaga, não trunca', () => {
     expect(stops[stops.length - 1].opacity).toBe(0)
   })
+
+  it('não gera NaN quando não há passos', () => {
+    expect(buildDecayStops(0, 0.14)).toEqual([{ offset: 0, opacity: 0 }])
+  })
 })
 
 describe('travelDuration', () => {

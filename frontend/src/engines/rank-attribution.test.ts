@@ -28,9 +28,14 @@ describe('explainRank', () => {
   })
 
   it('no Thomaz, aponta os indicadores que puxaram a linha', () => {
-    const f = explainRank({ dy: 0.33, roe: 0.37, pl: 4.4, margemLiquida: 0.24 }, 'thomaz')
+    const f = explainRank({ dy: 0.33, roe: 0.37, pl: 4.4, margemLiquida: 0.24, dividaLiquidaEbit: 0.5, roic: 0.2 }, 'thomaz')
     expect(f.length).toBeGreaterThanOrEqual(2)
     expect(f.every((x) => x.value.length > 0)).toBe(true)
+  })
+
+  it('Thomaz considera DL/EBITDA e ROIC entre os fatores possíveis', () => {
+    const f = explainRank({ dividaLiquidaEbit: 0.5, roic: 0.2 }, 'thomaz')
+    expect(f.map((x) => x.label)).toEqual(expect.arrayContaining(['DL/EBITDA', 'ROIC']))
   })
 
   it('dado ausente vira fator neutro em vez de sumir da explicação', () => {

@@ -558,17 +558,17 @@ export function RankingPage() {
 
       {compareSelection.length > 0 && (
         <div
-          className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 rounded-[12px] border border-border px-4 py-3"
+          className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-30 max-w-[calc(100vw-2rem)] flex flex-wrap items-center justify-center gap-2 md:gap-3 rounded-[12px] border border-border px-3 md:px-4 py-3"
           style={{ background: 'var(--color-bg-2)', boxShadow: '0 4px 20px rgba(0,0,0,.6)' }}
         >
-          <span className="text-[13px] text-text-sec">
+          <span className="text-[13px] text-text-sec shrink-0">
             {compareSelection.length} ticker{compareSelection.length > 1 ? 's' : ''} selecionado{compareSelection.length > 1 ? 's' : ''}
           </span>
           <button
             onClick={handleCompareGo}
             disabled={compareSelection.length < 2 || compareSelection.length > MAX_COMPARE}
             title={compareSelection.length > MAX_COMPARE ? `Comparar aceita no máximo ${MAX_COMPARE} tickers` : undefined}
-            className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
             style={{ background: 'var(--color-cyan-dim)', color: 'var(--color-cyan)', border: '1px solid var(--color-border-glow)' }}
           >
             Comparar
@@ -577,21 +577,21 @@ export function RankingPage() {
               tela de comparar, não da seleção. */}
           <button
             onClick={handleBulkSave}
-            className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer border border-border text-text-sec hover:text-text-base hover:border-cyan transition-colors"
+            className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer shrink-0 border border-border text-text-sec hover:text-text-base hover:border-cyan transition-colors"
             style={{ background: 'none' }}
           >
             Salvar tetos
           </button>
           <button
             onClick={handleExportCSV}
-            className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer border border-border text-text-sec hover:text-text-base hover:border-cyan transition-colors"
+            className="rounded-[8px] text-[13px] font-medium px-3 py-1.5 cursor-pointer shrink-0 border border-border text-text-sec hover:text-text-base hover:border-cyan transition-colors"
             style={{ background: 'none' }}
           >
             Exportar CSV
           </button>
           <button
             onClick={() => setCompareSelection([])}
-            className="text-[13px] text-text-muted cursor-pointer"
+            className="text-[13px] text-text-muted cursor-pointer shrink-0"
             style={{ background: 'none', border: 'none', padding: 0 }}
           >
             Limpar

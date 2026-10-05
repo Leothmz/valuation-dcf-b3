@@ -28,7 +28,7 @@ describe('MethodExplainer', () => {
     await userEvent.click(screen.getByRole('button', { name: /sobre o método/i }))
     expect(screen.getByText('Rank Bazin')).toBeInTheDocument()
     expect(screen.getByText(/Dividendo como âncora/)).toBeInTheDocument()
-    expect(screen.getByText(/DPA ÷ 6%/)).toBeInTheDocument()
+    expect(screen.getByText(/DPA ÷ taxa escolhida/)).toBeInTheDocument()
     expect(screen.getByText(/dividendo extraordinário/)).toBeInTheDocument()
   })
 

@@ -51,9 +51,11 @@ export function SupportPage() {
   const keyRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
+    let active = true
     QRCode.toDataURL(PIX_PAYLOAD, { width: 220, margin: 1 })
-      .then(setQrDataUrl)
-      .catch(() => setQrDataUrl(null))
+      .then((url) => { if (active) setQrDataUrl(url) })
+      .catch(() => { if (active) setQrDataUrl(null) })
+    return () => { active = false }
   }, [])
 
   async function copyKey() {

@@ -31,6 +31,7 @@ interface AttributionRow {
   roe?: number | null
   pl?: number | null
   margemLiquida?: number | null
+  dividaLiquidaEbit?: number | null
   [key: string]: unknown
 }
 
@@ -77,13 +78,15 @@ export function explainRank(row: AttributionRow, method: RankingMethod): RankFac
 
     case 'thomaz':
     default: {
-      // Thomaz combina seis ranks; aqui mostram-se os que mais destoam do piso
-      // dos filtros default (DY 6%, ROE 10%, margem 10%), até três.
+      // Thomaz combina seis ranks; mostramos os fatores mais fortes entre todos
+      // eles, para que DL/EBITDA e ROIC também possam explicar a posição.
       const all: RankFactor[] = [
         factor('DY', row.dy, (v) => fPct(v, 1), (v) => v >= 0.06),
         factor('ROE', row.roe, (v) => fPct(v, 1), (v) => v >= 0.15),
         factor('P/L', row.pl, (v) => fNum(v, 1), (v) => v > 0 && v < 10),
         factor('Margem líq.', row.margemLiquida, (v) => fPct(v, 1), (v) => v >= 0.1),
+        factor('DL/EBITDA', row.dividaLiquidaEbit, (v) => fNum(v, 1), (v) => v >= 0 && v < 2),
+        factor('ROIC', row.roic, (v) => fPct(v, 1), (v) => v >= 0.15),
       ]
       const strong = all.filter((f) => f.verdict === 'forte')
       const rest = all.filter((f) => f.verdict !== 'forte')

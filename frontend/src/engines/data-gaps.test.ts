@@ -22,7 +22,11 @@ describe('explainGap', () => {
   it('campo preenchido não gera explicação', () => {
     expect(explainGap({ dpa: 3 }, 'bazinFairPrice')).toBeNull()
     expect(explainGap({ lpa: 10, vpa: 30 }, 'grahamFairPrice')).toBeNull()
-    expect(explainGap({ crescimentoLucros: 0.2 }, 'lynchFairPrice')).toBeNull()
+    expect(explainGap({ lpa: 10, crescimentoLucros: 0.2 }, 'lynchFairPrice')).toBeNull()
+  })
+
+  it('Lynch sem LPA explica a base ausente mesmo com crescimento', () => {
+    expect(explainGap({ crescimentoLucros: 0.2, lpa: null }, 'lynchFairPrice')).toMatch(/LPA/i)
   })
 
   it('teto salvo ausente diz o que fazer, não o que falta', () => {

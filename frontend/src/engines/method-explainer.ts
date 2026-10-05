@@ -33,7 +33,7 @@ export const METHOD_EXPLAINERS: Record<RankingMethod, MethodExplainer> = {
     title: 'Rank Bazin',
     privileges:
       'Dividendo como âncora: o preço justo é o que faz o provento pago render pelo menos a taxa que você exige.',
-    formula: 'Preço teto = DPA ÷ 6% (taxa ajustável nos filtros).',
+    formula: 'Preço teto = DPA ÷ taxa escolhida (6% por padrão; ajustável nos filtros).',
     blindSpot:
       'Um dividendo extraordinário infla o teto e some no ano seguinte. Ignora crescimento e endividamento — empresa que distribui muito porque não tem onde investir parece barata.',
   },
@@ -41,7 +41,7 @@ export const METHOD_EXPLAINERS: Record<RankingMethod, MethodExplainer> = {
     title: 'Rank Graham',
     privileges:
       'Barateza contra o patrimônio e o lucro: paga pouco por real de lucro e por real de patrimônio líquido.',
-    formula: 'Preço teto = √(22,5 × LPA × VPA), só quando LPA e VPA são positivos.',
+    formula: 'Preço teto = √(multiplicador × LPA × VPA) (22,5 por padrão; ajustável nos filtros).',
     blindSpot:
       'Exige lucro e patrimônio positivos, então some em prejuízo. Penaliza empresa de ativo leve, cujo valor está em marca e software, não no balanço.',
   },

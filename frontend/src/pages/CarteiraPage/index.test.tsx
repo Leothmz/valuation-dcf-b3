@@ -88,8 +88,8 @@ describe('CarteiraPage — estado vazio', () => {
     expect(screen.getByRole('tab', { name: 'Operações' })).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('os KPIs continuam visíveis: são a moldura da página, não conteúdo', () => {
+  it('não mostra KPIs zerados enquanto a carteira está vazia', () => {
     render(<CarteiraPage />)
-    expect(screen.getByText('Total Investido')).toBeInTheDocument()
+    expect(screen.queryByText('Total Investido')).not.toBeInTheDocument()
   })
 })

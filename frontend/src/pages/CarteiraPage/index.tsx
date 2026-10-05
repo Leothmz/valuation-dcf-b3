@@ -231,13 +231,15 @@ export function CarteiraPage() {
             : 'Nenhum ativo. Registre uma operação para começar.'}
         </p>
 
-        {/* KPIs */}
-        <CarteiraKPIs
-          totalInvested={totalInvested}
-          totalValue={totalValue}
-          positions={totalAtivos}
-          loading={quotesLoading && holdings.length > 0}
-        />
+        {/* KPIs só fazem sentido quando existe uma posição para resumir. */}
+        {totalAtivos > 0 && (
+          <CarteiraKPIs
+            totalInvested={totalInvested}
+            totalValue={totalValue}
+            positions={totalAtivos}
+            loading={quotesLoading && holdings.length > 0}
+          />
+        )}
 
         {/* Tabs */}
         <div className="mt-6 mb-5">
