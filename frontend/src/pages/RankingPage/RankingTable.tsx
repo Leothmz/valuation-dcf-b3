@@ -1,8 +1,13 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { fBRL, fPct } from '../../engines/formatters'
 import { SECTOR_PT } from '../../data/b3Tickers'
 import { PositionBadge } from './PositionBadge'
+import { RankDetail } from './RankDetail'
+import { explainGap } from '../../engines/data-gaps'
 import type { RankedRow } from './index'
+import type { RankingMethod } from '../../stores/rankingStore'
 
 interface RankingTableProps {
   rows: RankedRow[]
@@ -16,7 +21,13 @@ interface RankingTableProps {
   compareSelection?: string[]
   onToggleCompare?: (ticker: string) => void
   maxCompare?: number
+  /** Método ativo — decide quais fatores a linha expandida explica. */
+  method?: RankingMethod
 }
+
+// #, ticker, cotação, DY, P/L, margem, ROE, DL/EBITDA, 4 métodos, detalhe = 13;
+// +1 quando a coluna de seleção para comparar está montada.
+const COLUMN_COUNT = 14
 
 function fNum(v: number | null | undefined, dec = 1): string {
   if (v == null) return '—'
@@ -63,8 +74,12 @@ export function RankingTable({
   compareSelection = [],
   onToggleCompare,
   maxCompare = 3,
+  method = 'thomaz',
 }: RankingTableProps) {
   const navigate = useNavigate()
+  // Uma linha expandida por vez: duas abertas empurram a tabela e o usuário
+  // perde a referência de onde estava na varredura.
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   if (isLoading && rows.length === 0) {
     return (
@@ -101,28 +116,30 @@ export function RankingTable({
               <TH col="dividaLiquidaEbit" sortCol={sortCol} sortDir={sortDir} onSort={onSort}>DL/EBITDA</TH>
               <th
                 className="bg-bg-2 border-b border-border text-[11px] font-semibold tracking-[.08em] uppercase py-3 px-3 text-right whitespace-nowrap"
-                style={{ color: 'var(--color-cyan)' }}
+                style={{ color: 'var(--color-text-sec)' }}
               >
                 Bazin
               </th>
               <th
                 className="bg-bg-2 border-b border-border text-[11px] font-semibold tracking-[.08em] uppercase py-3 px-3 text-right whitespace-nowrap"
-                style={{ color: 'var(--color-purple)' }}
+                style={{ color: 'var(--color-text-sec)' }}
               >
                 Graham
               </th>
               <th
                 className="bg-bg-2 border-b border-border text-[11px] font-semibold tracking-[.08em] uppercase py-3 px-3 text-right whitespace-nowrap"
-                style={{ color: 'var(--color-green)' }}
+                style={{ color: 'var(--color-text-sec)' }}
               >
                 P. Lynch
               </th>
               <th
                 className="bg-bg-2 border-b border-border text-[11px] font-semibold tracking-[.08em] uppercase py-3 px-3 text-right whitespace-nowrap"
-                style={{ color: 'var(--color-amber)' }}
+                style={{ color: 'var(--color-text-sec)' }}
               >
                 Joel EY
               </th>
+              {/* Coluna do botão de detalhe — sem rótulo, o ícone se explica. */}
+              <th className="bg-bg-2 border-b border-border py-3 px-2 w-9" />
             </tr>
           </thead>
           <tbody>
@@ -137,9 +154,11 @@ export function RankingTable({
                 : 'var(--color-text-sec)'
 
               const isSelectedForCompare = compareSelection.includes(s.ticker)
-              const compareDisabled = !isSelectedForCompare && compareSelection.length >= maxCompare
+              // Sem trava: a seleção alimenta comparar, salvar tetos e exportar. O limite
+              // de 3 é da tela de comparação e agora vive no botão Comparar.
+              const compareDisabled = false
 
-              return (
+              return [
                 <tr
                   key={s.ticker}
                   className="border-b border-border-muted last:border-b-0 cursor-pointer"
@@ -258,29 +277,55 @@ export function RankingTable({
 
                   {/* Bazin fair price */}
                   <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
-                    style={{ color: 'var(--color-cyan)' }}>
+                    style={{ color: 'var(--color-cyan)' }}
+                    title={explainGap(s, 'bazinFairPrice') ?? undefined}>
                     {s.bazinFairPrice != null ? fBRL.format(s.bazinFairPrice) : '—'}
                   </td>
 
                   {/* Graham fair price */}
                   <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
-                    style={{ color: 'var(--color-purple)' }}>
+                    style={{ color: 'var(--color-purple)' }}
+                    title={explainGap(s, 'grahamFairPrice') ?? undefined}>
                     {s.grahamFairPrice != null ? fBRL.format(s.grahamFairPrice) : '—'}
                   </td>
 
                   {/* Lynch PEG */}
                   <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
-                    style={{ color: 'var(--color-green)' }}>
-                    {s.lynchVal != null ? fNum(s.lynchVal, 2) : '—'}
+                    style={{ color: 'var(--color-text-base)' }}>
+                    {s.lynchVal != null ? fNum(s.lynchVal, 2) : (
+                      <span title={explainGap(s, 'lynchVal') ?? undefined}>—</span>
+                    )}
                   </td>
 
                   {/* Joel Earnings Yield */}
                   <td className="py-[10px] px-3 text-right align-middle font-mono text-[13px]"
-                    style={{ color: 'var(--color-amber)' }}>
+                    style={{ color: 'var(--color-text-base)' }}>
                     {s.joelVal != null ? fPct(s.joelVal) : '—'}
                   </td>
-                </tr>
-              )
+
+                  {/* Detalhe — stopPropagation porque o clique na linha navega
+                      para a DCF; expandir não pode levar embora da tela. */}
+                  <td className="py-[10px] px-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => setExpanded((prev) => (prev === s.ticker ? null : s.ticker))}
+                      aria-expanded={expanded === s.ticker}
+                      aria-label={`Detalhe de ${s.ticker}`}
+                      className="flex items-center justify-center w-7 h-7 rounded-[7px] text-text-muted
+                                 hover:text-cyan hover:bg-bg-3 cursor-pointer transition-colors"
+                    >
+                      {expanded === s.ticker ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                    </button>
+                  </td>
+                </tr>,
+
+                expanded === s.ticker && (
+                  <tr key={`${s.ticker}-detalhe`} className="border-b border-border-muted">
+                    <td colSpan={COLUMN_COUNT} className="u-detail-open px-4 py-3" style={{ background: 'var(--color-bg-1)' }}>
+                      <RankDetail row={s} method={method} />
+                    </td>
+                  </tr>
+                ),
+              ]
             })}
           </tbody>
         </table>

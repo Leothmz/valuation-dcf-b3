@@ -201,3 +201,29 @@ describe('ScrollableTabs', () => {
     })
   })
 })
+
+describe('ScrollableTabs — cor do fade', () => {
+  const tabs = [
+    { key: 'a' as const, label: 'Aba A' },
+    { key: 'b' as const, label: 'Aba B' },
+  ]
+
+  it('por padrão o fade termina na cor de fundo da página', () => {
+    const { container } = render(
+      <ScrollableTabs tabs={tabs} active="a" onSelect={vi.fn()} ariaLabel="Teste" />
+    )
+    const fade = container.querySelector('[aria-hidden]') as HTMLElement
+    expect(fade.style.background).toContain('var(--color-bg-1)')
+  })
+
+  it('aceita a cor da superfície onde o tablist está montado', () => {
+    // Ranking e Carteira montam o tablist dentro de um card bg-2: com o fade
+    // terminando em bg-1, aparecia uma emenda de cor e a última pill era
+    // cortada em corte reto.
+    const { container } = render(
+      <ScrollableTabs tabs={tabs} active="a" onSelect={vi.fn()} ariaLabel="Teste" fadeColor="var(--color-bg-2)" />
+    )
+    const fade = container.querySelector('[aria-hidden]') as HTMLElement
+    expect(fade.style.background).toContain('var(--color-bg-2)')
+  })
+})

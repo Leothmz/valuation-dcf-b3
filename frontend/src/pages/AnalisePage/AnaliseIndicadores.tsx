@@ -121,7 +121,14 @@ export function AnaliseIndicadores({ data }: Props) {
           >
             {group.title}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+          {/* Colunas em função da quantidade: grade fixa de 4 deixava um grupo de 6
+              itens com 2 sozinhos na última linha e um de 5 com 1 órfão. Múltiplos
+              de 3 resolvem os grupos de 6; os de 4 continuam em 4. */}
+          <div
+            className={`grid grid-cols-2 gap-2.5 ${
+              group.items.length % 4 === 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'
+            }`}
+          >
             {group.items.map((cfg) => (
               <IndicatorCard key={`${group.title}-${cfg.field}-${cfg.label}`} cfg={cfg} data={data} />
             ))}

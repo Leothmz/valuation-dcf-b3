@@ -149,70 +149,17 @@ export function FIIRankingPage() {
     setCustomTickers((prev) => prev.filter((t) => t !== ticker))
   }
 
-  const activeFilterCount = countActiveFilters(filterConfig)
+  // Segmento conta junto: escondido dentro do painel, precisa aparecer no contador.
+  const activeControlCount = countActiveFilters(filterConfig) + (segment !== 'todos' ? 1 : 0)
 
   // Mesmo elemento reaproveitado no BottomSheet (mobile) e inline (desktop) — evita
   // duplicar o JSX de props idênticas nos dois lugares.
   const filterChipsEl = (
-    <FIIFilterChips
-      config={filterConfig}
-      customTickers={customTickers}
-      onChange={setFilterConfig}
-      onAddTicker={addCustomTicker}
-      onRemoveTicker={removeCustomTicker}
-      onRefresh={handleRefresh}
-      count={rankedRows.length}
-      loading={isLoading}
-    />
-  )
-
-  const loadingBox = (
-    <div className="bg-bg-2 border border-border rounded-[14px] p-10 text-center text-text-muted text-[13px]">
-      Carregando FIIs...
-    </div>
-  )
-
-  return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 md:px-7 md:py-6 flex flex-col gap-4">
-      {/* Hero */}
-      <div
-        className="rounded-[20px] px-8 py-7 border border-border"
-        style={{ background: 'linear-gradient(135deg, rgba(6,182,212,.06) 0%, var(--color-bg-2) 60%)' }}
-      >
-        <div className="flex items-center gap-4 mb-5">
-          <div
-            className="w-12 h-12 rounded-[14px] flex items-center justify-center"
-            style={{ background: 'rgba(6,182,212,.12)', border: '1px solid rgba(6,182,212,.3)' }}
-          >
-            <Building2 size={24} className="text-cyan" />
-          </div>
-          <div>
-            <div className="text-[24px] font-extrabold">Ranking de FIIs · B3</div>
-            <div className="text-[13px] text-text-sec mt-0.5">Rank Thomaz FII — rank DY + rank P/VP</div>
-          </div>
-        </div>
-        <div className="flex gap-4 flex-wrap">
-          {[
-            { id: 'count', label: 'FIIs analisados', val: stats?.count ?? '—', color: 'text-cyan' },
-            { id: 'dy', label: 'DY médio', val: fPct(stats?.dy), color: 'text-green' },
-            { id: 'pvp', label: 'P/VP médio', val: fNum2(stats?.pvp), color: 'text-cyan' },
-            { id: 'vac', label: 'Vacância média', val: fPct(stats?.vac), color: 'text-amber' },
-          ].map(({ id, label, val, color }) => (
-            <div
-              key={id}
-              className="bg-bg-3 border border-border rounded-[10px] px-5 py-3 text-center min-w-[110px]"
-            >
-              <div className={`font-mono text-[20px] font-bold ${color}`}>
-                {isLoading ? <span className="skeleton inline-block w-12 h-5 rounded" /> : String(val)}
-              </div>
-              <div className="text-[11px] text-text-muted mt-0.5">{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Mobile toolbar: ordenação */}
-      <div className="md:hidden flex gap-2">
+    <div className="flex flex-col gap-3">
+      {/* Ordenação mora com os filtros: no mobile ocupava uma faixa inteira acima
+          da lista e é decisão eventual, não a cada varredura. */}
+      {isMobile && (
+      <div className="flex gap-2">
         <select
           value={sortCol}
           onChange={(e) => setSortCol(e.target.value)}
@@ -238,29 +185,106 @@ export function FIIRankingPage() {
           {sortDir === 'desc' ? '↓' : '↑'}
         </button>
       </div>
+      )}
 
-      {/* Mobile toolbar: filtros */}
-      <div className="md:hidden">
-        <button
-          onClick={() => setFiltersOpen(true)}
-          className="w-full flex items-center justify-between min-h-[44px] px-3 rounded-[9px] border border-border text-[13px] text-text-sec cursor-pointer"
-          style={{ background: 'var(--color-bg-2)' }}
+      <FIIFilterChips
+        config={filterConfig}
+        customTickers={customTickers}
+        onChange={setFilterConfig}
+        onAddTicker={addCustomTicker}
+        onRemoveTicker={removeCustomTicker}
+        onRefresh={handleRefresh}
+        count={rankedRows.length}
+        loading={isLoading}
+      />
+
+      {/* Segmento entra aqui: é filtro, e filtro mora com os outros filtros. Solta
+          no fluxo principal, essa faixa de 10 segmentos empurrava a primeira linha
+          de dado para baixo. */}
+      <div>
+        <div className="text-[11px] font-semibold text-text-muted tracking-[0.08em] uppercase mb-2">
+          Segmento
+        </div>
+        <ScrollableTabs ariaLabel="Segmento" fadeColor="var(--color-bg-2)" tabs={SEGMENT_TABS} active={segment} onSelect={setSegment} />
+      </div>
+    </div>
+  )
+
+  const filtersButton = (
+    <button
+      onClick={() => setFiltersOpen((v) => !v)}
+      aria-expanded={filtersOpen}
+      className="flex items-center justify-between gap-3 min-h-[44px] px-3 rounded-[9px] border border-border text-[13px] text-text-sec cursor-pointer hover:border-cyan hover:text-cyan transition-colors"
+      style={{ background: 'var(--color-bg-2)' }}
+    >
+      Filtros
+      {activeControlCount > 0 && (
+        <span
+          className="rounded-full px-2 py-0.5 text-[10px] font-extrabold"
+          style={{ background: 'var(--color-cyan)', color: '#04121a' }}
         >
-          Filtros
-          {activeFilterCount > 0 && (
-            <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold"
-                  style={{ background: 'var(--color-cyan)', color: '#04121a' }}>
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
+          {activeControlCount}
+        </span>
+      )}
+    </button>
+  )
+
+  const loadingBox = (
+    <div className="bg-bg-2 border border-border rounded-[14px] p-10 text-center text-text-muted text-[13px]">
+      Carregando FIIs...
+    </div>
+  )
+
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-4 md:px-7 md:py-6 flex flex-col gap-4">
+      {/* Hero */}
+      {/* Hero enxuto no mobile: sem moldura, sem gradiente e com o ícone menor —
+          numa tela cujo conteúdo é lista, o cabeçalho custava ~180px antes da
+          primeira linha. No desktop a moldura fica. */}
+      <div
+        className="md:rounded-[20px] md:px-8 md:py-7 md:border md:border-border"
+        style={{ background: 'linear-gradient(135deg, rgba(6,182,212,.06) 0%, var(--color-bg-2) 60%)' }}
+      >
+        <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-5">
+          <div
+            className="w-9 h-9 md:w-12 md:h-12 rounded-[14px] flex items-center justify-center shrink-0"
+            style={{ background: 'rgba(6,182,212,.12)', border: '1px solid rgba(6,182,212,.3)' }}
+          >
+            <Building2 size={20} className="text-cyan md:hidden" />
+            <Building2 size={24} className="text-cyan hidden md:block" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[19px] md:text-[24px] font-extrabold">Ranking de FIIs · B3</div>
+            <div className="text-[12px] md:text-[13px] text-text-sec mt-0.5">Rank Thomaz FII — rank DY + rank P/VP</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 md:flex md:gap-4 md:flex-wrap">
+          {[
+            { id: 'count', label: 'FIIs analisados', val: stats?.count ?? '—', color: 'text-cyan' },
+            { id: 'dy', label: 'DY médio', val: fPct(stats?.dy), color: 'text-green' },
+            { id: 'pvp', label: 'P/VP médio', val: fNum2(stats?.pvp), color: 'text-cyan' },
+            { id: 'vac', label: 'Vacância média', val: fPct(stats?.vac), color: 'text-amber' },
+          ].map(({ id, label, val, color }) => (
+            <div
+              key={id}
+              className="bg-bg-3 border border-border rounded-[10px] px-3 py-2 md:px-5 md:py-3 text-center md:min-w-[110px]"
+            >
+              <div className={`font-mono text-[16px] md:text-[20px] font-bold ${color}`}>
+                {isLoading ? <span className="skeleton inline-block w-12 h-5 rounded" /> : String(val)}
+              </div>
+              <div className="text-[11px] text-text-muted mt-0.5">{label}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Segment tabs */}
-      <ScrollableTabs ariaLabel="Segmento" tabs={SEGMENT_TABS} active={segment} onSelect={setSegment} />
 
-      {/* Filter chips — uma instância só: dentro do BottomSheet no mobile, inline no
-          desktop. Nunca as duas montadas ao mesmo tempo (evita duplicata no DOM). */}
+      {/* Botão de filtros — mesmo controle nos dois viewports: abre o BottomSheet
+          no mobile e o painel colapsável no desktop. */}
+      <div className="flex">{filtersButton}</div>
+
+      {/* Filter chips — uma instância só: dentro do BottomSheet no mobile, no painel
+          colapsável no desktop. Nunca as duas montadas ao mesmo tempo. */}
       {isMobile ? (
         <BottomSheet
           isOpen={filtersOpen}
@@ -288,7 +312,14 @@ export function FIIRankingPage() {
           {filterChipsEl}
         </BottomSheet>
       ) : (
-        filterChipsEl
+        filtersOpen && (
+          <div
+            className="rounded-[12px] border border-border px-4 py-3"
+            style={{ background: 'var(--color-bg-2)' }}
+          >
+            {filterChipsEl}
+          </div>
+        )
       )}
 
       {/* Montagem condicional (não CSS): lista compacta OU tabela, nunca as duas ao mesmo

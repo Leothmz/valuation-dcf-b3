@@ -79,7 +79,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        className="w-full max-w-xl mx-4 bg-bg-2 border border-border rounded-2xl overflow-hidden"
+        className="u-layer-in w-full max-w-xl mx-4 bg-bg-2 border border-border rounded-2xl overflow-hidden"
         style={{ boxShadow: '0 0 40px rgba(6,182,212,0.1), 0 25px 50px rgba(0,0,0,0.5)' }}
       >
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border">

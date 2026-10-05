@@ -88,6 +88,8 @@ test.describe('Flow 2: adjust premises → save to watchlist', () => {
     await page.getByText(/Salvar Preço Teto/i).click()
 
     await page.goto('/watchlist', { waitUntil: 'networkidle' })
-    await expect(page.getByText('PETR4')).toBeVisible({ timeout: 5000 })
+    // exact: o hero 'Melhor Oportunidade Salva' cita o ticker na nota; o alvo aqui
+    // é a linha salva, não o resumo.
+    await expect(page.getByText('PETR4', { exact: true }).first()).toBeVisible({ timeout: 5000 })
   })
 })

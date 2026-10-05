@@ -31,7 +31,7 @@ export function RankingNavPopover({ isOpen, onClose, currentPath }: RankingNavPo
         id="ranking-nav-popover"
         role="group"
         aria-label="Escolher ranking"
-        className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50
+        className="u-layer-in absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50
                    w-[150px] rounded-[12px] border p-1"
         style={{
           background: 'var(--color-bg-2)',

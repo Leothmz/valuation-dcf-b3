@@ -11,10 +11,17 @@ interface ScrollableTabsProps<T extends string> {
   onSelect: (key: T) => void
   /** Rótulo acessível do tablist — obrigatório porque a página pode ter mais de um. */
   ariaLabel: string
+  /**
+   * Cor em que o fade da direita termina. Default: o fundo da página (bg-1).
+   * Páginas que montam o tablist dentro de um card (bg-2) precisam passar a cor
+   * do card — com bg-1 aparecia uma emenda e a última pill parecia cortada em
+   * corte reto em vez de esmaecer.
+   */
+  fadeColor?: string
 }
 
 export function ScrollableTabs<T extends string>({
-  tabs, active, onSelect, ariaLabel,
+  tabs, active, onSelect, ariaLabel, fadeColor = 'var(--color-bg-1)',
 }: ScrollableTabsProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null)
   const activeRef = useRef<HTMLButtonElement>(null)
@@ -120,7 +127,7 @@ export function ScrollableTabs<T extends string>({
       <div
         aria-hidden
         className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 md:hidden"
-        style={{ background: 'linear-gradient(90deg, transparent, var(--color-bg-1))' }}
+        style={{ background: `linear-gradient(90deg, transparent, ${fadeColor})` }}
       />
     </div>
   )

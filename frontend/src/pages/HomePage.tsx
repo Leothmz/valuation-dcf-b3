@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useInView } from '../hooks/useInView'
 import {
   TrendingUp,
   Calculator,
@@ -118,20 +119,22 @@ const ACCENT_STYLES: Record<string, { icon: string; hoverBorder: string }> = {
 }
 
 export function HomePage() {
+  const { ref: formulaRef, inView: formulaInView } = useInView<HTMLDivElement>()
+
   return (
     <div
-      className="min-h-screen overflow-y-auto"
+      className="relative min-h-screen overflow-y-auto"
       style={{
         background:
           'radial-gradient(ellipse at 30% -20%, rgba(6,182,212,.08) 0%, transparent 60%), ' +
-          'radial-gradient(ellipse at 90% 10%, rgba(168,85,247,.06) 0%, transparent 50%), #0b0f17',
+          'radial-gradient(ellipse at 90% 10%, rgba(168,85,247,.06) 0%, transparent 50%)',
       }}
     >
-      <div className="max-w-[860px] mx-auto px-4 py-8 md:px-10 md:py-14">
+      <div className="relative max-w-[860px] mx-auto px-4 py-8 md:px-10 md:py-14">
         {/* Hero */}
         <section className="mb-16">
           <div
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full
+            className="u-rise inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full
                         text-cyan text-[13px] font-medium mb-6"
             style={{
               background: 'rgba(6,182,212,.08)',
@@ -144,7 +147,7 @@ export function HomePage() {
           </div>
 
           <h1
-            className="text-[28px] md:text-[48px] font-extrabold leading-[1.15] tracking-[-0.03em] mb-5"
+            className="u-rise text-[28px] md:text-[48px] font-extrabold leading-[1.15] tracking-[-0.03em] mb-5"
             style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
           >
             Encontre o valor<br />intrínseco de uma ação{' '}
@@ -161,16 +164,16 @@ export function HomePage() {
             </em>
           </h1>
 
-          <p className="text-[15px] md:text-[17px] text-text-sec leading-[1.75] max-w-[580px] mb-8">
+          <p className="u-rise u-stagger-1 text-[15px] md:text-[17px] text-text-sec leading-[1.75] max-w-[580px] mb-8">
             8 ferramentas integradas para análise fundamentalista de ações e FIIs — sem cadastro,
             sem custo. Do cálculo do preço teto ao ranking por múltiplos métodos, sempre como
             apoio à sua análise, nunca como substituto dela.
           </p>
 
-          <div className="grid grid-cols-2 gap-2.5 md:flex md:gap-3 md:flex-wrap">
+          <div className="u-rise u-stagger-2 grid grid-cols-2 gap-2.5 md:flex md:gap-3 md:flex-wrap">
             <Link
               to="/dcf"
-              className="inline-flex items-center justify-center gap-1.5 px-3 md:px-[22px] py-3 md:py-2.5 min-h-[44px] md:min-h-0 text-center rounded-[14px]
+              className="u-lift inline-flex items-center justify-center gap-1.5 px-3 md:px-[22px] py-3 md:py-2.5 min-h-[44px] md:min-h-0 text-center rounded-[14px]
                          text-sm font-semibold text-[#060910] no-underline"
               style={{
                 background: 'linear-gradient(135deg,#06b6d4 0%,#0891b2 100%)',
@@ -182,7 +185,7 @@ export function HomePage() {
             </Link>
             <Link
               to="/ranking"
-              className="inline-flex items-center justify-center gap-1.5 px-3 md:px-[22px] py-3 md:py-2.5 min-h-[44px] md:min-h-0 text-center rounded-[14px]
+              className="u-lift inline-flex items-center justify-center gap-1.5 px-3 md:px-[22px] py-3 md:py-2.5 min-h-[44px] md:min-h-0 text-center rounded-[14px]
                          text-sm font-semibold text-text-base no-underline
                          border border-border hover:border-cyan"
               style={{ background: '#1a2233' }}
@@ -192,7 +195,7 @@ export function HomePage() {
             </Link>
             <Link
               to="/fiis"
-              className="inline-flex items-center justify-center gap-1.5 px-3 md:px-[22px] py-3 md:py-2.5 min-h-[44px] md:min-h-0 text-center rounded-[14px]
+              className="u-lift inline-flex items-center justify-center gap-1.5 px-3 md:px-[22px] py-3 md:py-2.5 min-h-[44px] md:min-h-0 text-center rounded-[14px]
                          text-sm font-semibold text-text-base no-underline
                          border border-border hover:border-cyan"
               style={{ background: '#1a2233' }}
@@ -202,7 +205,7 @@ export function HomePage() {
             </Link>
             <Link
               to="/analise"
-              className="inline-flex items-center justify-center gap-1.5 px-3 md:px-[22px] py-3 md:py-2.5 min-h-[44px] md:min-h-0 text-center rounded-[14px]
+              className="u-lift inline-flex items-center justify-center gap-1.5 px-3 md:px-[22px] py-3 md:py-2.5 min-h-[44px] md:min-h-0 text-center rounded-[14px]
                          text-sm font-semibold text-text-base no-underline
                          border border-border hover:border-cyan"
               style={{ background: '#1a2233' }}
@@ -223,7 +226,14 @@ export function HomePage() {
             <strong>um real hoje vale mais do que um real no futuro</strong>.
           </p>
 
+          {/* Momento autoral da Home: as fórmulas se escrevem da esquerda para a
+              direita quando o bloco entra na viewport, uma depois da outra, como
+              alguém resolvendo a conta no papel. O produto promete expor a
+              matemática (princípio 3 do DESIGN.md) — aqui a promessa vira gesto.
+              O estado final é o padrão do CSS: sem JS, sem observer ou com
+              movimento reduzido, as fórmulas continuam legíveis. */}
           <div
+            ref={formulaRef}
             className="rounded-[14px] p-6"
             style={{ background: '#111827', border: '1px solid #1e2d42' }}
           >
@@ -235,7 +245,9 @@ export function HomePage() {
             ].map(([lbl, eq, val], i, arr) => (
               <div
                 key={lbl}
-                className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5"
+                className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5 ${
+                  formulaInView ? `u-write u-stagger-${i + 1}` : ''
+                }`}
                 style={{
                   borderBottom: i < arr.length - 1 ? '1px solid #151e2d' : 'none',
                   fontFamily: 'JetBrains Mono, Cascadia Code, Fira Code, monospace',
@@ -334,8 +346,7 @@ export function HomePage() {
                 <Link
                   key={title}
                   to={to}
-                  className="block rounded-[14px] p-[22px] no-underline
-                             transition-transform hover:-translate-y-0.5"
+                  className="u-lift block rounded-[14px] p-[22px] no-underline"
                   style={{
                     background: '#111827',
                     border: '1px solid #1e2d42',

@@ -398,8 +398,9 @@ export function DCFPage() {
   // Içados para fora do ternário de ordem mobile/desktop — evita duplicar o
   // bloco de props em cada ramo. São elementos React (valores); guardá-los numa
   // const não muda onde/quando eles montam.
-  const resultPanel = (
+  const makeResultPanel = (layout: 'column' | 'wide') => (
     <DCFResultPanel
+      layout={layout}
       results={store.results}
       resultsClassico={store.resultsClassico}
       resultsBuffett={store.resultsBuffett}
@@ -417,6 +418,12 @@ export function DCFPage() {
       isExporting={isExporting}
     />
   )
+
+  // Mesmo painel em dois formatos: coluna estreita (mobile, sob o header da
+  // empresa) e coluna larga (desktop, abrindo a coluna direita). A fábrica evita
+  // repetir o bloco de props em cada ramo.
+  const resultPanel = makeResultPanel('column')
+  const resultPanelWide = makeResultPanel('wide')
 
   const inputPanel = (
     <DCFInputPanel
@@ -519,13 +526,18 @@ export function DCFPage() {
               <>
                 <DCFCompanyHeader data={headerData} isLoading={isFetching} />
                 {inputPanel}
-                {resultPanel}
               </>
             )}
           </div>
 
-          {/* Right panel */}
+          {/* Right panel — no desktop o resultado abre esta coluna: em 1440x900 o
+              card de preço teto começava em y≈760 (cortado pela dobra) no fim da
+              coluna esquerda, enquanto aqui sobravam ~170px de vazio depois da
+              tabela. O usuário busca um ticker para obter um número e tinha que
+              rolar para vê-lo. No mobile nada muda — lá o resultado já vem antes
+              das premissas, dentro da coluna única. */}
           <div className="bg-bg-1 md:overflow-y-auto p-4 md:p-5">
+            {!isMobile && <div className="mb-6">{resultPanelWide}</div>}
             <DCFTable
               results={store.results}
               history={store.history}

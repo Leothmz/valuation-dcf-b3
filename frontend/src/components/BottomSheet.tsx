@@ -35,7 +35,7 @@ export function BottomSheet({ isOpen, onClose, title, children, footer }: Bottom
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full max-h-[80vh] flex flex-col
+        className="u-layer-up relative w-full max-h-[80vh] flex flex-col
                    rounded-t-[18px] border-t border-border safe-area-pb"
         style={{ background: 'var(--color-bg-2)' }}
       >

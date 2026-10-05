@@ -22,7 +22,7 @@ export function ShortcutsPanel({ isOpen, onClose }: ShortcutsPanelProps) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        className="bg-bg-2 border border-border rounded-[16px] p-6 w-[420px] max-w-[92vw]"
+        className="u-layer-in bg-bg-2 border border-border rounded-[16px] p-6 w-[420px] max-w-[92vw]"
         style={{ boxShadow: '0 8px 32px rgba(0,0,0,.6)' }}
       >
         <div className="flex items-center justify-between mb-5">

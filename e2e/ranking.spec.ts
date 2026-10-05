@@ -59,9 +59,10 @@ test.describe('Flow 4: open ranking → table loads with scores', () => {
     ).toBeVisible()
   })
 
-  test('sector tabs are rendered', async ({ page }) => {
-    // Sector tabs são `ScrollableTabs` (role="tab") — role="button" era o seletor
-    // pré-conversão e nunca foi atualizado.
+  test('sector tabs are rendered inside the filters panel', async ({ page }) => {
+    // Setor é filtro e passou a morar dentro do painel de Filtros (nos dois
+    // viewports), para tirar mais uma faixa de controle de cima da tabela.
+    await page.getByRole('button', { name: /filtros/i }).click()
     await expect(page.getByRole('tab', { name: 'Todos' })).toBeVisible({ timeout: 8000 })
   })
 })

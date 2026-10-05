@@ -40,7 +40,10 @@ test('tablist: Tab atravessa de uma vez, setas navegam dentro', async ({ page })
   await page.keyboard.press('Home')
   expect(await focado()).toBe(nomes[0])
 
-  // A página tem dois tablists; navegar num não mexe no outro.
+  // A página tem dois tablists; navegar num não mexe no outro. O de Setor mora
+  // dentro do painel de Filtros desde que ele deixou de ficar solto acima da
+  // tabela, então precisa ser aberto para existir no DOM.
+  await page.getByRole('button', { name: /filtros/i }).click()
   await expect(page.getByRole('tablist', { name: 'Setor' }).getByRole('tab').first())
     .toHaveAttribute('aria-selected', 'true')
 })

@@ -45,7 +45,7 @@ export function ExpandableRow({
       </div>
 
       {expanded && (
-        <div className="px-3 pb-3 pt-2 border-t border-border">{children}</div>
+        <div className="u-detail-open px-3 pb-3 pt-2 border-t border-border">{children}</div>
       )}
     </div>
   )
